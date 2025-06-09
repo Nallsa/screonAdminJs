@@ -5,7 +5,7 @@ import { DndContext, closestCenter } from '@dnd-kit/core';
 import {
     SortableContext,
     arrayMove,
-    verticalListSortingStrategy,
+    verticalListSortingStrategy, horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { Button, Form } from 'react-bootstrap';
 import {PlaylistItem} from "@/public/types/interfaces";
@@ -55,7 +55,7 @@ export default function PlaylistsPage() {
                     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                         <SortableContext
                             items={items.map(item => item.id)}
-                            strategy={verticalListSortingStrategy}
+                            strategy={horizontalListSortingStrategy}
                         >
                             <div className="d-flex flex-wrap gap-3">
                                 {items.map(item => (
