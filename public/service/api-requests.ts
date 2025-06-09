@@ -1,0 +1,5 @@
+
+export const api_url = "https://atelier-api.gnt-it.ru"
+export const token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImp0aSI6IlVOSVFVRS1KV1QtSURFTlRJRklFUiJ9.eyJpc3MiOiJodHRwczpcL1wvYXBpLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6XC9cL2Zyb250ZW5kLmV4YW1wbGUuY29tIiwianRpIjoiVU5JUVVFLUpXVC1JREVOVElGSUVSIiwiaWF0IjoxNzIxOTkzNjYxLCJleHAiOjE3MjQ1ODU2NjEsInVpZCI6Mn0.jBJeMACCpv5J1KJEuHdWeY5-uolbGIRqyfVDTuCsA7k"
+
+

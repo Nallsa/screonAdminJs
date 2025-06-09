@@ -1,0 +1,18 @@
+html {
+  scroll-behavior: smooth;
+}
+body {
+  font-family: "Raleway", sans-serif;
+  font-size: 18px;
+  color: #444;
+}
+img {
+  max-width: 100%;
+}
+ul, ol {
+  padding-left: 20px;
+}
+a {
+  color: #006d76;
+  text-decoration: none;
+}

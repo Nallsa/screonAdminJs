@@ -1,0 +1,35 @@
+{
+  "name": "screonAdmin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.3",
+    "html-react-parser": "^5.2.5",
+    "next": "14.2.7",
+    "react": "^18",
+    "react-bootstrap": "^2.10.4",
+    "react-device-detect": "^2.2.3",
+    "react-dom": "^18",
+    "react-router-dom": "^7.0.2",
+    "react-tooltip": "^5.28.0",
+    "reactjs-popup": "^2.0.6",
+    "swiper": "^11.1.12",
+    "zustand": "^5.0.4"
+  },
+  "devDependencies": {
+    "@types/bootstrap": "^5.2.10",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-collapse": "^5.0.4",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.7",
+    "typescript": "^5"
+  }
+}
