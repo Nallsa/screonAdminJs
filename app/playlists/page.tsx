@@ -11,6 +11,7 @@ import { Button, Form } from 'react-bootstrap';
 import {PlaylistItem} from "@/public/types/interfaces";
 import PlaylistItemCard from "@/app/components/Playlist/PlaylistItemCard";
 import LibraryItemCard from "@/app/components/Library/LibraryItemCard";
+import {usePlaylistStore} from "@/app/store/playlistStore";
 
 const initialItems: PlaylistItem[] = [
     { id: 1, title: 'Default Image', type: 'IMAGE', duration: 8, image: '/assets/image1.jpg' },
@@ -20,6 +21,10 @@ const initialItems: PlaylistItem[] = [
 ];
 
 export default function PlaylistsPage() {
+
+    const playlistItems = usePlaylistStore(state => state.playlistItems)
+
+
     const [items, setItems] = useState(initialItems);
 
     const handleDragEnd = (event: any) => {
