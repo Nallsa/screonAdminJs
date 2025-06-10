@@ -1,75 +1,152 @@
 'use client'
 
-import React, { useState } from 'react';
-import { Tabs, Tab, Form, Button } from 'react-bootstrap';
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import React, {useCallback, useEffect, useState} from 'react';
+import {Tabs, Tab, Form, Button, ProgressBar, Modal} from 'react-bootstrap';
+import {
+    DndContext,
+    closestCenter,
+    UniqueIdentifier,
+    DragStartEvent,
+    DragOverEvent,
+    DragEndEvent,
+    DragOverlay
+} from '@dnd-kit/core';
+import {SortableContext, arrayMove, horizontalListSortingStrategy} from '@dnd-kit/sortable';
 import {LibraryItem} from "@/public/types/interfaces";
 import LibraryItemCard from "@/app/components/Library/LibraryItemCard";
+import MediaCard, {FileItem} from "@/app/components/Library/MediaCard";
+import {AnimatePresence} from "framer-motion";
+import {useDropzone} from 'react-dropzone';
+import {v4 as uuid} from 'uuid';
 
-const initialItems: LibraryItem[] = [
-    { id: 1, title: 'Get started with Digital Reception', image: '/assets/image1.jpg' },
-    { id: 2, title: 'Digital Signage Software', image: '/assets/image2.jpg' },
-    { id: 3, title: 'What is Digital Signage?', image: '/assets/image3.jpg' },
-    { id: 4, title: 'We are excited to introduce you to Castit', image: '/assets/image4.jpg' },
-];
 
 export default function LibraryPage() {
-    const [key, setKey] = useState('uploaded');
-    const [items, setItems] = useState(initialItems);
 
-    const handleDragEnd = (event: any) => {
-        const { active, over } = event;
-        if (active.id !== over?.id) {
-            const oldIndex = items.findIndex(i => i.id === active.id);
-            const newIndex = items.findIndex(i => i.id === over?.id);
-            setItems(arrayMove(items, oldIndex, newIndex));
+    const [items, setItems] = useState<FileItem[]>([])
+    const [showUploadModal, setShowUploadModal] = useState(false)
+    const [uploadProgress, setUploadProgress] = useState(0)
+
+
+    const startUpload = useCallback((files: File[]) => {
+        setShowUploadModal(true)
+        let prog = 0
+        const iv = setInterval(() => {
+            prog += 10
+            setUploadProgress(prog)
+            if (prog >= 100) {
+                clearInterval(iv)
+                const newItems = files.map((file) => ({
+                    id: uuid(),
+                    file,
+                    name: file.name,
+                    type: file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE',
+                    size: file.size,
+                    duration: undefined,
+                    url: URL.createObjectURL(file),
+                }))
+                setItems((prev) => [...prev, ...newItems])
+                setShowUploadModal(false)
+                setUploadProgress(0)
+            }
+        }, 100)
+    }, [])
+
+    const onDrop = useCallback(
+        (accepted: File[]) => {
+            if (accepted.length) startUpload(accepted)
+        },
+        [startUpload]
+    )
+    const {getRootProps, getInputProps, open} = useDropzone({
+        onDrop,
+        multiple: true,
+        noClick: true,
+        accept: {'image/*': [], 'video/*': []},
+    })
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const {active, over} = event
+        if (over && active.id !== over.id) {
+            setItems((prev) => {
+                const oldIndex = prev.findIndex((i) => i.id === active.id)
+                const newIndex = prev.findIndex((i) => i.id === over.id)
+                return arrayMove(prev, oldIndex, newIndex)
+            })
         }
-    };
+    }
 
     return (
         <div className="p-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
-                <h4>Library ✏️</h4>
+                <h4>Библиотека</h4>
                 <div>
-                    <Button variant="outline-secondary" className="me-2">Create new folder</Button>
-                    <Button variant="dark">Upload file</Button>
+                    <Button variant="outline-primary">
+                        Сохранить
+                    </Button>
                 </div>
             </div>
 
-            <Tabs activeKey={key} onSelect={(k) => setKey(k || '')} className="mb-3">
-                <Tab eventKey="uploaded" title="Uploaded" />
-                <Tab eventKey="slides" title="Slides" />
-                <Tab eventKey="stock" title="Stock" />
-                <Tab eventKey="ai" title="AI generated" />
-            </Tabs>
 
-            <div className="d-flex justify-content-between mb-3">
-                <div className="d-flex gap-2">
-                    <Form.Select size="sm">
-                        <option>Show: All</option>
-                    </Form.Select>
-                    <Form.Select size="sm">
-                        <option>Sort by: Name ↑</option>
-                    </Form.Select>
-                </div>
-                <Form.Control size="sm" type="search" placeholder="Search" style={{ maxWidth: 300 }} />
+            <div className="d-flex justify-content-end mb-3">
+
+                <Form.Control
+                    size="sm"
+                    type="search"
+                    placeholder="Search"
+                    style={{maxWidth: 300}}
+                />
             </div>
 
-            <div className="upload-area border border-dashed p-4 mb-4 text-center text-muted bg-light rounded">
-                <div>📤 Drop files here to upload, or use the ‘Upload file’ button</div>
+            <div
+                {...getRootProps({
+                    onClick: (e) => {
+                        e.preventDefault()
+                        open()
+                    },
+                })}
+                className="upload-area border border-dashed p-4 mb-4 text-center text-muted bg-light rounded"
+                style={{cursor: 'pointer'}}
+            >
+                <input {...getInputProps()} />
+                <div>📤 Drop files here to upload, or click ‘Upload file’</div>
                 <small>Supports: jpg, png, gif, webp, mp4, mpeg, mov, avi files</small>
             </div>
 
-            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={items.map(item => item.id)} strategy={horizontalListSortingStrategy}>
+            <Modal show={showUploadModal} centered>
+                <Modal.Header>
+                    <Modal.Title>Uploading files…</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <ProgressBar now={uploadProgress} label={`${uploadProgress}%`}/>
+                </Modal.Body>
+            </Modal>
+
+            <DndContext
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+            >
+                <SortableContext
+                    items={items.map((i) => i.id)}
+                    strategy={horizontalListSortingStrategy}
+                >
                     <div className="d-flex flex-wrap gap-3">
-                        {items.map(item => (
-                            <LibraryItemCard key={item.id} item={item} />
+                        {items.map((item) => (
+                            <MediaCard
+                                key={item.id}
+                                item={item}
+                                onDelete={(id) =>
+                                    setItems((prev) => prev.filter((i) => i.id !== id))
+                                }
+                                onUpdate={(upd) =>
+                                    setItems((prev) =>
+                                        prev.map((i) => (i.id === upd.id ? upd : i))
+                                    )
+                                }
+                            />
                         ))}
                     </div>
                 </SortableContext>
             </DndContext>
         </div>
-    );
+    )
 }
