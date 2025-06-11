@@ -185,15 +185,14 @@ interface usePlaylistState {
     getPlaylists: () => Promise<void>,
     addPlaylists: (playlists: PlaylistItem[]) => void
     clearPlayLists: () => void,
-
+    addPlaylist: (playlist: PlaylistItem) => void
 
 }
 
 
 export const usePlaylistStore = create<usePlaylistState>()(
     immer<usePlaylistState>((set, get) => ({
-        playlistItems: [
-        ],
+        playlistItems: [],
         playlistChild: [],
 
 
@@ -229,6 +228,12 @@ export const usePlaylistStore = create<usePlaylistState>()(
             } catch (error) {
                 console.error('Ошибка при получении плейлистов:', error);
             }
+        },
+
+        addPlaylist: (playlist) => {
+            set(state => {
+                state.playlistItems.push(playlist)
+            })
         },
 
         addPlaylists: (playlists) => {

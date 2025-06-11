@@ -4,8 +4,10 @@ import React, {useEffect, useState} from 'react';
 import {Badge, Button, Form} from 'react-bootstrap';
 import Link from "next/link";
 
-
+import {useRouter} from 'next/navigation'
 import {usePlaylistStore} from "@/app/store/playlistStore";
+import {PlaylistItem} from "@/public/types/interfaces";
+
 
 const formatDuration = (sec: number) => {
     const m = Math.floor(sec / 60)
@@ -14,18 +16,26 @@ const formatDuration = (sec: number) => {
 }
 
 export default function PlaylistsPage() {
-    const {playlistItems, getPlaylists} = usePlaylistStore()
-
+    const {playlistItems, getPlaylists, addPlaylist} = usePlaylistStore()
+    const router = useRouter()
     useEffect(() => {
-        console.log(playlistItems)
-
-        if(playlistItems.length == 0) {
+        if (playlistItems.length === 0) {
             getPlaylists()
         }
-    }, []);
+    }, [getPlaylists, playlistItems.length])
 
-    function handleNewPlaylist() {
+    const handleNewPlaylist = () => {
+        const newPlaylist: PlaylistItem = {
+            id: "1",
+            name: 'Новый плейлист',
+            duration: 0,
+            isActive: false,
+            thumbnail: '',
+            childFiles: [],
+        }
+        addPlaylist(newPlaylist)
 
+        router.push(`/playlists/${newPlaylist.id}`)
     }
 
 
