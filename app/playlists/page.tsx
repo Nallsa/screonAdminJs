@@ -1,44 +1,11 @@
 'use client'
 
-import React, { useState } from 'react';
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import {
-    SortableContext,
-    arrayMove,
-    verticalListSortingStrategy, horizontalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import React, {useEffect, useState} from 'react';
 import {Badge, Button, Form} from 'react-bootstrap';
-import {PlaylistItem} from "@/public/types/interfaces";
-import PlaylistItemCard from "@/app/components/Playlist/PlaylistItemCard";
-import LibraryItemCard from "@/app/components/Library/LibraryItemCard";
-import {color} from "motion-dom";
 import Link from "next/link";
 
-interface Playlists {
-    id: string
-    name: string
-    duration: number // в секундах
-    isActive: boolean
-    thumbnail?: string
-}
-import {usePlaylistStore} from "@/app/store/playlistStore";
 
-const samplePlaylists: Playlists[] = [
-    {
-        id: '1',
-        name: 'Default Playlist',
-        duration: 178,
-        isActive: true,
-        thumbnail: '/assets/default-thumbnail.jpg',
-    },
-    {
-        id: '2',
-        name: 'Плейлист 2',
-        duration: 0,
-        isActive: true,
-        thumbnail: '/assets/default-thumbnail.jpg',
-    },
-]
+import {usePlaylistStore} from "@/app/store/playlistStore";
 
 const formatDuration = (sec: number) => {
     const m = Math.floor(sec / 60)
@@ -47,23 +14,36 @@ const formatDuration = (sec: number) => {
 }
 
 export default function PlaylistsPage() {
-    const [playlists, setPlaylists] = useState<Playlists[]>(samplePlaylists)
+    const {playlistItems, getPlaylists} = usePlaylistStore()
+
+    useEffect(() => {
+        console.log(playlistItems)
+
+        if(playlistItems.length == 0) {
+            getPlaylists()
+        }
+    }, []);
+
+    function handleNewPlaylist() {
+
+    }
+
 
     return (
         <div className="p-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <h4 className="mb-0">Плейлисты</h4>
-                <Button variant="outline-primary">
+                <Button variant="outline-primary" onClick={handleNewPlaylist}>
                     + Новый плейлист
                 </Button>
             </div>
 
             <div className="d-flex flex-wrap gap-3">
-                {playlists.map((p) => (
+                {playlistItems.map((p) => (
 
                     <Link
                         key={p.id}
-                        href={`/playlists/${p.id}`}
+                        href={`/playlistItems/${p.id}`}
                         className="text-decoration-none"
                     >
                         <div

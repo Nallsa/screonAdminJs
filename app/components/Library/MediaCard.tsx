@@ -15,17 +15,8 @@ import {
     Badge,
 } from 'react-bootstrap';
 import type {UniqueIdentifier} from '@dnd-kit/core';
+import {FileItem} from "@/public/types/interfaces";
 
-
-export interface FileItem {
-    id: UniqueIdentifier;
-    file: File;
-    name: string;
-    type: 'VIDEO' | 'IMAGE';
-    size: number;
-    duration?: number;
-    url: string;
-}
 
 interface Props {
     item: FileItem;

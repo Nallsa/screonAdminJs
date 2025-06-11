@@ -1,55 +1,29 @@
-import {create} from 'zustand'
-import {immer} from 'zustand/middleware/immer'
-import axios from 'axios'
-import {MediaItem} from "@/public/types/interfaces";
+import {create} from 'zustand';
+import {immer} from 'zustand/middleware/immer';
+import axios from 'axios';
+import {FileItem} from '@/public/types/interfaces';
+import {getValueInStorage} from "@/app/API/localStorage";
 
-interface FileItemDto {
-    id: string
-    name: string
-    contentType: string
-    size: number
-    width?: number
-    height?: number
-    duration?: number
-    sha256: string
-    uploadedBy: string
-    organizationId: string
-    hasPreview: boolean
-    createdAt: string
-    tags: string[]
-    categoryIds: string[]
-    downloadUrl: string
-    previewUrl?: string
-    public: boolean
-}
 
 interface LibraryStore {
-    libraryItems: MediaItem[]
-    isUploadingMetadata: boolean
-    uploadError: string | null
+    libraryItems: (FileItem)[];
+    isUploadingMetadata: boolean;
+    uploadError: string | null;
 
-    addLibraryItem: (item: MediaItem) => void
-    updateLibraryItem: (index: number, item: MediaItem) => void
-    removeFromLibrary: (index: number) => void
-    uploadMediaData: (item: MediaItem) => Promise<void>
+    addLibraryItem: (item: FileItem) => void;
+    addLibraryItems: (item: FileItem[]) => void;
+    updateLibraryItem: (updatedItem: FileItem) => void;
+    deleteLibraryItem: (id: string) => void;
+    uploadFileMetaData: (item: FileItem) => Promise<void>
+    uploadFile: (url: String,
+                 file: File,
+                 onProgress: (percent: number) => void,
+                 onComplete: (fileId: string | null) => void,
+    ) => Promise<void>
+
     getFilesInLibrary: () => Promise<void>
 }
 
-const getValueInStorage = (key: string): string => {
-    if (typeof localStorage === 'undefined') return ''
-    return localStorage.getItem(key) || ''
-}
-
-const fileItemDtoToMediaItem = (dto: FileItemDto): MediaItem => ({
-    previewUrl: dto.downloadUrl,
-    type: dto.contentType.startsWith('video') ? 'VIDEO' : 'IMAGE',
-    title: dto.name,
-    duration: dto.duration ?? 0,
-    videoUrl: dto.contentType.startsWith('video') ? dto.downloadUrl : "",
-    fileId: dto.id,
-    id: dto.id, // <- если используешь и это поле
-    isVisible: true,
-})
 
 export const useLibraryStore = create<LibraryStore>()(
     immer((set, get) => ({
@@ -58,41 +32,47 @@ export const useLibraryStore = create<LibraryStore>()(
         uploadError: null,
 
         addLibraryItem: (item) => {
-            const newItem = {...item, isVisible: false}
-            set(state => {
-                state.libraryItems.push(newItem)
-            })
-            setTimeout(() => {
-                const index = get().libraryItems.findIndex(i => i.fileId === item.fileId)
+            set((state) => ({
+                ...state,
+                libraryItems: [...state.libraryItems, {...item}]
+            }));
+        },
+
+
+        addLibraryItems: (items: FileItem[]) => {
+            set((state) => {
+                state.libraryItems = items;
+            });
+        },
+
+
+        updateLibraryItem: (updatedItem: FileItem) => {
+            set((state) => {
+                const index = state.libraryItems.findIndex((i: { id: string; }) => i.id === updatedItem.id);
                 if (index !== -1) {
-                    set(state => {
-                        state.libraryItems[index].isVisible = true
-                    })
+                    state.libraryItems[index] = updatedItem;
                 }
-            }, 30)
+            });
         },
 
-        updateLibraryItem: (index, item) => {
-            set(state => {
-                state.libraryItems[index] = item
-            })
+        deleteLibraryItem: (id: string) => {
+            set((state) => {
+                state.libraryItems = state.libraryItems.filter((i: { id: string; }) => i.id !== id);
+            });
         },
 
-        removeFromLibrary: (index) => {
-            set(state => {
-                state.libraryItems.splice(index, 1)
-            })
-        },
-
-        uploadMediaData: async (item) => {
+        uploadFileMetaData: async (item) => {
             set(state => {
                 state.isUploadingMetadata = true
                 state.uploadError = null
             })
 
             try {
-                const response = await axios.post('/api/files/assign-metadata', {
-                    fileId: item.fileId,
+                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+
+
+                const response = await axios.post(`${SERVER_URL}files/assign-metadata`, {
+                    fileId: item.id,
                     uploadedBy: getValueInStorage('userId'),
                     organizationId: getValueInStorage('organizationId'),
                     isPublic: true,
@@ -112,20 +92,68 @@ export const useLibraryStore = create<LibraryStore>()(
 
         getFilesInLibrary: async () => {
             try {
-                const response = await axios.post('/api/files/user-files', {
+                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+
+                const response = await axios.post(`${SERVER_URL}files/user-files`, {
                     userId: getValueInStorage('userId'),
                     organizationId: getValueInStorage('organizationId'),
-                })
+                });
 
-                const files: FileItemDto[] = response.data
+                const filesFromBackend = response.data;
 
-                files.forEach(dto => {
-                    const mediaItem = fileItemDtoToMediaItem(dto)
-                    get().addLibraryItem(mediaItem)
-                })
+                // Преобразуем к FileItem[]
+                const files: FileItem[] = filesFromBackend.map((item: any) => ({
+                    id: item.id,
+                    name: item.name,
+                    type: item.contentType.startsWith('video/') ? 'VIDEO' : 'IMAGE',
+                    size: item.size,
+                    duration: item.duration ?? 0,
+                    file: new File([], item.name, { type: item.contentType }), // Пустой файл (не нужен для отображения)
+                    url: item.downloadUrl,
+                }));
+
+                // Сохраняем в Zustand
+                get().addLibraryItems(files);
+
+                console.log('Загружено файлов:', files.length);
             } catch (error) {
-                console.error('Ошибка получения файлов библиотеки', error)
+                console.error('Ошибка получения файлов библиотеки', error);
             }
-        }
+        },
+
+
+
+        uploadFile: async (
+            url,
+            file,
+            onProgress,
+            onComplete
+        ) => {
+            const formData = new FormData();
+            formData.append('file', file, file.name);
+
+            try {
+                const response = await axios.post(String(url), formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                    onUploadProgress: (progressEvent) => {
+                        if (progressEvent.total) {
+                            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                            onProgress(percent);
+                        }
+                    },
+                });
+
+                const fileId = response.data?.fileId ?? null;
+                onComplete(fileId);
+            } catch (error) {
+                console.error('❌ Upload failed', error);
+                onComplete(null);
+            }
+        },
+
+
+
     }))
-)
+);

@@ -10,15 +10,16 @@ import {
 } from 'react-bootstrap'
 import {useDropzone} from 'react-dropzone'
 
-import MediaCard, {FileItem} from '@/app/components/Library/MediaCard'
+import MediaCard from '@/app/components/Library/MediaCard'
 import {closestCenter, DndContext, DragEndEvent, useDraggable} from "@dnd-kit/core";
 import {arrayMove, horizontalListSortingStrategy, SortableContext} from "@dnd-kit/sortable";
+import {FileItem} from "@/public/types/interfaces";
 
 
 const makeFile = (name: string, type: string): File =>
     new File([''], name, {type})
 
-export const sampleLibraryItems: FileItem[] = [
+ const sampleLibraryItems: FileItem[] = [
     {
         id: 'lib-1',
         file: makeFile('image1.png', 'image/png'),
