@@ -22,16 +22,25 @@ import {useLibraryStore} from "@/app/store/libraryStore";
 
 
 export default function LibraryPage() {
-    const {libraryItems, addLibraryItems, deleteLibraryItem, updateLibraryItem, getFilesInLibrary} = useLibraryStore(state => state)
+    const {
+        libraryItems,
+        addLibraryItems,
+        deleteLibraryItem,
+        updateLibraryItem,
+        getFilesInLibrary
+    } = useLibraryStore(state => state)
     const [showUploadModal, setShowUploadModal] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
-    const { uploadFile, uploadFileMetaData, addLibraryItem } = useLibraryStore();
+    const {uploadFile, uploadFileMetaData, addLibraryItem} = useLibraryStore();
 
+    useEffect(() => {
+        getFilesInLibrary()
+    }, [getFilesInLibrary])
 
     useEffect(() => {
         console.log(libraryItems)
 
-        if(libraryItems.length == 0) {
+        if (libraryItems.length == 0) {
             getFilesInLibrary()
         }
     }, []);
@@ -90,7 +99,6 @@ export default function LibraryPage() {
     }, [uploadFile, uploadFileMetaData, addLibraryItem]);
 
 
-
     const onDrop = useCallback(
         (accepted: File[]) => {
             if (accepted.length) startUpload(accepted)
@@ -105,7 +113,7 @@ export default function LibraryPage() {
     })
 
     const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
+        const {active, over} = event;
         if (over && active.id !== over.id) {
             const oldIndex = libraryItems.findIndex((i) => i.id === active.id);
             const newIndex = libraryItems.findIndex((i) => i.id === over.id);
