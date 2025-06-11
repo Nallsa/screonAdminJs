@@ -1,0 +1,139 @@
+'use client'
+import {create} from 'zustand'
+import {immer} from 'zustand/middleware/immer'
+
+export interface ScreenData {
+    id: string
+    name: string
+    online: boolean
+    groupIds: string[]
+}
+
+export interface GroupData {
+    id: string
+    name: string
+}
+
+interface ScreensState {
+    allScreens: ScreenData[]
+    filteredScreens: ScreenData[]
+    groups: GroupData[]
+
+    // UI-состояния
+    isCreatingGroup: boolean
+    newGroupName: string
+    selectedForNewGroup: string[]
+    currentQuery: string
+    currentGroupFilter: string
+
+    // методы
+    startCreateGroup: () => void
+    cancelCreateGroup: () => void
+    toggleNewGroupScreen: (screenId: string) => void
+    saveGroup: () => void
+    setNewGroupName: (name: string) => void
+    filterScreens: (query: string, groupId: string) => void
+    assignGroupsToScreen: (screenId: string, newGroupIds: string[]) => void
+
+    addScreen: (screen: ScreenData) => void
+}
+
+export const useScreensStore = create<ScreensState>()(
+    immer((set, get) => ({
+
+        allScreens: [
+            {id: 'screen1', name: 'Экран 1', online: true, groupIds: []},
+            {id: 'screen2', name: 'Экран 2', online: false, groupIds: []},
+            {id: 'screen3', name: 'Экран 3', online: true, groupIds: []},
+            {id: 'screen4', name: 'Экран 4', online: false, groupIds: []},
+        ],
+        filteredScreens: [],
+        groups: [],
+
+
+        isCreatingGroup: false,
+        newGroupName: '',
+        selectedForNewGroup: [],
+        currentQuery: '',
+        currentGroupFilter: 'all',
+
+
+        startCreateGroup: () => {
+            set(state => {
+                state.isCreatingGroup = true
+                state.newGroupName = ''
+                state.selectedForNewGroup = []
+            })
+        },
+        cancelCreateGroup: () => {
+            set(state => {
+                state.isCreatingGroup = false
+                state.newGroupName = ''
+                state.selectedForNewGroup = []
+            })
+        },
+        toggleNewGroupScreen: (screenId) => {
+            set(state => {
+                const idx = state.selectedForNewGroup.indexOf(screenId)
+                if (idx >= 0) state.selectedForNewGroup.splice(idx, 1)
+                else state.selectedForNewGroup.push(screenId)
+            })
+        },
+        saveGroup: () => {
+            set(state => {
+                const name = state.newGroupName.trim()
+                if (!name || state.selectedForNewGroup.length === 0) return
+
+                const newId = `group${state.groups.length + 1}`
+                state.groups.push({id: newId, name})
+
+                // назначаем всем выбранным экранам этот groupId
+                state.allScreens.forEach(screen => {
+                    if (state.selectedForNewGroup.includes(screen.id)) {
+                        screen.groupIds.push(newId)
+                    }
+                })
+
+                // сброс UI-состояний
+                state.isCreatingGroup = false
+                state.newGroupName = ''
+                state.selectedForNewGroup = []
+            })
+            // сразу обновляем фильтр
+            get().filterScreens(get().currentQuery, get().currentGroupFilter)
+        },
+
+        setNewGroupName: (name) => {
+            set(state => {
+                state.newGroupName = name
+            })
+        },
+
+        filterScreens: (query, groupId) => {
+            set(state => {
+                state.currentQuery = query
+                state.currentGroupFilter = groupId
+
+                state.filteredScreens = state.allScreens.filter(screen => {
+                    const matchesName = screen.name
+                        .toLowerCase()
+                        .includes(query.toLowerCase())
+                    const matchesGroup = groupId === 'all'
+                        ? true
+                        : groupId === 'nogroup'
+                            ? screen.groupIds.length === 0
+                            : screen.groupIds.includes(groupId)
+                    return matchesName && matchesGroup
+                })
+            })
+        },
+
+
+        addScreen: (screen) => {
+            set(state => {
+                state.allScreens.push(screen)
+            })
+            get().filterScreens(get().currentQuery, get().currentGroupFilter)
+        },
+    }))
+)
