@@ -180,12 +180,27 @@ import {FileItem, PlaylistItem} from "@/public/types/interfaces";
 
 interface usePlaylistState {
     playlistItems: PlaylistItem[]
-    playlistChild: FileItem[],
+    playlistToEdit: PlaylistItem | null,
 
-    getPlaylists: () => Promise<void>,
+    getPlaylists: () => Promise<void>
+
+    sendPlaylist: (playlistChildren: FileItem[], playListName: string) => Promise<boolean>
+
+    updatePlaylist: () => Promise<boolean>
+
+    deletePlaylist: (playlist: PlaylistItem | null) => Promise<boolean>
+
+
     addPlaylists: (playlists: PlaylistItem[]) => void
+
     clearPlayLists: () => void,
+
     addPlaylist: (playlist: PlaylistItem) => void
+
+    setPlaylistToEdit: (playlist: PlaylistItem | null) => void,
+
+    delPlaylistById: (playlistId: string) => void,
+
 
 }
 
@@ -193,7 +208,7 @@ interface usePlaylistState {
 export const usePlaylistStore = create<usePlaylistState>()(
     immer<usePlaylistState>((set, get) => ({
         playlistItems: [],
-        playlistChild: [],
+        playlistToEdit: null,
 
 
         getPlaylists: async () => {
@@ -230,6 +245,77 @@ export const usePlaylistStore = create<usePlaylistState>()(
             }
         },
 
+        sendPlaylist: async (playlistChildren: FileItem[], playListName: string) => {
+
+            const data = {
+                playListName: playListName,
+                userId: getValueInStorage('userId'),
+                organizationId: getValueInStorage('organizationId'),
+                isPublic: true,
+                items: playlistChildren.map((item, index) => ({
+                    fileId: item.id,
+                    orderIndex: index
+                }))
+            }
+
+            const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+
+            const response = await axios.post(`${SERVER_URL}playlists/create`, data)
+            const result: boolean = response.data
+
+            return result
+        },
+
+
+        updatePlaylist: async () => {
+            const {playlistToEdit} = get()
+            if (!playlistToEdit) return false
+            const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+
+
+            const response = await axios.post(`${SERVER_URL}playlists/create`, playlistToEdit)
+            const result = response.data
+
+
+            return result === true
+        },
+
+
+        deletePlaylist: async (playlist) => {
+            const {playlistToEdit, delPlaylistById} = get()
+            let delPlaylist: PlaylistItem | null = playlist
+
+            if (playlistToEdit) {
+                console.log('[deletePlaylist] Overriding with playlistToEdit')
+                delPlaylist = playlistToEdit
+            }
+
+            if (!delPlaylist) {
+                console.warn('[deletePlaylist] No playlist to delete, aborting.')
+                return false
+            }
+
+            const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL
+
+            try {
+                const response = await axios.delete(`${SERVER_URL}playlists/${delPlaylist.id}`)
+
+                const result = response.data
+
+                if (result) {
+                    delPlaylistById(delPlaylist.id)
+                    return result === true
+
+                } else {
+                    return false
+                }
+            } catch (error) {
+                console.error('[deletePlaylist] Error during deletion:', error)
+                return false
+            }
+        },
+
+
         addPlaylist: (playlist) => {
             set(state => {
                 state.playlistItems.push(playlist)
@@ -241,6 +327,21 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 state.playlistItems = playlists;
             });
         },
+
+
+        setPlaylistToEdit: (playlist) => {
+            set(state => {
+                state.playlistToEdit = playlist;
+            });
+        },
+
+
+        delPlaylistById: (playlistId: string) => {
+            set(state => ({
+                playlistItems: state.playlistItems.filter(p => p.id !== playlistId)
+            }));
+        },
+
 
         clearPlayLists: () => {
             set(state => {

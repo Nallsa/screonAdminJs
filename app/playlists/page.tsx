@@ -16,7 +16,7 @@ const formatDuration = (sec: number) => {
 }
 
 export default function PlaylistsPage() {
-    const {playlistItems, getPlaylists, addPlaylist} = usePlaylistStore()
+    const {playlistItems, getPlaylists, addPlaylist, setPlaylistToEdit} = usePlaylistStore()
     const router = useRouter()
     useEffect(() => {
         if (playlistItems.length === 0) {
@@ -39,6 +39,14 @@ export default function PlaylistsPage() {
     }
 
 
+
+
+
+    const handleEditPlaylist = (playlist: PlaylistItem) => {
+        setPlaylistToEdit(playlist)
+    }
+
+
     return (
         <div className="p-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -53,7 +61,8 @@ export default function PlaylistsPage() {
 
                     <Link
                         key={p.id}
-                        href={`/playlistItems/${p.id}`}
+                        href={`/playlists/${p.id}`}
+                        onClick={() => handleEditPlaylist(p)}
                         className="text-decoration-none"
                     >
                         <div
