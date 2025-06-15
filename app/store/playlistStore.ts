@@ -181,12 +181,13 @@ import {FileItem, PlaylistItem} from "@/public/types/interfaces";
 interface usePlaylistState {
     playlistItems: PlaylistItem[]
     playlistToEdit: PlaylistItem | null,
+    playlistToCreate: PlaylistItem | null,
 
     getPlaylists: () => Promise<void>
 
-    sendPlaylist: (playlistChildren: FileItem[], playListName: string) => Promise<boolean>
+    createPlaylist: (playlistChildren: FileItem[], name: string) => Promise<boolean>
 
-    updatePlaylist: () => Promise<boolean>
+    updatePlaylist:(playlistChildren: FileItem[], name: string) => Promise<boolean>
 
     deletePlaylist: (playlist: PlaylistItem | null) => Promise<boolean>
 
@@ -199,6 +200,10 @@ interface usePlaylistState {
 
     setPlaylistToEdit: (playlist: PlaylistItem | null) => void,
 
+    setPlaylistToCreate: (playlist: PlaylistItem) => void,
+
+    updatePlaylistItem: (playlist: PlaylistItem) => void,
+
     delPlaylistById: (playlistId: string) => void,
 
 
@@ -209,7 +214,7 @@ export const usePlaylistStore = create<usePlaylistState>()(
     immer<usePlaylistState>((set, get) => ({
         playlistItems: [],
         playlistToEdit: null,
-
+        playlistToCreate: null,
 
         getPlaylists: async () => {
             try {
@@ -226,58 +231,55 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
                 const response = await axios.get(`${SERVER_URL}playlists/organizations/${organizationId}`);
+
                 const playlists = response.data;
 
-                const formatted: PlaylistItem[] = playlists.map((playlist: any) => ({
-                    id: playlist.id,
-                    name: playlist.name,
-                    organizationId: playlist.organizationId,
-                    createdBy: playlist.createdBy,
-                    previewUrl: '',
-                    duration: 0,
-                    active: true,
-                    items: (playlist.items ?? []).sort((a: any, b: any) => a.orderIndex - b.orderIndex),
-                }));
-
-                get().addPlaylists(formatted);
+                get().addPlaylists(playlists);
             } catch (error) {
                 console.error('Ошибка при получении плейлистов:', error);
             }
         },
 
-        sendPlaylist: async (playlistChildren: FileItem[], playListName: string) => {
-
+        createPlaylist: async (playlistChildren: FileItem[], name: string) => {
+            const {addPlaylist} = get()
             const data = {
-                playListName: playListName,
+                playListName: name,
                 userId: getValueInStorage('userId'),
                 organizationId: getValueInStorage('organizationId'),
                 isPublic: true,
-                items: playlistChildren.map((item, index) => ({
-                    fileId: item.id,
-                    orderIndex: index
-                }))
+                childFiles: playlistChildren
             }
 
             const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
             const response = await axios.post(`${SERVER_URL}playlists/create`, data)
-            const result: boolean = response.data
+            const result: PlaylistItem = response.data
 
-            return result
+            console.log(result)
+
+            addPlaylist(result)
+
+            return !!result
         },
 
 
-        updatePlaylist: async () => {
-            const {playlistToEdit} = get()
+        updatePlaylist: async (playlistChildren: FileItem[], name: string) => {
+            const {playlistToEdit, updatePlaylistItem} = get()
             if (!playlistToEdit) return false
+
             const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
+            const formatted: PlaylistItem = {
+                ...playlistToEdit,
+                name: name,
+                childFiles: playlistChildren,
+            }
 
-            const response = await axios.post(`${SERVER_URL}playlists/create`, playlistToEdit)
-            const result = response.data
+            const response = await axios.put(`${SERVER_URL}playlists/update`, formatted)
+            const result: PlaylistItem = response.data
+            updatePlaylistItem(result)
 
-
-            return result === true
+            return !!result
         },
 
 
@@ -335,12 +337,40 @@ export const usePlaylistStore = create<usePlaylistState>()(
             });
         },
 
+        setPlaylistToCreate: (playlist) => {
+            set(state => {
+                state.playlistToCreate = playlist;
+            });
+        },
+
 
         delPlaylistById: (playlistId: string) => {
             set(state => ({
                 playlistItems: state.playlistItems.filter(p => p.id !== playlistId)
             }));
         },
+
+        updatePlaylistItem: (updatedPlaylist) => {
+            console.log('[updatePlaylistItem] Обновление плейлиста:', updatedPlaylist);
+
+            set(state => {
+                const exists = state.playlistItems.some(item => item.id === updatedPlaylist.id);
+                if (!exists) {
+                    console.warn(`[updatePlaylistItem] Плейлист с id ${updatedPlaylist.id} не найден`);
+                }
+
+                const updatedItems = state.playlistItems.map(item =>
+                    item.id === updatedPlaylist.id ? updatedPlaylist : item
+                );
+
+                console.log('[updatePlaylistItem] Результат после обновления:', updatedItems);
+
+                return {
+                    playlistItems: updatedItems
+                };
+            });
+        },
+
 
 
         clearPlayLists: () => {

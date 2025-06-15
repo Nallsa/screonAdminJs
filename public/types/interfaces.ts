@@ -3,8 +3,8 @@ import type {UniqueIdentifier} from "@dnd-kit/core";
 export interface PlaylistItem {
     id: string
     name: string
-    duration: number // в секундах
-    isActive: boolean
+    organizationId: string
+    createdBy: string
     previewUrl: string | null
     childFiles: FileItem[]
 }
@@ -37,7 +37,7 @@ export interface PlaylistItem {
 
 export interface FileItem {
     id: string;
-    file: File;
+    file?: File | null;
     name: string;
     type: 'VIDEO' | 'IMAGE';
     size: number;

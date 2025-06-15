@@ -35,23 +35,23 @@ export default function PlaylistItemCard({ item }: { item: PlaylistItem }) {
     return (
         <div ref={setNodeRef} style={style} className="card shadow-sm" {...attributes} {...listeners}>
             <div className="position-relative">
-                <img src={item.image} alt={item.title} className="card-img-top" />
+                <img src={item.previewUrl} alt={item.name} className="card-img-top" />
                 <div className="position-absolute top-0 start-0 p-1">
                     <span role="img" aria-label="drag">⠿</span>
                 </div>
             </div>
             <div className="card-body p-2">
-                <div className="small fw-bold mb-1">{item.title}</div>
+                <div className="small fw-bold mb-1">{item.name}</div>
                 <div className="badge bg-success mb-2">{item.type}</div>
                 <div className="d-flex align-items-center mb-2">
                     <span className="me-1 small">Duration:</span>
-                    <Form.Control
-                        type="number"
-                        size="sm"
-                        value={item.duration}
-                        style={{ width: 60 }}
-                        readOnly
-                    />
+                    {/*<Form.Control*/}
+                    {/*    type="number"*/}
+                    {/*    size="sm"*/}
+                    {/*    value={item.duration}*/}
+                    {/*    style={{ width: 60 }}*/}
+                    {/*    readOnly*/}
+                    {/*/>*/}
                     <span className="ms-1 small">sec</span>
                 </div>
                 <div className="d-flex justify-content-between">

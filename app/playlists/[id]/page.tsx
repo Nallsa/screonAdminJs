@@ -27,7 +27,7 @@ export default function PlaylistContentPage() {
     const {getFilesInLibrary, libraryItems} = useLibraryStore(state => state)
 
     const {
-        sendPlaylist,
+        createPlaylist,
         playlistToEdit,
         setPlaylistToEdit,
         updatePlaylist,
@@ -86,13 +86,13 @@ export default function PlaylistContentPage() {
 
     async function handleSavePlaylist() {
         if (playlistToEdit) {
-            const res = await updatePlaylist()
+            const res = await updatePlaylist(items, name)
 
             if (res) {
                 router.push('/playlists')
             }
         } else {
-            const res = await sendPlaylist(items, name)
+            const res = await createPlaylist(items, name)
 
             if (res) {
                 router.push('/playlists')
@@ -199,7 +199,7 @@ export default function PlaylistContentPage() {
                                     onClick={() => addToPlaylist(li)}
                                 >
                                     <img
-                                        src={li.url}
+                                        src={li.previewUrl}
                                         alt={li.name}
                                         style={{width: 40, height: 40, objectFit: 'cover', marginRight: 8}}
                                     />

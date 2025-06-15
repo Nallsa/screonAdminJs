@@ -36,7 +36,8 @@ export default function UploadZone() {
                             type: file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE',
                             size: file.size,
                             duration: 0,
-                            url: URL.createObjectURL(file),
+                            previewUrl: URL.createObjectURL(file),
+                            orderIndex: 0
                         }
                         addLibraryItem(newItem)
                         await uploadFileMetaData(newItem)
