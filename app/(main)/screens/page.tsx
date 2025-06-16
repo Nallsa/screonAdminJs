@@ -24,7 +24,7 @@ export default function ScreensPage() {
         saveGroup,
 
         filterScreens,
-        addScreen,
+        addPairingConfirm,
     } = useScreensStore()
 
 
@@ -48,14 +48,7 @@ export default function ScreensPage() {
             return
         }
 
-
-        addScreen({
-            id: screenCode,
-            name: `Экран ${screenCode}`,
-            online: true,
-            groupIds: []
-        })
-        setShowAddModal(false)
+        addPairingConfirm(screenCode).then(r => setShowAddModal(false))
     }
 
 
@@ -177,7 +170,7 @@ export default function ScreensPage() {
                 <Modal.Body className="d-flex justify-content-center">
                     <Form.Group controlId="screenCode" className="w-50">
                         <Form.Control
-                            size="xl"
+                            size="sm"
                             type="text"
                             inputMode="numeric"
                             pattern="\d*"

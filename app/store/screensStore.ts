@@ -1,7 +1,10 @@
 'use client'
-import { create } from 'zustand'
-import { immer } from 'zustand/middleware/immer'
-import { GroupData, ScreenData } from "@/public/types/interfaces";
+import {create} from 'zustand'
+import {immer} from 'zustand/middleware/immer'
+import {FileItem, GroupData, ScreenData} from "@/public/types/interfaces";
+import axios from "axios";
+import {getValueInStorage} from "@/app/API/localStorage";
+import {promises} from "node:dns";
 
 interface ScreensState {
     allScreens: ScreenData[]
@@ -25,23 +28,26 @@ interface ScreensState {
     assignGroupsToScreen: (screenId: string, newGroupIds: string[]) => void
 
     addScreen: (screen: ScreenData) => void
+
+    addPairingConfirm: (code: string) => Promise<void>
+
 }
 
 export const useScreensStore = create<ScreensState>()(
     immer((set, get) => ({
 
         allScreens: [
-            { id: 'screen1', name: 'Экран 1', online: true, groupIds: [] as string[] },
-            { id: 'screen2', name: 'Экран 2', online: false, groupIds: [] as string[] },
-            { id: 'screen3', name: 'Экран 3', online: true, groupIds: [] as string[] },
-            { id: 'screen4', name: 'Экран 4', online: false, groupIds: [] as string[] },
+            {id: 'screen1', name: 'Экран 1', online: true, groupIds: [] as string[]},
+            {id: 'screen2', name: 'Экран 2', online: false, groupIds: [] as string[]},
+            {id: 'screen3', name: 'Экран 3', online: true, groupIds: [] as string[]},
+            {id: 'screen4', name: 'Экран 4', online: false, groupIds: [] as string[]},
         ],
         filteredScreens: [] as ScreenData[],
         groups: [] as GroupData[],
 
         isCreatingGroup: false,
         newGroupName: '',
-        selectedForNewGroup: [],
+        selectedForNewGroup: [] as string[],
         currentQuery: '',
         currentGroupFilter: 'all',
 
@@ -72,7 +78,7 @@ export const useScreensStore = create<ScreensState>()(
                 if (!name || state.selectedForNewGroup.length === 0) return
 
                 const newId = `group${state.groups.length + 1}`
-                state.groups.push({ id: newId, name })
+                state.groups.push({id: newId, name})
 
                 // Назначаем всем выбранным экранам этот groupId
                 state.allScreens.forEach(screen => {
@@ -129,6 +135,37 @@ export const useScreensStore = create<ScreensState>()(
                 state.allScreens.push(screen)
             })
             get().filterScreens(get().currentQuery, get().currentGroupFilter)
+        },
+
+
+        addPairingConfirm: async (code) => {
+
+            try {
+                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+
+                const userId = getValueInStorage("userId")
+                const token = getValueInStorage("accessToken"); // или где у тебя хранится токен
+
+
+                if (!userId || !token) return
+
+                const response = await axios.post(
+                    `${SERVER_URL}screens/pairing/confirm`,
+                    {
+                        code,
+                        userId
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        }
+                    }
+                );
+
+                console.log('uploadMediaData response:', response.data)
+            } catch (error) {
+
+            }
         },
     }))
 )
