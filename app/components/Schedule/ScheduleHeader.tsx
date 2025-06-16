@@ -1,4 +1,3 @@
-// app/components/Schedule/ScheduleHeader.tsx
 'use client'
 import React from 'react'
 import {Button} from 'react-bootstrap'

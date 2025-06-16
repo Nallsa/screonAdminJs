@@ -1,10 +1,9 @@
-// app/components/Schedule/ScheduleSettingsPanel.tsx
 'use client'
 import React from 'react'
-import {Form, Button, Dropdown, InputGroup} from 'react-bootstrap'
+import {Form, Button, Dropdown, InputGroup, Card, Col, Row} from 'react-bootstrap'
 import {getCurrentWeekByDate, parseDayToDate, RU_DAYS, timeToMinutes} from '@/app/lib/scheduleUtils'
 import {useScheduleStore} from '@/app/store/scheduleStore'
-import {motion, LayoutGroup} from 'framer-motion'
+import {motion, LayoutGroup, AnimatePresence} from 'framer-motion'
 
 
 export default function ScheduleSettingsPanel() {
@@ -26,6 +25,20 @@ export default function ScheduleSettingsPanel() {
         setEndTime,
         selectedDays,
         toggleDay,
+        showMode,
+        cycleMinutes,
+        pauseMinutes,
+        intervalMinutes,
+        setShowMode,
+        setCycleMinutes,
+        setPauseMinutes,
+        setIntervalMinutes,
+        maxPerDay,
+        maxPerHour,
+        maxTotalDuration,
+        setMaxPerDay,
+        setMaxPerHour,
+        setMaxTotalDuration,
         addBlock,
         scheduledItemsFixed,
         scheduledItemsCalendar,
@@ -97,15 +110,6 @@ export default function ScheduleSettingsPanel() {
                         </motion.div>
                     )}
 
-                    <motion.div layout>
-                        <Form.Check
-                            inline
-                            label="Зациклено"
-                            type="checkbox"
-                            checked={isPlayConstantly}
-                            onChange={togglePlayConstantly}
-                        />
-                    </motion.div>
 
                     <motion.div layout>
                         <Form.Check
@@ -144,35 +148,198 @@ export default function ScheduleSettingsPanel() {
                         </InputGroup>
                     </motion.div>
 
-                    <motion.div layout>
-                        <Dropdown onSelect={k => setSelectedPlaylist(k!)}>
-                            <Dropdown.Toggle>{selectedPlaylist}</Dropdown.Toggle>
-                            <Dropdown.Menu>
-                                {playlists.map(pl => (
-                                    <Dropdown.Item key={pl} eventKey={pl}>
-                                        {pl}
-                                    </Dropdown.Item>
-                                ))}
-                            </Dropdown.Menu>
-                        </Dropdown>
-                    </motion.div>
+                    <Row className="g-3 d-flex align-items-center justify-content-center">
 
-                    <motion.div layout style={{display: 'flex', gap: 8}}>
-                        {RU_DAYS.map(d => (
-                            <motion.div layout key={d}>
-                                <Button
-                                    size="sm"
-                                    variant={selectedDays.includes(d) ? 'success' : 'outline-secondary'}
-                                    onClick={() => toggleDay(d)}
-                                >
-                                    {d}
-                                </Button>
+                        <Col xs="auto">
+                            <motion.div layout>
+                                <Dropdown onSelect={k => setSelectedPlaylist(k!)}>
+                                    <Dropdown.Toggle>{selectedPlaylist}</Dropdown.Toggle>
+                                    <Dropdown.Menu>
+                                        {playlists.map(pl => (
+                                            <Dropdown.Item key={pl} eventKey={pl}>
+                                                {pl}
+                                            </Dropdown.Item>
+                                        ))}
+                                    </Dropdown.Menu>
+                                </Dropdown>
                             </motion.div>
-                        ))}
+                        </Col>
+
+                        <Col xs="auto">
+                            <motion.div layout style={{display: 'flex', gap: 8}}>
+                                {RU_DAYS.map(d => (
+                                    <motion.div layout key={d}>
+                                        <Button
+                                            size="sm"
+                                            variant={selectedDays.includes(d) ? 'success' : 'outline-secondary'}
+                                            onClick={() => toggleDay(d)}
+                                        >
+                                            {d}
+                                        </Button>
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+                        </Col>
+
+                        <Col xs="auto">
+                            <motion.div layout>
+                                <Button onClick={handleAdd}>Добавить</Button>
+                            </motion.div>
+                        </Col>
+                    </Row>
+
+                    {/* Как показывать */}
+
+                    <motion.div layout className="mb-1">
+                        <Card>
+                            <Card.Header>Как показывать</Card.Header>
+                            <Card.Body>
+
+                                <motion.div layout>
+                                    <Form.Check
+                                        inline
+                                        label="Зациклено"
+                                        type="checkbox"
+                                        checked={isPlayConstantly}
+                                        onChange={togglePlayConstantly}
+                                        className="form-check-square mb-1"
+                                    />
+                                </motion.div>
+
+
+                                {!isPlayConstantly && (
+                                    <motion.div
+                                        layout
+                                        key="show-mode-block"
+                                        initial={{opacity: 0, height: 0}}
+                                        animate={{opacity: 1, height: 'auto'}}
+                                        exit={{opacity: 0, height: 0}}
+                                        className="overflow-hidden"
+                                    >
+
+                                        <Form.Check
+                                            type="checkbox"
+                                            id="mode-cycle"
+                                            name="showMode"
+                                            label="Играть X минут, потом пауза Y минут"
+                                            checked={showMode === 'cycle'}
+                                            onChange={() => setShowMode('cycle')}
+                                            className="form-check-square mb-2"
+                                        />
+
+                                        {showMode === 'cycle' && (
+                                            <div className="d-flex align-items-center gap-3 ps-4 mb-3">
+                                                <InputGroup style={{width: 240}}>
+                                                    <InputGroup.Text>Играть</InputGroup.Text>
+                                                    <Form.Control
+                                                        type="number"
+                                                        min={0}
+                                                        value={cycleMinutes}
+                                                        onChange={e => setCycleMinutes(+e.target.value)}
+                                                    />
+                                                    <InputGroup.Text>мин</InputGroup.Text>
+                                                </InputGroup>
+
+                                                <InputGroup style={{width: 240}}>
+                                                    <InputGroup.Text>Пауза</InputGroup.Text>
+                                                    <Form.Control
+                                                        type="number"
+                                                        min={0}
+                                                        value={pauseMinutes}
+                                                        onChange={e => setPauseMinutes(+e.target.value)}
+                                                    />
+                                                    <InputGroup.Text>мин</InputGroup.Text>
+                                                </InputGroup>
+                                            </div>
+                                        )}
+
+                                        <Form.Check
+                                            type="checkbox"
+                                            id="mode-interval"
+                                            name="showMode"
+                                            label="Показывать раз в X минут"
+                                            checked={showMode === 'interval'}
+                                            onChange={() => setShowMode('interval')}
+                                            className="form-check-square mb-2"
+                                        />
+
+                                        {showMode === 'interval' && (
+                                            <div className="ps-4" style={{maxWidth: 240}}>
+                                                <InputGroup>
+                                                    <Form.Control
+                                                        type="number"
+                                                        min={0}
+                                                        value={intervalMinutes}
+                                                        onChange={e => setIntervalMinutes(+e.target.value)}
+                                                    />
+                                                    <InputGroup.Text>мин</InputGroup.Text>
+                                                </InputGroup>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                )}
+
+                            </Card.Body>
+                        </Card>
                     </motion.div>
 
+                    {/* Ограничения */}
                     <motion.div layout>
-                        <Button onClick={handleAdd}>Добавить</Button>
+                        <Card>
+                            <Card.Header>Ограничения</Card.Header>
+                            <Card.Body>
+                                <div className="d-flex flex-column gap-3">
+                                    <motion.div
+                                        layout
+                                        className="d-flex align-items-center"
+                                        style={{maxWidth: 400}}
+                                    >
+                                        <InputGroup>
+                                            <InputGroup.Text>Макс. показов/день</InputGroup.Text>
+                                            <Form.Control
+                                                type="number"
+                                                min={0}
+                                                value={maxPerDay}
+                                                onChange={e => setMaxPerDay(+e.target.value)}
+                                            />
+                                        </InputGroup>
+                                    </motion.div>
+
+                                    <motion.div
+                                        layout
+                                        className="d-flex align-items-center"
+                                        style={{maxWidth: 400}}
+                                    >
+                                        <InputGroup>
+                                            <InputGroup.Text>Макс. показов/час</InputGroup.Text>
+                                            <Form.Control
+                                                type="number"
+                                                min={0}
+                                                value={maxPerHour}
+                                                onChange={e => setMaxPerHour(+e.target.value)}
+                                            />
+                                        </InputGroup>
+                                    </motion.div>
+
+                                    <motion.div
+                                        layout
+                                        className="d-flex align-items-center"
+                                        style={{maxWidth: 400}}
+                                    >
+                                        <InputGroup>
+                                            <InputGroup.Text>Макс. длит. в день</InputGroup.Text>
+                                            <Form.Control
+                                                type="number"
+                                                min={0}
+                                                value={maxTotalDuration}
+                                                onChange={e => setMaxTotalDuration(+e.target.value)}
+                                            />
+                                            <InputGroup.Text>мин</InputGroup.Text>
+                                        </InputGroup>
+                                    </motion.div>
+                                </div>
+                            </Card.Body>
+                        </Card>
                     </motion.div>
                 </motion.div>
             </LayoutGroup>

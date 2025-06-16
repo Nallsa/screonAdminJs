@@ -1,4 +1,3 @@
-// app/store/scheduleStore.ts
 'use client'
 
 import {create} from 'zustand'
@@ -9,6 +8,8 @@ import {
     normalizeTime
 } from '@/app/lib/scheduleUtils'
 import {ScheduledBlock} from "@/public/types/interfaces";
+
+type ShowMode = 'cycle' | 'interval'
 
 interface ScheduleState {
     // state
@@ -23,6 +24,17 @@ interface ScheduleState {
     startTime: string
     endTime: string
     selectedDays: string[]
+
+    // как показывать
+    showMode: ShowMode
+    cycleMinutes: number
+    pauseMinutes: number
+    intervalMinutes: number
+
+    // ограничения
+    maxPerDay: number
+    maxPerHour: number
+    maxTotalDuration: number
 
     scheduledItemsFixed: ScheduledBlock[]
     scheduledItemsCalendar: ScheduledBlock[]
@@ -43,6 +55,17 @@ interface ScheduleState {
     removeBlock: (b: ScheduledBlock) => void
 
     setHoveredBlock: (b: ScheduledBlock | null) => void
+
+    // как показывать
+    setShowMode: (m: ShowMode) => void
+    setCycleMinutes: (m: number) => void
+    setPauseMinutes: (m: number) => void
+    setIntervalMinutes: (m: number) => void
+
+    // ограничения
+    setMaxPerDay: (n: number) => void
+    setMaxPerHour: (n: number) => void
+    setMaxTotalDuration: (n: number) => void
 }
 
 export const useScheduleStore = create<ScheduleState>()(
@@ -65,6 +88,15 @@ export const useScheduleStore = create<ScheduleState>()(
             scheduledItemsFixed: [],
             scheduledItemsCalendar: [],
             hoveredBlock: null,
+
+            showMode: 'cycle',
+            cycleMinutes: 10,
+            pauseMinutes: 50,
+            intervalMinutes: 60,
+
+            maxPerDay: 0,
+            maxPerHour: 0,
+            maxTotalDuration: 0,
 
             onDateSelected: (d) => set(s => {
                 s.selectedDate = d
@@ -134,6 +166,30 @@ export const useScheduleStore = create<ScheduleState>()(
 
             setHoveredBlock: b => set(s => {
                 s.hoveredBlock = b
+            }),
+
+            setShowMode: m => set(s => {
+                s.showMode = m
+            }),
+            setCycleMinutes: m => set(s => {
+                s.cycleMinutes = m
+            }),
+            setPauseMinutes: m => set(s => {
+                s.pauseMinutes = m
+            }),
+            setIntervalMinutes: m => set(s => {
+                s.intervalMinutes = m
+            }),
+
+
+            setMaxPerDay: n => set(s => {
+                s.maxPerDay = n
+            }),
+            setMaxPerHour: n => set(s => {
+                s.maxPerHour = n
+            }),
+            setMaxTotalDuration: n => set(s => {
+                s.maxTotalDuration = n
             }),
         }
     })

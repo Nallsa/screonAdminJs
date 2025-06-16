@@ -1,4 +1,3 @@
-// app/lib/scheduleUtils.ts
 export const RU_DAYS = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"]
 export const RU_DAY_INDEX: Record<string, number> = {
     ПН: 0, ВТ: 1, СР: 2, ЧТ: 3, ПТ: 4, СБ: 5, ВС: 6
