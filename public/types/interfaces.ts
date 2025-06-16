@@ -18,3 +18,22 @@ export interface FileItem {
     duration: number;
     url: string;
 }
+
+export interface ScreenData {
+    id: string
+    name: string
+    online: boolean
+    groupIds: string[]
+}
+
+export interface GroupData {
+    id: string
+    name: string
+}
+
+export interface ScheduledBlock {
+    day: string
+    start: string
+    end: string
+    playlist: string
+}
