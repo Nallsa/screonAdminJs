@@ -1,7 +1,7 @@
 'use client'
 
 import React, {useEffect, useState} from 'react'
-import {Button, Form, Dropdown, InputGroup} from 'react-bootstrap'
+import {Button, Form, Dropdown, InputGroup, Modal} from 'react-bootstrap'
 import {v4 as uuid} from 'uuid'
 
 import ScreenCard from '@/app/components/Screens/ScreenCard'
@@ -27,9 +27,36 @@ export default function ScreensPage() {
         addScreen,
     } = useScreensStore()
 
-    // локальные UI-стейты
+
     const [search, setSearch] = useState('')
     const [groupFilter, setGroupFilter] = useState<'all' | 'nogroup' | string>('all')
+
+    // для модалки Добавить экран
+    const [showAddModal, setShowAddModal] = useState(false)
+    const [screenCode, setScreenCode] = useState('')
+
+    const handleOpenAddModal = () => {
+        setScreenCode('')
+        setShowAddModal(true)
+    }
+    const handleCloseAddModal = () => {
+        setShowAddModal(false)
+    }
+    const handleConfirmAdd = () => {
+        if (!screenCode) {
+            alert('Пожалуйста, введите код экрана')
+            return
+        }
+
+
+        addScreen({
+            id: screenCode,
+            name: `Экран ${screenCode}`,
+            online: true,
+            groupIds: []
+        })
+        setShowAddModal(false)
+    }
 
 
     // первичный фильтр
@@ -45,11 +72,11 @@ export default function ScreensPage() {
 
     return (
         <div className="p-4">
-            {/* заголовок */}
+            {/* хэдер */}
             <div className="d-flex justify-content-between align-items-center mb-3 p-3 rounded">
                 <h4 className="mb-0">Экраны</h4>
                 <div className="d-flex gap-2">
-                    <Button variant="success">
+                    <Button variant="success" onClick={handleOpenAddModal}>
                         Добавить экран
                     </Button>
                     <Button variant="primary" onClick={startCreateGroup}>
@@ -123,6 +150,50 @@ export default function ScreensPage() {
                     />
                 ))}
             </div>
+
+
+            {/* добавление экрана */}
+            <Modal show={showAddModal} onHide={handleCloseAddModal} centered>
+                <Modal.Header
+                    className="border-0 position-relative"
+                    style={{justifyContent: 'center'}}
+                >
+                    <Modal.Title>Введите код экрана</Modal.Title>
+
+                    {/* свой крестик */}
+                    <button
+                        type="button"
+                        className="btn-close"
+                        aria-label="Close"
+                        onClick={handleCloseAddModal}
+                        style={{
+                            position: 'absolute',
+                            right: '1rem',
+                            top: '1rem',
+                        }}
+                    />
+                </Modal.Header>
+
+                <Modal.Body className="d-flex justify-content-center">
+                    <Form.Group controlId="screenCode" className="w-50">
+                        <Form.Control
+                            size="xl"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="\d*"
+                            placeholder="12345"
+                            value={screenCode}
+                            onChange={e => setScreenCode(e.target.value.replace(/\D/g, ''))}
+                        />
+                    </Form.Group>
+                </Modal.Body>
+
+                <Modal.Footer className="border-0 justify-content-center">
+                    <Button variant="success" onClick={handleConfirmAdd}>
+                        Добавить экран
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </div>
     )
 }

@@ -1,3 +1,5 @@
+import type {UniqueIdentifier} from "@dnd-kit/core";
+
 export interface PlaylistItem {
     id: string
     name: string
@@ -6,6 +8,7 @@ export interface PlaylistItem {
     previewUrl: string | null
     childFiles: FileItem[]
 }
+
 
 export interface FileItem {
     id: string;
@@ -17,6 +20,7 @@ export interface FileItem {
     previewUrl: string;
     orderIndex: number
 }
+
 
 export interface ScreenData {
     id: string
