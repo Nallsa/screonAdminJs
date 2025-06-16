@@ -7,6 +7,7 @@ import Link from "next/link";
 import {useRouter} from 'next/navigation'
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {PlaylistItem} from "@/public/types/interfaces";
+import {getValueInStorage} from "@/app/API/localStorage";
 
 
 const formatDuration = (sec: number) => {
@@ -16,7 +17,7 @@ const formatDuration = (sec: number) => {
 }
 
 export default function PlaylistsPage() {
-    const {playlistItems, getPlaylists, addPlaylist} = usePlaylistStore()
+    const {playlistItems, getPlaylists, addPlaylist, setPlaylistToEdit, setPlaylistToCreate} = usePlaylistStore()
     const router = useRouter()
     useEffect(() => {
         if (playlistItems.length === 0) {
@@ -24,18 +25,22 @@ export default function PlaylistsPage() {
         }
     }, [getPlaylists, playlistItems.length])
 
-    const handleNewPlaylist = () => {
-        const newPlaylist: PlaylistItem = {
-            id: "1",
-            name: 'Новый плейлист',
-            duration: 0,
-            isActive: false,
-            thumbnail: '',
-            childFiles: [],
-        }
-        addPlaylist(newPlaylist)
 
-        router.push(`/playlists/${newPlaylist.id}`)
+    const handleNewPlaylist = () => {
+        const userId = getValueInStorage('userId')
+        const organizationId = getValueInStorage('organizationId')
+
+        if (userId?.trim() && organizationId?.trim()) {
+            router.push(`/playlists/0`)
+        } else {
+            console.warn("userId или organizationId отсутствует или пуст");
+        }
+    }
+
+
+
+    const handleEditPlaylist = (playlist: PlaylistItem) => {
+        setPlaylistToEdit(playlist)
     }
 
 
@@ -53,7 +58,8 @@ export default function PlaylistsPage() {
 
                     <Link
                         key={p.id}
-                        href={`/playlistItems/${p.id}`}
+                        href={`/playlists/${p.id}`}
+                        onClick={() => handleEditPlaylist(p)}
                         className="text-decoration-none"
                     >
                         <div
@@ -64,7 +70,7 @@ export default function PlaylistsPage() {
 
                             <div style={{height: 140, overflow: 'hidden', background: '#000'}}>
                                 <img
-                                    src={p.thumbnail}
+                                    src={p.previewUrl ?? ""}
                                     alt={p.name}
                                     style={{width: '100%', height: '100%', objectFit: 'cover'}}
                                 />
@@ -72,16 +78,11 @@ export default function PlaylistsPage() {
                             <div className="p-2">
                                 <div style={{fontWeight: 500}}>{p.name}</div>
                                 <div className="d-flex justify-content-between align-items-center mt-2">
-                                    {p.isActive && (
-                                        <Badge bg="success" className="px-3 py-1 rounded-pill">
-                                            ACTIVE
-                                        </Badge>
-                                    )}
-                                    <div
-                                        className="border rounded-pill px-2 py-1 text-muted small d-flex align-items-center gap-1">
-                                        <i className="bi bi-clock"/>
-                                        {formatDuration(p.duration)}
-                                    </div>
+                                    {/*<div*/}
+                                    {/*    className="border rounded-pill px-2 py-1 text-muted small d-flex align-items-center gap-1">*/}
+                                    {/*    <i className="bi bi-clock"/>*/}
+                                    {/*    {formatDuration(p.duration)}*/}
+                                    {/*</div>*/}
                                 </div>
                             </div>
                         </div>

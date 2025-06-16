@@ -16,14 +16,23 @@ import {arrayMove, horizontalListSortingStrategy, SortableContext} from "@dnd-ki
 import {FileItem} from "@/public/types/interfaces";
 import {useLibraryStore} from "@/app/store/libraryStore";
 import UploadZone from "@/app/components/Library/UploadZone";
+import {usePlaylistStore} from "@/app/store/playlistStore";
+import {log} from "node:util";
 
 
 export default function PlaylistContentPage() {
 
     const router = useRouter()
 
-    const libraryItems = useLibraryStore(state => state.libraryItems)
-    const getFilesInLibrary = useLibraryStore(state => state.getFilesInLibrary)
+    const {getFilesInLibrary, libraryItems} = useLibraryStore(state => state)
+
+    const {
+        createPlaylist,
+        playlistToEdit,
+        setPlaylistToEdit,
+        updatePlaylist,
+        deletePlaylist
+    } = usePlaylistStore(state => state)
 
     const [items, setItems] = useState<FileItem[]>([])
 
@@ -31,6 +40,25 @@ export default function PlaylistContentPage() {
     const [isEditingName, setIsEditingName] = useState(false)
     const [name, setName] = useState('Default Playlist')
     const [priority, setPriority] = useState<'normal' | 'high' | 'override'>('normal')
+
+
+    useEffect(() => {
+        console.log("lflasflaflfl", playlistToEdit)
+
+        if (playlistToEdit && Array.isArray(playlistToEdit.childFiles)) {
+
+            setName(playlistToEdit.name || 'Без названия')
+            setItems(playlistToEdit.childFiles)
+        }
+    }, [playlistToEdit])
+
+    //
+    // useEffect(() => {
+    //
+    //     return () => {
+    //         setPlaylistToEdit(null)
+    //     }
+    // }, [setPlaylistToEdit])
 
 
     useEffect(() => {
@@ -55,6 +83,34 @@ export default function PlaylistContentPage() {
             setItems(prev => [...prev, item])
         }
     }
+
+    async function handleSavePlaylist() {
+        if (playlistToEdit) {
+            const res = await updatePlaylist(items, name)
+
+            if (res) {
+                router.push('/playlists')
+            }
+        } else {
+            const res = await createPlaylist(items, name)
+
+            if (res) {
+                router.push('/playlists')
+            }
+        }
+
+    }
+
+    async function handleDeletePlaylist() {
+        console.log('[Delete Handler] playlistToEdit:', playlistToEdit)
+
+        const success = await deletePlaylist(null)
+        if (success) {
+            setPlaylistToEdit(null)
+            router.push('/playlists')
+        }
+    }
+
 
     return (
         <div className="p-4">
@@ -88,6 +144,9 @@ export default function PlaylistContentPage() {
                     )}
                 </div>
                 <div className="d-flex align-items-center gap-2">
+                    <Button size="sm" variant="success" onClick={handleSavePlaylist}>
+                        Сохранить
+                    </Button>
                     <Dropdown onSelect={k => setPriority(k as any)}>
                         <Dropdown.Toggle size="sm" variant="success">
                             {priority === 'normal'
@@ -102,7 +161,7 @@ export default function PlaylistContentPage() {
                             <Dropdown.Item eventKey="override">Перекрывать всё</Dropdown.Item>
                         </Dropdown.Menu>
                     </Dropdown>
-                    <Button size="sm" variant="danger" onClick={() => router.push('/playlists')}>
+                    <Button size="sm" variant="danger" onClick={() => handleDeletePlaylist()}>
                         Удалить
                     </Button>
                 </div>
@@ -140,7 +199,7 @@ export default function PlaylistContentPage() {
                                     onClick={() => addToPlaylist(li)}
                                 >
                                     <img
-                                        src={li.url}
+                                        src={li.previewUrl}
                                         alt={li.name}
                                         style={{width: 40, height: 40, objectFit: 'cover', marginRight: 8}}
                                     />
