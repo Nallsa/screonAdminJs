@@ -10,7 +10,6 @@ export interface PlaylistItem {
 }
 
 
-
 export interface FileItem {
     id: string;
     file?: File | null;
@@ -20,4 +19,24 @@ export interface FileItem {
     duration: number;
     previewUrl: string;
     orderIndex: number
+}
+
+
+export interface ScreenData {
+    id: string
+    name: string
+    online: boolean
+    groupIds: string[]
+}
+
+export interface GroupData {
+    id: string
+    name: string
+}
+
+export interface ScheduledBlock {
+    day: string
+    start: string
+    end: string
+    playlist: string
 }
