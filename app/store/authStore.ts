@@ -32,12 +32,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     loading: false,
     error: null,
 
-    // Вход
+
     signIn: async (email, password) => {
         set({loading: true, error: null})
         try {
             const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-            const res = await axios.post(`${SERVER}/auth/login`, {email, password})
+            const res = await axios.post(`${SERVER}auth/login`, {email, password})
             const {accessToken, refreshToken, userId} = res.data
             // сохраняем
             localStorage.setItem('accessToken', accessToken)
@@ -59,12 +59,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 
-    // Регистрация
+
     signUp: async (username, phone, password, email) => {
         set({loading: true, error: null})
         try {
             const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-            const res = await axios.post(`${SERVER}/auth/register`, {
+            const res = await axios.post(`${SERVER}auth/register`, {
                 name: username,
                 phone: phone.replace(/^\+/, ''),
                 password,
@@ -90,7 +90,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 
-    // Выход
+
     signOut: () => {
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
@@ -104,14 +104,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         })
     },
 
-    // Проверка refresh-токена
+
     checkToken: async () => {
         set({loading: true, error: null})
         try {
-            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL!
             const token = localStorage.getItem('refreshToken')
             if (!token) throw new Error('no token')
-            const res = await axios.post(`${SERVER}/auth/validate-refresh-token`, {
+            const res = await axios.post(`${SERVER}auth/validate-refresh-token`, {
                 refreshToken: token,
             })
             const ok = res.data.valid === true

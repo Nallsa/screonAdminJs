@@ -16,7 +16,7 @@ export default function LoginPage() {
     const [emailError, setEmailError] = useState<string | null>(null)
     const [passError, setPassError] = useState<string | null>(null)
 
-    // если уже залогинены — редирект
+
     useEffect(() => {
         if (isAuth) router.push('/screens')
     }, [isAuth, router])
