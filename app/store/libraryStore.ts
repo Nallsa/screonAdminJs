@@ -6,7 +6,7 @@ import {getValueInStorage} from "@/app/API/localStorage";
 
 
 interface LibraryStore {
-    libraryItems: (FileItem)[];
+    libraryItems: FileItem[];
     isUploadingMetadata: boolean;
     uploadError: string | null;
 

@@ -24,6 +24,8 @@ export default function UploadZone() {
                 `${process.env.NEXT_PUBLIC_SERVER_URL}files/upload`,
                 file,
                 (percent) => {
+
+                    console.log("percent", percent)
                     const total = Math.round(((index + percent / 100) / files.length) * 100)
                     setUploadProgress(total)
                 },
