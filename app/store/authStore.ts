@@ -114,7 +114,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const res = await axios.post(`${SERVER}auth/validate-refresh-token`, {
                 refreshToken: token,
             })
-            const ok = res.data.valid === true
+            const ok = res.data.valid
+
+            console.log("ok", ok)
             set({isAuthenticated: ok})
             return ok
         } catch {

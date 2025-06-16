@@ -20,7 +20,7 @@ export default function HomeWindow() {
             await getFilesInLibrary();
             await getPlaylists();
 
-            router.replace('/playlists'); // редиректим
+            // router.replace('/playlists'); // редиректим
         })(); // 👈 вызываем немедленно
     }, [getFilesInLibrary, getPlaylists, router]);
 

@@ -9,7 +9,7 @@ export default function LoginPage() {
     const signIn = useAuthStore(s => s.signIn)
     const loading = useAuthStore(s => s.loading)
     const error = useAuthStore(s => s.error)
-    const isAuth = useAuthStore(s => s.isAuthenticated)
+    const {isAuthenticated} = useAuthStore.getState()
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -18,8 +18,11 @@ export default function LoginPage() {
 
 
     useEffect(() => {
-        if (isAuth) router.push('/screens')
-    }, [isAuth, router])
+        if (isAuthenticated) {
+            console.log("asdddadasadsadsasd")
+            router.push('/screens')
+        }
+    }, [isAuthenticated, router])
 
     const validate = () => {
         let ok = true
