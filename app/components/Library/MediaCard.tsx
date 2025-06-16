@@ -46,7 +46,7 @@ export default function MediaCard({item, onDelete, onUpdate}: Props) {
     useEffect(() => {
         if (item.type === 'VIDEO') {
             const vid = document.createElement('video')
-            vid.src = item.url
+            vid.src = item.previewUrl
             vid.currentTime = 0.1
             vid.onloadedmetadata = () => {
                 const dur = vid.duration
@@ -64,7 +64,7 @@ export default function MediaCard({item, onDelete, onUpdate}: Props) {
                 onUpdate({...item, duration: DEFAULT_IMAGE_DURATION})
             }
         } else {
-            setThumb(item.url)
+            setThumb(item.previewUrl)
             onUpdate({...item, duration: item.duration ?? DEFAULT_IMAGE_DURATION})
         }
     }, [])
@@ -240,13 +240,13 @@ export default function MediaCard({item, onDelete, onUpdate}: Props) {
                     {item.type === 'VIDEO' ? (
                         <video
                             ref={videoRef}
-                            src={item.url}
+                            src={item.previewUrl}
                             controls
                             style={{width: '100%', height: 'auto'}}
                         />
                     ) : (
                         <img
-                            src={item.url}
+                            src={item.previewUrl}
                             alt={item.name}
                             style={{width: '100%', height: 'auto'}}
                         />
