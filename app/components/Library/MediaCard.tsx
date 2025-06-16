@@ -45,6 +45,7 @@ export default function MediaCard({item, onDelete, onUpdate}: Props) {
 
     useEffect(() => {
         if (item.type === 'VIDEO') {
+
             const vid = document.createElement('video')
             vid.src = item.previewUrl
             vid.currentTime = 0.1
