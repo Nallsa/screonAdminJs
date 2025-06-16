@@ -1,18 +1,8 @@
 'use client'
 import {create} from 'zustand'
 import {immer} from 'zustand/middleware/immer'
+import {GroupData, ScreenData} from "@/public/types/interfaces";
 
-export interface ScreenData {
-    id: string
-    name: string
-    online: boolean
-    groupIds: string[]
-}
-
-export interface GroupData {
-    id: string
-    name: string
-}
 
 interface ScreensState {
     allScreens: ScreenData[]

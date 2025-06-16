@@ -3,15 +3,19 @@ import Link from "next/link";
 import {usePathname} from 'next/navigation';
 
 const navItems = [
-    {href: "/screens", label: "Экраны", icon: "bi bi-screens"},
-    {href: "/playlists", label: "Плейлисты", icon: "bi bi-film"},
+    {href: "/screens", label: "Экраны", icon: "bi bi-display"},
+    {href: "/playlists", label: "Плейлисты", icon: "bi bi-collection-play"},
     {href: "/library", label: "Библиотека", icon: "bi bi-music-note-list"},
-
+    {href: "/schedule", label: "Расписание", icon: "bi bi-calendar-week"},
+    {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
 
 ];
-
 const Sidebar = () => {
     const pathname = usePathname();
+
+    if (pathname.startsWith('/auth')) {
+        return null
+    }
 
     return (
         <div className="d-flex flex-column bg-white shadow-sm" style={{width: 220, height: '100vh', position: 'fixed'}}>
