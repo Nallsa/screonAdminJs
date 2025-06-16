@@ -1,12 +1,12 @@
 'use client'
 
 import React from 'react';
-import { Form } from 'react-bootstrap';
-import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import {Form} from 'react-bootstrap';
+import {useSortable, defaultAnimateLayoutChanges} from '@dnd-kit/sortable';
+import {CSS} from '@dnd-kit/utilities';
 import {PlaylistItem} from "@/public/types/interfaces";
 
-export default function PlaylistItemCard({ item }: { item: PlaylistItem }) {
+export default function PlaylistItemCard({item}: { item: PlaylistItem }) {
     const {
         attributes,
         listeners,
@@ -35,14 +35,13 @@ export default function PlaylistItemCard({ item }: { item: PlaylistItem }) {
     return (
         <div ref={setNodeRef} style={style} className="card shadow-sm" {...attributes} {...listeners}>
             <div className="position-relative">
-                <img src={item.previewUrl} alt={item.name} className="card-img-top" />
+                {item.previewUrl && (<img src={item.previewUrl} alt={item.name} className="card-img-top"/>)}
                 <div className="position-absolute top-0 start-0 p-1">
                     <span role="img" aria-label="drag">⠿</span>
                 </div>
             </div>
             <div className="card-body p-2">
                 <div className="small fw-bold mb-1">{item.name}</div>
-                <div className="badge bg-success mb-2">{item.type}</div>
                 <div className="d-flex align-items-center mb-2">
                     <span className="me-1 small">Duration:</span>
                     {/*<Form.Control*/}

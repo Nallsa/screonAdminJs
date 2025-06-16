@@ -2,7 +2,8 @@
 
 import React from 'react'
 import {Card, Button, Form} from 'react-bootstrap'
-import {GroupData, ScreenData, useScreensStore} from '@/app/store/screensStore'
+import {useScreensStore} from '@/app/store/screensStore'
+import {GroupData, ScreenData} from "@/public/types/interfaces";
 
 interface ScreenCardProps {
     screen: ScreenData

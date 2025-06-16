@@ -1,8 +1,7 @@
 'use client'
-import {create} from 'zustand'
-import {immer} from 'zustand/middleware/immer'
-import {GroupData, ScreenData} from "@/public/types/interfaces";
-
+import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
+import { GroupData, ScreenData } from "@/public/types/interfaces";
 
 interface ScreensState {
     allScreens: ScreenData[]
@@ -32,21 +31,19 @@ export const useScreensStore = create<ScreensState>()(
     immer((set, get) => ({
 
         allScreens: [
-            {id: 'screen1', name: 'Экран 1', online: true, groupIds: []},
-            {id: 'screen2', name: 'Экран 2', online: false, groupIds: []},
-            {id: 'screen3', name: 'Экран 3', online: true, groupIds: []},
-            {id: 'screen4', name: 'Экран 4', online: false, groupIds: []},
+            { id: 'screen1', name: 'Экран 1', online: true, groupIds: [] as string[] },
+            { id: 'screen2', name: 'Экран 2', online: false, groupIds: [] as string[] },
+            { id: 'screen3', name: 'Экран 3', online: true, groupIds: [] as string[] },
+            { id: 'screen4', name: 'Экран 4', online: false, groupIds: [] as string[] },
         ],
-        filteredScreens: [],
-        groups: [],
-
+        filteredScreens: [] as ScreenData[],
+        groups: [] as GroupData[],
 
         isCreatingGroup: false,
         newGroupName: '',
         selectedForNewGroup: [],
         currentQuery: '',
         currentGroupFilter: 'all',
-
 
         startCreateGroup: () => {
             set(state => {
@@ -75,21 +72,20 @@ export const useScreensStore = create<ScreensState>()(
                 if (!name || state.selectedForNewGroup.length === 0) return
 
                 const newId = `group${state.groups.length + 1}`
-                state.groups.push({id: newId, name})
+                state.groups.push({ id: newId, name })
 
-                // назначаем всем выбранным экранам этот groupId
+                // Назначаем всем выбранным экранам этот groupId
                 state.allScreens.forEach(screen => {
                     if (state.selectedForNewGroup.includes(screen.id)) {
                         screen.groupIds.push(newId)
                     }
                 })
 
-                // сброс UI-состояний
+                // Сброс UI-состояний
                 state.isCreatingGroup = false
                 state.newGroupName = ''
                 state.selectedForNewGroup = []
             })
-            // сразу обновляем фильтр
             get().filterScreens(get().currentQuery, get().currentGroupFilter)
         },
 
@@ -118,6 +114,15 @@ export const useScreensStore = create<ScreensState>()(
             })
         },
 
+        assignGroupsToScreen: (screenId, newGroupIds) => {
+            set(state => {
+                const screen = state.allScreens.find(s => s.id === screenId)
+                if (screen) {
+                    screen.groupIds = [...newGroupIds]
+                }
+            })
+            get().filterScreens(get().currentQuery, get().currentGroupFilter)
+        },
 
         addScreen: (screen) => {
             set(state => {
