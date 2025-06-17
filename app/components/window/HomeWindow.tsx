@@ -17,10 +17,10 @@ export default function HomeWindow() {
             // addValueInStorage("organizationId", "aab12345-6789-4321-bbaa-1234567890cd");
             // addValueInStorage("userId", "aab12345-6789-4321-bbaa-1234567890ab");
             //
-            // await getFilesInLibrary();
-            // await getPlaylists();
+            await getFilesInLibrary();
+            await getPlaylists();
 
-            // router.replace('/playlists'); // редиректим
+            router.replace('/playlists'); // редиректим
         })(); // 👈 вызываем немедленно
     }, [getFilesInLibrary, getPlaylists, router]);
 
