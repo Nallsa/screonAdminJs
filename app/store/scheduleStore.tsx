@@ -7,128 +7,142 @@ import {
     parseDayToDate,
     normalizeTime
 } from '@/app/lib/scheduleUtils'
-import {ScheduledBlock} from "@/public/types/interfaces";
+import {PlaylistItem, ScheduledBlock, ScreenData} from "@/public/types/interfaces";
 
 type ShowMode = 'cycle' | 'interval'
 
 interface ScheduleState {
-    // state
+    // --- Основные параметры расписания ---
     selectedDate: Date
     currentWeek: Date[]
     isFixedSchedule: boolean
     isPlayConstantly: boolean
     isShowBackground: boolean
 
+    // --- Выбор экранов ---
+    selectedScreens: string[]
+    toggleScreen: (screenId: string) => void
+
+    // --- Выбор плейлиста ---
     selectedPlaylist: string
-    playlists: string[]
+    setSelectedPlaylist: (plId: string) => void
+
+    // --- Временные рамки и дни ---
     startTime: string
     endTime: string
     selectedDays: string[]
+    toggleDay: (day: string) => void
 
-    // как показывать
+    // --- Как показывать ---
     showMode: ShowMode
     cycleMinutes: number
     pauseMinutes: number
     intervalMinutes: number
-
-    // ограничения
-    maxPerDay: number
-    maxPerHour: number
-    maxTotalDuration: number
-
-    scheduledItemsFixed: ScheduledBlock[]
-    scheduledItemsCalendar: ScheduledBlock[]
-    hoveredBlock: ScheduledBlock | null
-
-    // actions
-    onDateSelected: (d: Date) => void
-    toggleFixedSchedule: () => void
-    togglePlayConstantly: () => void
-    toggleShowBackground: () => void
-
-    setSelectedPlaylist: (p: string) => void
-    setStartTime: (t: string) => void
-    setEndTime: (t: string) => void
-
-    toggleDay: (day: string) => void
-    addBlock: () => void
-    removeBlock: (b: ScheduledBlock) => void
-
-    setHoveredBlock: (b: ScheduledBlock | null) => void
-
-    // как показывать
     setShowMode: (m: ShowMode) => void
     setCycleMinutes: (m: number) => void
     setPauseMinutes: (m: number) => void
     setIntervalMinutes: (m: number) => void
 
-    // ограничения
+    // --- Ограничения ---
+    maxPerDay: number
+    maxPerHour: number
+    maxTotalDuration: number
     setMaxPerDay: (n: number) => void
     setMaxPerHour: (n: number) => void
     setMaxTotalDuration: (n: number) => void
+
+    // --- Блоки расписания ---
+    scheduledItemsFixed: ScheduledBlock[]
+    scheduledItemsCalendar: ScheduledBlock[]
+    addBlock: () => void
+    removeBlock: (b: ScheduledBlock) => void
+
+    // --- Ховер для блока в таблице ---
+    hoveredBlock: ScheduledBlock | null
+    setHoveredBlock: (b: ScheduledBlock | null) => void
+
+    // --- Прочие экшены (дата, фиксированный режим, фон) ---
+    onDateSelected: (d: Date) => void
+    toggleFixedSchedule: () => void
+    togglePlayConstantly: () => void
+    toggleShowBackground: () => void
+
+    setStartTime: (t: string) => void
+    setEndTime: (t: string) => void
 }
 
 export const useScheduleStore = create<ScheduleState>()(
     immer((set, get) => {
         const today = new Date()
         const zero = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+
         return {
+            // Основные параметры расписания
             selectedDate: zero,
             currentWeek: getCurrentWeekByDate(zero),
             isFixedSchedule: false,
             isPlayConstantly: true,
             isShowBackground: false,
 
-            playlists: ["Плейлист 1", "Плейлист 2", "Плейлист 3"],
-            selectedPlaylist: "Плейлист 1",
-            startTime: "08:00",
-            endTime: "18:00",
+            // Выбор экранов
+            selectedScreens: [],
+            toggleScreen: id => set(s => {
+                const idx = s.selectedScreens.indexOf(id)
+                if (idx >= 0) s.selectedScreens.splice(idx, 1)
+                else s.selectedScreens.push(id)
+            }),
+
+            // Выбор плейлиста
+            selectedPlaylist: '',
+            setSelectedPlaylist: plId => set(s => {
+                s.selectedPlaylist = plId
+            }),
+
+            // Временные рамки и дни
+            startTime: '08:00',
+            endTime: '18:00',
             selectedDays: [],
+            toggleDay: day => set(s => {
+                const idx = s.selectedDays.indexOf(day)
+                if (idx >= 0) s.selectedDays.splice(idx, 1)
+                else s.selectedDays.push(day)
+            }),
 
-            scheduledItemsFixed: [],
-            scheduledItemsCalendar: [],
-            hoveredBlock: null,
-
+            // Как показывать
             showMode: 'cycle',
             cycleMinutes: 10,
             pauseMinutes: 50,
             intervalMinutes: 60,
+            setShowMode: m => set(s => {
+                s.showMode = m
+            }),
+            setCycleMinutes: m => set(s => {
+                s.cycleMinutes = m
+            }),
+            setPauseMinutes: m => set(s => {
+                s.pauseMinutes = m
+            }),
+            setIntervalMinutes: m => set(s => {
+                s.intervalMinutes = m
+            }),
 
+            // Ограничения
             maxPerDay: 0,
             maxPerHour: 0,
             maxTotalDuration: 0,
-
-            onDateSelected: (d) => set(s => {
-                s.selectedDate = d
-                s.currentWeek = getCurrentWeekByDate(d)
+            setMaxPerDay: n => set(s => {
+                s.maxPerDay = n
+            }),
+            setMaxPerHour: n => set(s => {
+                s.maxPerHour = n
+            }),
+            setMaxTotalDuration: n => set(s => {
+                s.maxTotalDuration = n
             }),
 
-            toggleFixedSchedule: () => set(s => {
-                s.isFixedSchedule = !s.isFixedSchedule
-            }),
-            togglePlayConstantly: () => set(s => {
-                s.isPlayConstantly = !s.isPlayConstantly
-            }),
-            toggleShowBackground: () => set(s => {
-                s.isShowBackground = !s.isShowBackground
-            }),
-
-            setSelectedPlaylist: p => set(s => {
-                s.selectedPlaylist = p
-            }),
-            setStartTime: t => set(s => {
-                s.startTime = normalizeTime(t)
-            }),
-            setEndTime: t => set(s => {
-                s.endTime = normalizeTime(t)
-            }),
-
-            toggleDay: day => set(s => {
-                const i = s.selectedDays.indexOf(day)
-                if (i >= 0) s.selectedDays.splice(i, 1)
-                else s.selectedDays.push(day)
-            }),
-
+            // Блоки расписания
+            scheduledItemsFixed: [],
+            scheduledItemsCalendar: [],
             addBlock: () => {
                 const {
                     selectedDays, currentWeek,
@@ -136,6 +150,7 @@ export const useScheduleStore = create<ScheduleState>()(
                     selectedPlaylist, isFixedSchedule
                 } = get()
                 if (!selectedDays.length) return
+
                 selectedDays.forEach(dayShort => {
                     const dayDate = parseDayToDate(dayShort, currentWeek)
                     const block: ScheduledBlock = {
@@ -150,46 +165,45 @@ export const useScheduleStore = create<ScheduleState>()(
                     })
                 })
             },
+            removeBlock: b => set(s => {
+                const arr = s.isFixedSchedule
+                    ? s.scheduledItemsFixed
+                    : s.scheduledItemsCalendar
+                const idx = arr.findIndex(x =>
+                    x.day === b.day &&
+                    x.start === b.start &&
+                    x.end === b.end &&
+                    x.playlist === b.playlist
+                )
+                if (idx >= 0) arr.splice(idx, 1)
+            }),
 
-            removeBlock: b => {
-                set(s => {
-                    const arr = s.isFixedSchedule
-                        ? s.scheduledItemsFixed
-                        : s.scheduledItemsCalendar
-                    const idx = arr.findIndex(x =>
-                        x.day === b.day && x.start === b.start &&
-                        x.end === b.end && x.playlist === b.playlist
-                    )
-                    if (idx >= 0) arr.splice(idx, 1)
-                })
-            },
-
+            // Ховер для блока в таблице
+            hoveredBlock: null,
             setHoveredBlock: b => set(s => {
                 s.hoveredBlock = b
             }),
 
-            setShowMode: m => set(s => {
-                s.showMode = m
+            //  Прочие экшены
+            onDateSelected: d => set(s => {
+                s.selectedDate = d
+                s.currentWeek = getCurrentWeekByDate(d)
             }),
-            setCycleMinutes: m => set(s => {
-                s.cycleMinutes = m
+            toggleFixedSchedule: () => set(s => {
+                s.isFixedSchedule = !s.isFixedSchedule
             }),
-            setPauseMinutes: m => set(s => {
-                s.pauseMinutes = m
+            togglePlayConstantly: () => set(s => {
+                s.isPlayConstantly = !s.isPlayConstantly
             }),
-            setIntervalMinutes: m => set(s => {
-                s.intervalMinutes = m
+            toggleShowBackground: () => set(s => {
+                s.isShowBackground = !s.isShowBackground
             }),
 
-
-            setMaxPerDay: n => set(s => {
-                s.maxPerDay = n
+            setStartTime: t => set(s => {
+                s.startTime = normalizeTime(t)
             }),
-            setMaxPerHour: n => set(s => {
-                s.maxPerHour = n
-            }),
-            setMaxTotalDuration: n => set(s => {
-                s.maxTotalDuration = n
+            setEndTime: t => set(s => {
+                s.endTime = normalizeTime(t)
             }),
         }
     })

@@ -4,6 +4,8 @@ import {Form, Button, Dropdown, InputGroup, Card, Col, Row} from 'react-bootstra
 import {getCurrentWeekByDate, parseDayToDate, RU_DAYS, timeToMinutes} from '@/app/lib/scheduleUtils'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import {motion, LayoutGroup, AnimatePresence} from 'framer-motion'
+import {usePlaylistStore} from "@/app/store/playlistStore";
+import {useScreensStore} from "@/app/store/screensStore";
 
 
 export default function ScheduleSettingsPanel() {
@@ -16,7 +18,6 @@ export default function ScheduleSettingsPanel() {
         toggleFixedSchedule,
         isShowBackground,
         toggleShowBackground,
-        playlists,
         selectedPlaylist,
         setSelectedPlaylist,
         startTime,
@@ -42,10 +43,22 @@ export default function ScheduleSettingsPanel() {
         addBlock,
         scheduledItemsFixed,
         scheduledItemsCalendar,
+        selectedScreens,
+        toggleScreen,
     } = useScheduleStore()
 
 
+    const {allScreens} = useScreensStore()
+
+    const {playlistItems} = usePlaylistStore()
+
     const handleAdd = () => {
+
+        if (playlistItems.length === 0 || !selectedPlaylist) {
+            window.alert('Создайте, пожалуйста, плейлист во вкладке "Плейлисты"');
+            return;
+        }
+
         const targetList = isFixedSchedule
             ? scheduledItemsFixed
             : scheduledItemsCalendar
@@ -111,25 +124,47 @@ export default function ScheduleSettingsPanel() {
                     )}
 
 
-                    <motion.div layout>
-                        <Form.Check
-                            inline
-                            label="Фикс. расписание"
-                            type="checkbox"
-                            checked={isFixedSchedule}
-                            onChange={toggleFixedSchedule}
-                        />
+                    {/* Как показывать */}
+                    <motion.div layout className="mb-1">
+                        <Card>
+                            <Card.Header>Как показывать</Card.Header>
+                            <Card.Body>
+
+
+                                <motion.div layout>
+                                    <Form.Check
+                                        inline
+                                        label="Фикс. расписание"
+                                        type="checkbox"
+                                        checked={isFixedSchedule}
+                                        onChange={toggleFixedSchedule}
+                                    />
+                                </motion.div>
+
+                                <motion.div layout>
+                                    <Form.Check
+                                        inline
+                                        label="Зациклено"
+                                        type="checkbox"
+                                        checked={isPlayConstantly}
+                                        onChange={togglePlayConstantly}
+                                        className="form-check-square mb-1"
+                                    />
+                                </motion.div>
+                            </Card.Body>
+                        </Card>
                     </motion.div>
 
-                    <motion.div layout>
-                        <Form.Check
-                            inline
-                            label="Фон. видео"
-                            type="checkbox"
-                            checked={isShowBackground}
-                            onChange={toggleShowBackground}
-                        />
-                    </motion.div>
+
+                    {/*<motion.div layout>*/}
+                    {/*    <Form.Check*/}
+                    {/*        inline*/}
+                    {/*        label="Фон. видео"*/}
+                    {/*        type="checkbox"*/}
+                    {/*        checked={isShowBackground}*/}
+                    {/*        onChange={toggleShowBackground}*/}
+                    {/*    />*/}
+                    {/*</motion.div>*/}
 
                     <motion.div layout>
                         <InputGroup style={{maxWidth: 300}}>
@@ -148,21 +183,84 @@ export default function ScheduleSettingsPanel() {
                         </InputGroup>
                     </motion.div>
 
+
+                    {/*Экраны, плейлисты, дни недели, добавить*/}
                     <Row className="g-3 d-flex align-items-center justify-content-center">
+                        <Col xs="auto">
+                            <Dropdown autoClose="outside">
+                                <Dropdown.Toggle>Экраны</Dropdown.Toggle>
+                                <Dropdown.Menu style={{padding: 0}}>
+                                    {/* пункт "Выбрать всё" */}
+                                    <Dropdown.Item
+                                        as="label"
+                                        htmlFor="screen-checkbox-all"
+                                        key="select-all"
+                                        className="d-flex align-items-center px-3 py-2"
+                                        style={{cursor: 'pointer'}}
+                                    >
+                                        <Form.Check
+                                            type="checkbox"
+                                            id="screen-checkbox-all"
+                                            checked={selectedScreens.length === allScreens.length}
+                                            onChange={() => {
+                                                if (selectedScreens.length === allScreens.length) {
+                                                    // если все уже выбраны — снимаем выбор со всех
+                                                    selectedScreens.forEach(id => toggleScreen(id));
+                                                } else {
+                                                    // иначе — выбираем недостающие
+                                                    allScreens.forEach(s => {
+                                                        if (!selectedScreens.includes(s.id)) {
+                                                            toggleScreen(s.id);
+                                                        }
+                                                    });
+                                                }
+                                            }}
+                                            className="me-2 mb-0"
+                                        />
+                                        <span>Выбрать всё</span>
+                                    </Dropdown.Item>
+
+                                    {/* список экранов */}
+                                    {allScreens.map(s => {
+                                        const inputId = `screen-checkbox-${s.id}`;
+                                        return (
+                                            <Dropdown.Item
+                                                as="label"
+                                                htmlFor={inputId}
+                                                key={s.id}
+                                                className="d-flex align-items-center px-3 py-2"
+                                                style={{cursor: 'pointer'}}
+                                            >
+                                                <Form.Check
+                                                    type="checkbox"
+                                                    id={inputId}
+                                                    checked={selectedScreens.includes(s.id)}
+                                                    onChange={() => toggleScreen(s.id)}
+                                                    className="me-2 mb-0"
+                                                />
+                                                <span>{s.name}</span>
+                                            </Dropdown.Item>
+                                        );
+                                    })}
+                                </Dropdown.Menu>
+                            </Dropdown>
+                        </Col>
+
 
                         <Col xs="auto">
-                            <motion.div layout>
-                                <Dropdown onSelect={k => setSelectedPlaylist(k!)}>
-                                    <Dropdown.Toggle>{selectedPlaylist}</Dropdown.Toggle>
-                                    <Dropdown.Menu>
-                                        {playlists.map(pl => (
-                                            <Dropdown.Item key={pl} eventKey={pl}>
-                                                {pl}
-                                            </Dropdown.Item>
-                                        ))}
-                                    </Dropdown.Menu>
-                                </Dropdown>
-                            </motion.div>
+                            <Dropdown onSelect={k => setSelectedPlaylist(k!)}>
+                                <Dropdown.Toggle>
+                                    {playlistItems.find(p => p.id === selectedPlaylist)?.name
+                                        ?? 'Плейлист'}
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu>
+                                    {playlistItems.map(pl => (
+                                        <Dropdown.Item key={pl.id} eventKey={pl.id}>
+                                            {pl.name}
+                                        </Dropdown.Item>
+                                    ))}
+                                </Dropdown.Menu>
+                            </Dropdown>
                         </Col>
 
                         <Col xs="auto">
@@ -188,159 +286,137 @@ export default function ScheduleSettingsPanel() {
                         </Col>
                     </Row>
 
-                    {/* Как показывать */}
 
-                    <motion.div layout className="mb-1">
-                        <Card>
-                            <Card.Header>Как показывать</Card.Header>
-                            <Card.Body>
+                    {/*{!isPlayConstantly && (*/}
+                    {/*    <motion.div*/}
+                    {/*        layout*/}
+                    {/*        key="show-mode-block"*/}
+                    {/*        initial={{opacity: 0, height: 0}}*/}
+                    {/*        animate={{opacity: 1, height: 'auto'}}*/}
+                    {/*        exit={{opacity: 0, height: 0}}*/}
+                    {/*        className="overflow-hidden"*/}
+                    {/*    >*/}
 
-                                <motion.div layout>
-                                    <Form.Check
-                                        inline
-                                        label="Зациклено"
-                                        type="checkbox"
-                                        checked={isPlayConstantly}
-                                        onChange={togglePlayConstantly}
-                                        className="form-check-square mb-1"
-                                    />
-                                </motion.div>
+                    {/*        <Form.Check*/}
+                    {/*            type="checkbox"*/}
+                    {/*            id="mode-cycle"*/}
+                    {/*            name="showMode"*/}
+                    {/*            label="Играть X минут, потом пауза Y минут"*/}
+                    {/*            checked={showMode === 'cycle'}*/}
+                    {/*            onChange={() => setShowMode('cycle')}*/}
+                    {/*            className="form-check-square mb-2"*/}
+                    {/*        />*/}
 
+                    {/*        {showMode === 'cycle' && (*/}
+                    {/*            <div className="d-flex align-items-center gap-3 ps-4 mb-3">*/}
+                    {/*                <InputGroup style={{width: 240}}>*/}
+                    {/*                    <InputGroup.Text>Играть</InputGroup.Text>*/}
+                    {/*                    <Form.Control*/}
+                    {/*                        type="number"*/}
+                    {/*                        min={0}*/}
+                    {/*                        value={cycleMinutes}*/}
+                    {/*                        onChange={e => setCycleMinutes(+e.target.value)}*/}
+                    {/*                    />*/}
+                    {/*                    <InputGroup.Text>мин</InputGroup.Text>*/}
+                    {/*                </InputGroup>*/}
 
-                                {!isPlayConstantly && (
-                                    <motion.div
-                                        layout
-                                        key="show-mode-block"
-                                        initial={{opacity: 0, height: 0}}
-                                        animate={{opacity: 1, height: 'auto'}}
-                                        exit={{opacity: 0, height: 0}}
-                                        className="overflow-hidden"
-                                    >
+                    {/*                <InputGroup style={{width: 240}}>*/}
+                    {/*                    <InputGroup.Text>Пауза</InputGroup.Text>*/}
+                    {/*                    <Form.Control*/}
+                    {/*                        type="number"*/}
+                    {/*                        min={0}*/}
+                    {/*                        value={pauseMinutes}*/}
+                    {/*                        onChange={e => setPauseMinutes(+e.target.value)}*/}
+                    {/*                    />*/}
+                    {/*                    <InputGroup.Text>мин</InputGroup.Text>*/}
+                    {/*                </InputGroup>*/}
+                    {/*            </div>*/}
+                    {/*        )}*/}
 
-                                        <Form.Check
-                                            type="checkbox"
-                                            id="mode-cycle"
-                                            name="showMode"
-                                            label="Играть X минут, потом пауза Y минут"
-                                            checked={showMode === 'cycle'}
-                                            onChange={() => setShowMode('cycle')}
-                                            className="form-check-square mb-2"
-                                        />
+                    {/*        <Form.Check*/}
+                    {/*            type="checkbox"*/}
+                    {/*            id="mode-interval"*/}
+                    {/*            name="showMode"*/}
+                    {/*            label="Показывать раз в X минут"*/}
+                    {/*            checked={showMode === 'interval'}*/}
+                    {/*            onChange={() => setShowMode('interval')}*/}
+                    {/*            className="form-check-square mb-2"*/}
+                    {/*        />*/}
 
-                                        {showMode === 'cycle' && (
-                                            <div className="d-flex align-items-center gap-3 ps-4 mb-3">
-                                                <InputGroup style={{width: 240}}>
-                                                    <InputGroup.Text>Играть</InputGroup.Text>
-                                                    <Form.Control
-                                                        type="number"
-                                                        min={0}
-                                                        value={cycleMinutes}
-                                                        onChange={e => setCycleMinutes(+e.target.value)}
-                                                    />
-                                                    <InputGroup.Text>мин</InputGroup.Text>
-                                                </InputGroup>
+                    {/*        {showMode === 'interval' && (*/}
+                    {/*            <div className="ps-4" style={{maxWidth: 240}}>*/}
+                    {/*                <InputGroup>*/}
+                    {/*                    <Form.Control*/}
+                    {/*                        type="number"*/}
+                    {/*                        min={0}*/}
+                    {/*                        value={intervalMinutes}*/}
+                    {/*                        onChange={e => setIntervalMinutes(+e.target.value)}*/}
+                    {/*                    />*/}
+                    {/*                    <InputGroup.Text>мин</InputGroup.Text>*/}
+                    {/*                </InputGroup>*/}
+                    {/*            </div>*/}
+                    {/*        )}*/}
+                    {/*    </motion.div>*/}
+                    {/*)}*/}
 
-                                                <InputGroup style={{width: 240}}>
-                                                    <InputGroup.Text>Пауза</InputGroup.Text>
-                                                    <Form.Control
-                                                        type="number"
-                                                        min={0}
-                                                        value={pauseMinutes}
-                                                        onChange={e => setPauseMinutes(+e.target.value)}
-                                                    />
-                                                    <InputGroup.Text>мин</InputGroup.Text>
-                                                </InputGroup>
-                                            </div>
-                                        )}
+                    {/*/!* Ограничения *!/*/}
+                    {/*<motion.div layout>*/}
+                    {/*    <Card>*/}
+                    {/*        <Card.Header>Ограничения</Card.Header>*/}
+                    {/*        <Card.Body>*/}
+                    {/*            <div className="d-flex flex-column gap-3">*/}
+                    {/*                <motion.div*/}
+                    {/*                    layout*/}
+                    {/*                    className="d-flex align-items-center"*/}
+                    {/*                    style={{maxWidth: 400}}*/}
+                    {/*                >*/}
+                    {/*                    <InputGroup>*/}
+                    {/*                        <InputGroup.Text>Макс. показов/день</InputGroup.Text>*/}
+                    {/*                        <Form.Control*/}
+                    {/*                            type="number"*/}
+                    {/*                            min={0}*/}
+                    {/*                            value={maxPerDay}*/}
+                    {/*                            onChange={e => setMaxPerDay(+e.target.value)}*/}
+                    {/*                        />*/}
+                    {/*                    </InputGroup>*/}
+                    {/*                </motion.div>*/}
 
-                                        <Form.Check
-                                            type="checkbox"
-                                            id="mode-interval"
-                                            name="showMode"
-                                            label="Показывать раз в X минут"
-                                            checked={showMode === 'interval'}
-                                            onChange={() => setShowMode('interval')}
-                                            className="form-check-square mb-2"
-                                        />
+                    {/*                <motion.div*/}
+                    {/*                    layout*/}
+                    {/*                    className="d-flex align-items-center"*/}
+                    {/*                    style={{maxWidth: 400}}*/}
+                    {/*                >*/}
+                    {/*                    <InputGroup>*/}
+                    {/*                        <InputGroup.Text>Макс. показов/час</InputGroup.Text>*/}
+                    {/*                        <Form.Control*/}
+                    {/*                            type="number"*/}
+                    {/*                            min={0}*/}
+                    {/*                            value={maxPerHour}*/}
+                    {/*                            onChange={e => setMaxPerHour(+e.target.value)}*/}
+                    {/*                        />*/}
+                    {/*                    </InputGroup>*/}
+                    {/*                </motion.div>*/}
 
-                                        {showMode === 'interval' && (
-                                            <div className="ps-4" style={{maxWidth: 240}}>
-                                                <InputGroup>
-                                                    <Form.Control
-                                                        type="number"
-                                                        min={0}
-                                                        value={intervalMinutes}
-                                                        onChange={e => setIntervalMinutes(+e.target.value)}
-                                                    />
-                                                    <InputGroup.Text>мин</InputGroup.Text>
-                                                </InputGroup>
-                                            </div>
-                                        )}
-                                    </motion.div>
-                                )}
-
-                            </Card.Body>
-                        </Card>
-                    </motion.div>
-
-                    {/* Ограничения */}
-                    <motion.div layout>
-                        <Card>
-                            <Card.Header>Ограничения</Card.Header>
-                            <Card.Body>
-                                <div className="d-flex flex-column gap-3">
-                                    <motion.div
-                                        layout
-                                        className="d-flex align-items-center"
-                                        style={{maxWidth: 400}}
-                                    >
-                                        <InputGroup>
-                                            <InputGroup.Text>Макс. показов/день</InputGroup.Text>
-                                            <Form.Control
-                                                type="number"
-                                                min={0}
-                                                value={maxPerDay}
-                                                onChange={e => setMaxPerDay(+e.target.value)}
-                                            />
-                                        </InputGroup>
-                                    </motion.div>
-
-                                    <motion.div
-                                        layout
-                                        className="d-flex align-items-center"
-                                        style={{maxWidth: 400}}
-                                    >
-                                        <InputGroup>
-                                            <InputGroup.Text>Макс. показов/час</InputGroup.Text>
-                                            <Form.Control
-                                                type="number"
-                                                min={0}
-                                                value={maxPerHour}
-                                                onChange={e => setMaxPerHour(+e.target.value)}
-                                            />
-                                        </InputGroup>
-                                    </motion.div>
-
-                                    <motion.div
-                                        layout
-                                        className="d-flex align-items-center"
-                                        style={{maxWidth: 400}}
-                                    >
-                                        <InputGroup>
-                                            <InputGroup.Text>Макс. длит. в день</InputGroup.Text>
-                                            <Form.Control
-                                                type="number"
-                                                min={0}
-                                                value={maxTotalDuration}
-                                                onChange={e => setMaxTotalDuration(+e.target.value)}
-                                            />
-                                            <InputGroup.Text>мин</InputGroup.Text>
-                                        </InputGroup>
-                                    </motion.div>
-                                </div>
-                            </Card.Body>
-                        </Card>
-                    </motion.div>
+                    {/*                <motion.div*/}
+                    {/*                    layout*/}
+                    {/*                    className="d-flex align-items-center"*/}
+                    {/*                    style={{maxWidth: 400}}*/}
+                    {/*                >*/}
+                    {/*                    <InputGroup>*/}
+                    {/*                        <InputGroup.Text>Макс. длит. в день</InputGroup.Text>*/}
+                    {/*                        <Form.Control*/}
+                    {/*                            type="number"*/}
+                    {/*                            min={0}*/}
+                    {/*                            value={maxTotalDuration}*/}
+                    {/*                            onChange={e => setMaxTotalDuration(+e.target.value)}*/}
+                    {/*                        />*/}
+                    {/*                        <InputGroup.Text>мин</InputGroup.Text>*/}
+                    {/*                    </InputGroup>*/}
+                    {/*                </motion.div>*/}
+                    {/*            </div>*/}
+                    {/*        </Card.Body>*/}
+                    {/*    </Card>*/}
+                    {/*</motion.div>*/}
                 </motion.div>
             </LayoutGroup>
         </>

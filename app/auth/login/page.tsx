@@ -50,8 +50,19 @@ export default function LoginPage() {
     }
 
     return (
-        <Form onSubmit={onSubmit} style={{maxWidth: 400, margin: 'auto', padding: 20}}>
-            <h3 className="mb-4">Вход</h3>
+        <Form onSubmit={onSubmit}
+              style={{
+                  maxWidth: 400,
+                  margin: 'auto',
+                  padding: 20,
+
+              }}>
+            <h3 style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                flexDirection: "column"
+            }} className="mb-4">Вход в Скреон</h3>
             {error && <Alert variant="danger">{error}</Alert>}
 
             <Form.Group className="mb-3">
