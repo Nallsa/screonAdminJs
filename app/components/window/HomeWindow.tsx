@@ -14,8 +14,8 @@ export default function HomeWindow() {
 
     useEffect(() => {
         (async () => {
-            // addValueInStorage("organizationId", "aab12345-6789-4321-bbaa-1234567890cd");
-            // addValueInStorage("userId", "aab12345-6789-4321-bbaa-1234567890ab");
+            addValueInStorage("organizationId", "aab12345-6789-4321-bbaa-1234567890cd");
+            addValueInStorage("userId", "aab12345-6789-4321-bbaa-1234567890ab");
             //
             await getFilesInLibrary();
             await getPlaylists();
