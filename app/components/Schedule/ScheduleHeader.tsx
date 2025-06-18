@@ -1,8 +1,12 @@
 'use client'
 import React from 'react'
 import {Button} from 'react-bootstrap'
+import {useScheduleStore} from "@/app/store/scheduleStore";
 
 export default function ScheduleHeader() {
+
+    const sendSchedule = useScheduleStore(s => s.sendSchedule)
+
     return (
         <header
             style={{
@@ -13,8 +17,7 @@ export default function ScheduleHeader() {
             }}
         >
             <Button
-                onClick={() => { /* TODO: */
-                }}
+                onClick={sendSchedule}
                 variant="primary"
             >
                 Сохранить

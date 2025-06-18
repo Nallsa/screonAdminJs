@@ -5,9 +5,10 @@ import {immer} from 'zustand/middleware/immer'
 import {
     getCurrentWeekByDate,
     parseDayToDate,
-    normalizeTime
+    normalizeTime, RU_DAYS, WEEK_DAYS
 } from '@/app/lib/scheduleUtils'
 import {PlaylistItem, ScheduledBlock, ScreenData} from "@/public/types/interfaces";
+import axios from "axios";
 
 type ShowMode = 'cycle' | 'interval'
 
@@ -16,8 +17,12 @@ interface ScheduleState {
     selectedDate: Date
     currentWeek: Date[]
     isFixedSchedule: boolean
-    isPlayConstantly: boolean
+    isRecurring: boolean
     isShowBackground: boolean
+
+    // — приоритет (если понадобится) —
+    priority: number
+    setPriority: (p: number) => void
 
     // --- Выбор экранов ---
     selectedScreens: string[]
@@ -64,11 +69,13 @@ interface ScheduleState {
     // --- Прочие экшены (дата, фиксированный режим, фон) ---
     onDateSelected: (d: Date) => void
     toggleFixedSchedule: () => void
-    togglePlayConstantly: () => void
+    togglePlayRecurring: () => void
     toggleShowBackground: () => void
 
     setStartTime: (t: string) => void
     setEndTime: (t: string) => void
+
+    sendSchedule: () => Promise<void>
 }
 
 export const useScheduleStore = create<ScheduleState>()(
@@ -78,11 +85,71 @@ export const useScheduleStore = create<ScheduleState>()(
 
         return {
             // Основные параметры расписания
+            scheduledItemsFixed: [],
+            scheduledItemsCalendar: [],
             selectedDate: zero,
             currentWeek: getCurrentWeekByDate(zero),
             isFixedSchedule: false,
-            isPlayConstantly: true,
+            isRecurring: true,
             isShowBackground: false,
+            priority: 1,
+
+
+            sendSchedule: async () => {
+                const {
+                    selectedScreens,
+                    isFixedSchedule,
+                    isRecurring,
+                    priority,
+                    selectedDate,
+                    scheduledItemsFixed,
+                    scheduledItemsCalendar
+                } = get()
+
+                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+                const token = typeof window !== 'undefined'
+                    ? localStorage.getItem('accessToken')
+                    : null
+
+
+                const source = isFixedSchedule
+                    ? scheduledItemsFixed
+                    : scheduledItemsCalendar
+
+
+                const timeSlots = source.map(b => ({
+                    dayOfWeek: b.dayOfWeek,
+                    startDate: b.startDate,
+                    endDate: b.endDate,
+                    startTime: b.startTime,
+                    endTime: b.endTime,
+                    playlistId: b.playlistId
+                }))
+
+                const payload = {
+                    screenIds: selectedScreens,
+                    groupIds: [] as string[],
+                    startDate: isFixedSchedule
+                        ? null
+                        : selectedDate.toISOString().slice(0, 10),
+                    endDate: null,
+                    isRecurring,
+                    priority,
+                    timeSlots
+                }
+
+                try {
+                    const res = await axios.post(
+                        `${SERVER}schedule`,
+                        payload,
+                        {headers: {Authorization: `Bearer ${token}`}}
+                    )
+                    console.log('Schedule saved:', res.data)
+                } catch (e: any) {
+                    console.error('Error save schedule:', e.response?.data || e.message)
+                }
+            },
+
 
             // Выбор экранов
             selectedScreens: [],
@@ -141,39 +208,58 @@ export const useScheduleStore = create<ScheduleState>()(
             }),
 
             // Блоки расписания
-            scheduledItemsFixed: [],
-            scheduledItemsCalendar: [],
+
             addBlock: () => {
                 const {
-                    selectedDays, currentWeek,
-                    startTime, endTime,
-                    selectedPlaylist, isFixedSchedule
-                } = get()
-                if (!selectedDays.length) return
+                    selectedDays,
+                    currentWeek,
+                    startTime,
+                    endTime,
+                    selectedPlaylist,
+                    isFixedSchedule
+                } = get();
+                if (!selectedDays.length) return;
 
                 selectedDays.forEach(dayShort => {
-                    const dayDate = parseDayToDate(dayShort, currentWeek)
+                    const dateObj = parseDayToDate(dayShort, currentWeek);
+                    const isoDate = dateObj.toISOString().slice(0, 10);
+
+                    // находим порядковый номер дня в RU_DAYS
+                    const ruIndex = RU_DAYS.indexOf(dayShort);
+                    // для фиксированного берём из WEEK_DAYS по этому индексу
+                    const dow = isFixedSchedule
+                        ? WEEK_DAYS[ruIndex]
+                        : WEEK_DAYS[dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1];
+
                     const block: ScheduledBlock = {
-                        day: dayDate.toISOString().slice(0, 10),
-                        start: normalizeTime(startTime),
-                        end: normalizeTime(endTime),
-                        playlist: selectedPlaylist
-                    }
+                        dayOfWeek: dow,
+                        startDate: isFixedSchedule ? null : isoDate,
+                        endDate: isFixedSchedule ? null : isoDate,
+                        startTime: normalizeTime(startTime) + ':00',
+                        endTime: normalizeTime(endTime) + ':00',
+                        playlistId: selectedPlaylist
+                    };
+
                     set(s => {
-                        if (isFixedSchedule) s.scheduledItemsFixed.push(block)
-                        else s.scheduledItemsCalendar.push(block)
-                    })
-                })
+                        if (isFixedSchedule)
+                            s.scheduledItemsFixed.push(block);
+                        else
+                            s.scheduledItemsCalendar.push(block);
+                    });
+                });
             },
+
+
             removeBlock: b => set(s => {
                 const arr = s.isFixedSchedule
                     ? s.scheduledItemsFixed
                     : s.scheduledItemsCalendar
+
                 const idx = arr.findIndex(x =>
-                    x.day === b.day &&
-                    x.start === b.start &&
-                    x.end === b.end &&
-                    x.playlist === b.playlist
+                    x.dayOfWeek === b.dayOfWeek &&
+                    x.startTime === b.startTime &&
+                    x.endTime === b.endTime &&
+                    x.playlistId === b.playlistId
                 )
                 if (idx >= 0) arr.splice(idx, 1)
             }),
@@ -192,8 +278,8 @@ export const useScheduleStore = create<ScheduleState>()(
             toggleFixedSchedule: () => set(s => {
                 s.isFixedSchedule = !s.isFixedSchedule
             }),
-            togglePlayConstantly: () => set(s => {
-                s.isPlayConstantly = !s.isPlayConstantly
+            togglePlayRecurring: () => set(s => {
+                s.isRecurring = !s.isRecurring
             }),
             toggleShowBackground: () => set(s => {
                 s.isShowBackground = !s.isShowBackground

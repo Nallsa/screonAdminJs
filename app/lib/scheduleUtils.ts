@@ -1,7 +1,13 @@
+import {ScheduledBlock} from "@/public/types/interfaces";
+
 export const RU_DAYS = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"]
 export const RU_DAY_INDEX: Record<string, number> = {
     ПН: 0, ВТ: 1, СР: 2, ЧТ: 3, ПТ: 4, СБ: 5, ВС: 6
 }
+
+export const WEEK_DAYS: ScheduledBlock['dayOfWeek'][] = [
+    'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'
+]
 
 export function getCurrentWeekByDate(date: Date): Date[] {
     const jsDay = date.getDay() // 0=ВС,1=ПН...

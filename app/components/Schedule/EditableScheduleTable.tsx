@@ -1,8 +1,9 @@
 'use client'
 import React, {useLayoutEffect, useRef, useState} from 'react'
 import {useScheduleStore} from '@/app/store/scheduleStore'
-import {generateTimeSlots} from '@/app/lib/scheduleUtils'
+import {generateTimeSlots, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {ScheduledBlock} from "@/public/types/interfaces";
+
 
 export default function EditableScheduleTable() {
     const {
@@ -14,7 +15,7 @@ export default function EditableScheduleTable() {
         setHoveredBlock,
         removeBlock,
     } = useScheduleStore()
-    
+
 
     const times = generateTimeSlots('00:00', '23:30', 30)
 
@@ -24,7 +25,7 @@ export default function EditableScheduleTable() {
         : scheduledItemsCalendar.filter(b =>
             currentWeek
                 .map(d => d.toISOString().slice(0, 10))
-                .includes(b.day)
+                .includes(b.startDate!)
         )
 
     // мета-инфа столбец и ряды
@@ -37,13 +38,18 @@ export default function EditableScheduleTable() {
     const step = 30
 
     const meta: Meta[] = visible.map(b => {
-        const dayIndex = currentWeek.findIndex(
-            d => d.toISOString().slice(0, 10) === b.day
-        )
+        // вычисляем индекс дня недели
+        const dayIndex = isFixedSchedule
+            // для фиксированного: по перечислению MONDAY→0, … , SUNDAY→6
+            ? WEEK_DAYS.indexOf(b.dayOfWeek)
+            // для календарного: по дате в startDate
+            : currentWeek.findIndex(
+                d => d.toISOString().slice(0, 10) === b.startDate
+            )
 
-        // парсим часы и минуты из b.start / b.end
-        const [h0, m0] = b.start.split(':').map(Number)
-        const [h1, m1] = b.end.split(':').map(Number)
+        // парсим часы и минуты
+        const [h0, m0] = b.startTime.split(':').map(Number)
+        const [h1, m1] = b.endTime.split(':').map(Number)
 
         // переводим в минуты от полуночи
         const startMin = h0 * 60 + m0
@@ -151,7 +157,7 @@ export default function EditableScheduleTable() {
                         onMouseEnter={() => setHoveredBlock(m.block)}
                         onMouseLeave={() => setHoveredBlock(null)}
                     >
-                        {m.block.playlist}
+                        {m.block.playlistId}
                         {hoveredBlock === m.block && (
                             <span
                                 onClick={() => removeBlock(m.block)}
