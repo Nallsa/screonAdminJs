@@ -18,9 +18,9 @@ export default function Home() {
     useEffect(() => {
         (async () => {
             await checkToken()
-            connectWebSocket((code) => {
-                console.log("Connecting to server...", code)
-            });
+            // connectWebSocket((code) => {
+            //     console.log("Connecting to server...", code)
+            // });
             setInitialized(true)
         })()
     }, [checkToken])

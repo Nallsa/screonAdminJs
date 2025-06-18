@@ -40,8 +40,8 @@ export function sendGeneratePairingCode(screenId: string) {
     }
 }
 
-export function sendConfirmPairing(code: string, userId: string) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
+export function sendConfirmPairing(code: string, userId: string | null) {
+    if (userId && ws && ws.readyState === WebSocket.OPEN) {
         const request = {
             action: 'CONFIRM_PAIRING',
             payload: { code, userId }
