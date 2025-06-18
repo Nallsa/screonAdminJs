@@ -5,7 +5,7 @@ import {FileItem, GroupData, ScreenData} from "@/public/types/interfaces";
 import axios from "axios";
 import {getValueInStorage} from "@/app/API/localStorage";
 import {promises} from "node:dns";
-import {sendConfirmPairing, stompClient} from '../API/ws';
+import {sendConfirmPairing} from '../API/ws';
 
 interface ScreensState {
     allScreens: ScreenData[]
@@ -144,10 +144,10 @@ export const useScreensStore = create<ScreensState>()(
             try {
                 const userId = getValueInStorage("userId")
 
-
                 sendConfirmPairing(code, userId)
-            } catch (error) {
 
+            } catch (error) {
+                console.log("error", error)
             }
         },
     }))
