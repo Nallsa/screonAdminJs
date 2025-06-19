@@ -1,6 +1,18 @@
 let ws: WebSocket | null = null;
 
-export function connectWebSocket(onMessage: (action: string, payload: any) => void) {
+
+export function connectWebSocket(onMessage: (action: string, payload: any) => void): WebSocket {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        console.log('WebSocket уже подключен');
+        return ws;
+    }
+
+    if (ws && ws.readyState === WebSocket.CONNECTING) {
+        console.log('WebSocket в процессе подключения');
+        return ws;
+    }
+
+    console.log('Открываем новое WebSocket соединение...');
     ws = new WebSocket('wss://dev1.videotrade.ru/ws-pairing');
 
     ws.onopen = () => {
@@ -13,9 +25,6 @@ export function connectWebSocket(onMessage: (action: string, payload: any) => vo
             console.log('Received message:', data);
             const { action, payload } = data;
             onMessage(action, payload);
-
-
-
         } catch (err) {
             console.error('Error parsing message:', err);
         }
@@ -27,8 +36,9 @@ export function connectWebSocket(onMessage: (action: string, payload: any) => vo
 
     ws.onclose = () => {
         console.log('WebSocket closed');
-        // Здесь можно сделать reconnect при желании
     };
+
+    return ws;
 }
 
 export function sendGeneratePairingCode(screenId: string) {

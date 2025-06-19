@@ -7,6 +7,8 @@ import {v4 as uuid} from 'uuid'
 import ScreenCard from '@/app/components/Screens/ScreenCard'
 import {useScreensStore} from '@/app/store/screensStore'
 import {log} from "node:util";
+import {useAuthStore} from "@/app/store/authStore";
+import {connectWebSocket} from "@/app/API/ws";
 
 export default function ScreensPage() {
     const {
@@ -36,6 +38,23 @@ export default function ScreensPage() {
     // для модалки Добавить экран
     const [showAddModal, setShowAddModal] = useState(false)
     const [screenCode, setScreenCode] = useState('')
+
+
+
+    const checkToken = useAuthStore(s => s.checkToken)
+
+
+    useEffect(() => {
+        const initialize = async () => {
+            await checkToken(); // асинхронно ждем токен
+            connectWebSocket((action, payload) => {
+                console.log("Получено сообщение:", action, payload);
+            });
+        };
+
+        initialize();
+    }, [checkToken]);
+
 
     const handleOpenAddModal = () => {
         setScreenCode('')

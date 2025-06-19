@@ -17,18 +17,17 @@ export default function Home() {
     const [initialized, setInitialized] = useState(false)
 
     useEffect(() => {
-        console.log(`tokeeeeen ${accessToken}`)
-    }, []);
-
-    useEffect(() => {
-        (async () => {
-            await checkToken()
-            connectWebSocket((code) => {
-                console.log("Connecting to server...", code)
+        const initialize = async () => {
+            await checkToken(); // асинхронно ждем токен
+            connectWebSocket((action, payload) => {
+                console.log("Получено сообщение:", action, payload);
             });
-            setInitialized(true)
-        })()
-    }, [checkToken])
+            setInitialized(true);
+        };
+
+        initialize();
+    }, [checkToken]);
+
 
     useEffect(() => {
         if (initialized && !loading && !isAuthenticated) {
