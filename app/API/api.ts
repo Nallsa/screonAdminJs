@@ -32,3 +32,23 @@ export async function uploadFile(
         onComplete(null);
     }
 }
+
+
+
+function getScreens() {
+
+    // try {
+    //     const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+    //     const res = await axios.post(`${SERVER}auth/login`, {email, password})
+    //     const {accessToken, refreshToken, userId} = res.data
+    //     // сохраняем
+    //     localStorage.setItem('accessToken', accessToken)
+    //     localStorage.setItem('refreshToken', refreshToken)
+    //     localStorage.setItem('userId', userId)
+    //
+    //
+    //     return true
+    // } catch (e: any) {
+    //     return false
+    // }
+}

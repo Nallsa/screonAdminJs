@@ -20,14 +20,12 @@ export default function HomeWindow() {
             await getFilesInLibrary();
             await getPlaylists();
 
-            router.replace('/playlists'); // редиректим
+            console.log('daasdasasfafsfas');
+
+            router.push('/playlists'); // редиректим
         })(); // 👈 вызываем немедленно
     }, [getFilesInLibrary, getPlaylists, router]);
 
 
-    return (
-        <button onClick={
-            () => router.push('auth/login')
-        }>click</button>
-    );
+    return null
 }

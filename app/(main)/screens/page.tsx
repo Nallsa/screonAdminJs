@@ -176,7 +176,7 @@ export default function ScreensPage() {
                             pattern="\d*"
                             placeholder="12345"
                             value={screenCode}
-                            onChange={e => setScreenCode(e.target.value.replace(/\D/g, ''))}
+                            onChange={e => setScreenCode(e.target.value)}
                         />
                     </Form.Group>
                 </Modal.Body>

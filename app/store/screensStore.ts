@@ -5,6 +5,7 @@ import {FileItem, GroupData, ScreenData} from "@/public/types/interfaces";
 import axios from "axios";
 import {getValueInStorage} from "@/app/API/localStorage";
 import {promises} from "node:dns";
+import {sendConfirmPairing} from '../API/ws';
 
 interface ScreensState {
     allScreens: ScreenData[]
@@ -141,30 +142,12 @@ export const useScreensStore = create<ScreensState>()(
         addPairingConfirm: async (code) => {
 
             try {
-                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
-
                 const userId = getValueInStorage("userId")
-                const token = getValueInStorage("accessToken"); // или где у тебя хранится токен
 
+                sendConfirmPairing(code, userId)
 
-                if (!userId || !token) return
-
-                const response = await axios.post(
-                    `${SERVER_URL}screens/pairing/confirm`,
-                    {
-                        code,
-                        userId
-                    },
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        }
-                    }
-                );
-
-                console.log('uploadMediaData response:', response.data)
             } catch (error) {
-
+                console.log("error", error)
             }
         },
     }))

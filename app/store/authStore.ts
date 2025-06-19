@@ -110,6 +110,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             const SERVER = process.env.NEXT_PUBLIC_SERVER_URL!
             const token = localStorage.getItem('refreshToken')
+
+
             if (!token) throw new Error('no token')
             const res = await axios.post(`${SERVER}auth/validate-refresh-token`, {
                 refreshToken: token,
