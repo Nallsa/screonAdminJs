@@ -19,9 +19,9 @@ export default function Home() {
     useEffect(() => {
         const initialize = async () => {
             await checkToken(); // асинхронно ждем токен
-            connectWebSocket((action, payload) => {
-                console.log("Получено сообщение:", action, payload);
-            });
+            // connectWebSocket((action, payload) => {
+            //     console.log("Получено сообщение:", action, payload);
+            // });
             setInitialized(true);
         };
 

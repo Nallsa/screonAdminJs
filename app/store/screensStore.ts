@@ -3,7 +3,7 @@ import {create} from 'zustand'
 import {immer} from 'zustand/middleware/immer'
 import {FileItem, GroupData, ScreenData} from "@/public/types/interfaces"
 import {getValueInStorage} from "@/app/API/localStorage"
-import {sendConfirmPairing} from '../API/ws'
+import {connectWebSocket, sendConfirmPairing} from '../API/ws'
 import {StateCreator} from 'zustand'
 import axios from "axios";
 
@@ -31,6 +31,9 @@ interface ScreensState {
 
     getScreens: () => Promise<void>
 
+    delScreen: (screenId: string) => Promise<void>
+
+    connectWsForScreen: () => Promise<void>
 
 }
 
@@ -158,8 +161,6 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             const screens: ScreenData[] = await res.data
 
 
-
-
             set(state => {
                 state.filteredScreens = screens;
                 state.allScreens = screens;
@@ -169,7 +170,71 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
         }
 
 
+    },
+
+    delScreen: async (screenId) => {
+        try {
+            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL;
+            const userId = getValueInStorage("userId");
+            const accessToken = getValueInStorage("accessToken");
+
+            const data = {userId, screenId};
+
+            const res = await axios.delete(`${SERVER}screens/unpair`, {
+                data: data,
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            });
+
+            if (res.status === 200) {
+                set(state => {
+                    state.allScreens = state.allScreens.filter(screen => screen.id !== screenId);
+                    state.filteredScreens = state.filteredScreens.filter(screen => screen.id !== screenId);
+                });
+            }
+        } catch (e: any) {
+            console.error("Ошибка при удалении экрана:", e);
+        }
+    },
+
+    connectWsForScreen: async () => {
+        try {
+            connectWebSocket((action, payload) => {
+                console.log("Получено сообщениеaa:", action, payload);
+
+                switch (action) {
+                    case 'PAIRING_CONFIRMED':
+
+                        console.log("PAIRING_CONFIRMEDfsafasafsfas")
+
+                        const screen: ScreenData = payload;
+
+                        console.log("screen", screen)
+
+                        set(state => {
+
+                            state.allScreens.push(screen);
+
+                            state.filteredScreens.push(screen);
+                        });
+                        break;
+
+                    case 'ERROR':
+                        console.error("Ошибка:", payload.message);
+                        break;
+
+                    default:
+                        console.warn("Неизвестный action:", action);
+                }
+            });
+
+        } catch (e: any) {
+            console.error("Ошибка при удалении экрана:", e);
+        }
     }
+
+
 })
 
 // Сам store
