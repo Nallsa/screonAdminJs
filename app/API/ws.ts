@@ -13,6 +13,9 @@ export function connectWebSocket(onMessage: (action: string, payload: any) => vo
             console.log('Received message:', data);
             const { action, payload } = data;
             onMessage(action, payload);
+
+
+
         } catch (err) {
             console.error('Error parsing message:', err);
         }

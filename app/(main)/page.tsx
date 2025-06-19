@@ -1,7 +1,7 @@
 'use client'
 
-import {useEffect, useState} from 'react'
-import {useRouter} from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {useAuthStore} from "@/app/store/authStore";
 import HomeWindow from "@/app/components/window/HomeWindow";
 import {connectWebSocket} from "@/app/API/ws";
@@ -13,14 +13,19 @@ export default function Home() {
     const isAuthenticated = useAuthStore(s => s.isAuthenticated)
     const loading = useAuthStore(s => s.loading)
     const checkToken = useAuthStore(s => s.checkToken)
+    const accessToken = useAuthStore(s => s.accessToken)
     const [initialized, setInitialized] = useState(false)
+
+    useEffect(() => {
+        console.log(`tokeeeeen ${accessToken}`)
+    }, []);
 
     useEffect(() => {
         (async () => {
             await checkToken()
-            // connectWebSocket((code) => {
-            //     console.log("Connecting to server...", code)
-            // });
+            connectWebSocket((code) => {
+                console.log("Connecting to server...", code)
+            });
             setInitialized(true)
         })()
     }, [checkToken])
@@ -35,5 +40,5 @@ export default function Home() {
         return <div className="text-center p-4">Загрузка…</div>
     }
 
-    return <HomeWindow/>
+    return <HomeWindow />
 }

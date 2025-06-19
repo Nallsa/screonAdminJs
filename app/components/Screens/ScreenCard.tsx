@@ -3,7 +3,7 @@
 import React from 'react'
 import {Card, Button, Form} from 'react-bootstrap'
 import {useScreensStore} from '@/app/store/screensStore'
-import {GroupData, ScreenData} from "@/public/types/interfaces";
+import {DeviceStatus, GroupData, ScreenData} from "@/public/types/interfaces";
 
 interface ScreenCardProps {
     screen: ScreenData
@@ -21,9 +21,9 @@ export default function ScreenCard({
 
     const groups = useScreensStore(state => state.groups)
 
-    const groupNames = screen.groupIds
-        .map(id => groups.find((g: GroupData) => g.id === id)?.name)
-        .filter(Boolean) as string[]
+    // const groupNames = screen.groupIds
+    //     .map(id => groups.find((g: GroupData) => g.id === id)?.name)
+    //     .filter(Boolean) as string[]
 
     return (
         <Card
@@ -64,23 +64,23 @@ export default function ScreenCard({
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  background: screen.online ? 'green' : 'red',
+                  background: screen.status ? 'green' : 'red',
               }}
           />
                     <small className="text-muted">
-                        {screen.online ? 'Онлайн' : 'Оффлайн'}
+                        {screen.status ? DeviceStatus.ONLINE : 'Оффлайн'}
                     </small>
                 </div>
 
                 <div className="mb-3">
                     <text>Группы:</text>
                     {' '}
-                    {groupNames.length > 0 ? groupNames.join(', ') : 'Без группы'}
+                    {/*{groupNames.length > 0 ? groupNames.join(', ') : 'Без группы'}*/}
                 </div>
 
                 {/* Действия */}
                 <div className="d-flex flex-wrap gap-2">
-                    {screen.online ? (
+                    {screen.status ? (
                         ['Показать', 'Редактировать', 'Выключить'].map(label => (
                             <Button
                                 key={label}
