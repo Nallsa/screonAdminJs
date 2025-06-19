@@ -3,6 +3,7 @@ import React, {useLayoutEffect, useRef, useState} from 'react'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import {generateTimeSlots, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {ScheduledBlock} from "@/public/types/interfaces";
+import {usePlaylistStore} from "@/app/store/playlistStore";
 
 
 export default function EditableScheduleTable() {
@@ -16,7 +17,7 @@ export default function EditableScheduleTable() {
         removeBlock,
     } = useScheduleStore()
 
-
+    const {playlistItems} = usePlaylistStore()
     const times = generateTimeSlots('00:00', '23:30', 30)
 
     // блоки на рендер
@@ -157,7 +158,10 @@ export default function EditableScheduleTable() {
                         onMouseEnter={() => setHoveredBlock(m.block)}
                         onMouseLeave={() => setHoveredBlock(null)}
                     >
-                        {m.block.playlistId}
+                        {
+                            playlistItems.find(p => p.id === m.block.playlistId)?.name
+                            ?? m.block.playlistId
+                        }
                         {hoveredBlock === m.block && (
                             <span
                                 onClick={() => removeBlock(m.block)}

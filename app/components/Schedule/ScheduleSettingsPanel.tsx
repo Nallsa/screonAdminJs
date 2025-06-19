@@ -1,7 +1,7 @@
 'use client'
 import React from 'react'
 import {Form, Button, Dropdown, InputGroup, Card, Col, Row} from 'react-bootstrap'
-import {getCurrentWeekByDate, parseDayToDate, RU_DAYS, timeToMinutes} from '@/app/lib/scheduleUtils'
+import {getCurrentWeekByDate, parseDayToDate, RU_DAYS, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import {motion, LayoutGroup, AnimatePresence} from 'framer-motion'
 import {usePlaylistStore} from "@/app/store/playlistStore";
@@ -52,51 +52,62 @@ export default function ScheduleSettingsPanel() {
     const {playlistItems} = usePlaylistStore()
 
     const handleAdd = () => {
-
         if (playlistItems.length === 0 || !selectedPlaylist) {
-            window.alert('Создайте, пожалуйста, плейлист во вкладке "Плейлисты"');
+            window.alert('Выберите, пожалуйста, плейлист');
             return;
         }
 
         const targetList = isFixedSchedule
             ? scheduledItemsFixed
-            : scheduledItemsCalendar
+            : scheduledItemsCalendar;
 
-
-        const newStart = timeToMinutes(startTime)
-        const newEnd = timeToMinutes(endTime)
+        const newStart = timeToMinutes(startTime);
+        const newEnd = timeToMinutes(endTime);
 
         for (const dayShort of selectedDays) {
+            // 1. Общая часть: найдём ISO-дату и русский индекс
+            const dateObj = parseDayToDate(dayShort, getCurrentWeekByDate(selectedDate));
+            const isoDate = dateObj.toISOString().slice(0, 10);
+            const ruIndex = RU_DAYS.indexOf(dayShort);  // 0 для 'ПН', 1 для 'ВТ' и т.д.
+            if (ruIndex < 0) continue; // на всякий случай
 
-            const dayDate = parseDayToDate(
-                dayShort,
-                getCurrentWeekByDate(selectedDate)
-            ).toISOString().slice(0, 10)
+            // 2. Составляем ключ дня недели
+            const dayOfWeekKey = WEEK_DAYS[ruIndex]; // e.g. 'MONDAY'
 
+            // 3. Человеческое имя плейлиста для алерта
+            const playlistName =
+                playlistItems.find(p => p.id === selectedPlaylist)?.name
+                ?? selectedPlaylist;
 
+            // 4. Ищем конфликт в нужном листе
             const conflict = targetList.find(b => {
-                if (b.dayOfWeek !== dayDate) return false
-                if (b.playlistId !== selectedPlaylist) return false
+                if (isFixedSchedule) {
+                    // фиксированное расписание – используем только день недели
+                    if (b.dayOfWeek !== dayOfWeekKey) return false;
+                } else {
+                    // календарное – конкретная дата
+                    if (b.startDate !== isoDate) return false;
+                }
 
-                const existStart = timeToMinutes(b.startTime)
-                const existEnd = timeToMinutes(b.endTime)
+                if (b.playlistId !== selectedPlaylist) return false;
 
-
-                return newStart < existEnd && existStart < newEnd
-            })
+                const existStart = timeToMinutes(b.startTime);
+                const existEnd = timeToMinutes(b.endTime);
+                return newStart < existEnd && existStart < newEnd;
+            });
 
             if (conflict) {
                 window.alert(
-                    `Плейлист "${selectedPlaylist}" уже назначен в ${dayShort} ` +
+                    `Плейлист «${playlistName}» уже назначен в ${dayShort} ` +
                     `с ${conflict.startTime} до ${conflict.endTime}.`
-                )
-                return
+                );
+                return;
             }
         }
-        // Если ни для одного дня нет конфликта — добавляем блок
-        addBlock()
-    }
 
+        // если ни для одного дня конфликта нет — добавляем новый блок
+        addBlock();
+    };
 
     return (
         <>
