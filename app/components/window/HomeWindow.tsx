@@ -22,7 +22,7 @@ export default function HomeWindow() {
 
             console.log('daasdasasfafsfas');
 
-            router.push('/playlists'); // редиректим
+            router.push('/screens'); // редиректим
         })(); // 👈 вызываем немедленно
     }, [getFilesInLibrary, getPlaylists, router]);
 

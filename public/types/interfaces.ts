@@ -21,12 +21,21 @@ export interface FileItem {
     orderIndex: number
 }
 
+export enum DeviceStatus {
+    'ONLINE',
+    'OFFLINE',
+    'ERROR'
+}
 
 export interface ScreenData {
     id: string
     name: string
-    online: boolean
     groupIds: string[]
+    serialNumber: string;
+    model: string;
+    os: string;
+    status: DeviceStatus;
+    locationId: string;
 }
 
 export interface GroupData {
