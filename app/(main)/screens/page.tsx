@@ -6,6 +6,7 @@ import {v4 as uuid} from 'uuid'
 
 import ScreenCard from '@/app/components/Screens/ScreenCard'
 import {useScreensStore} from '@/app/store/screensStore'
+import {log} from "node:util";
 
 export default function ScreensPage() {
     const {
@@ -25,6 +26,7 @@ export default function ScreensPage() {
 
         filterScreens,
         addPairingConfirm,
+        getScreens
     } = useScreensStore()
 
 
@@ -51,6 +53,9 @@ export default function ScreensPage() {
         addPairingConfirm(screenCode).then(r => setShowAddModal(false))
     }
 
+    useEffect(() => {
+        getScreens().then(r => console.log(""))
+    }, [getScreens]);
 
     // первичный фильтр
     useEffect(() => {
@@ -61,6 +66,9 @@ export default function ScreensPage() {
     useEffect(() => {
         filterScreens(search, groupFilter)
     }, [search, groupFilter, filterScreens])
+
+
+
 
 
     return (

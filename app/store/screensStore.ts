@@ -32,6 +32,8 @@ interface ScreensState {
 
     addPairingConfirm: (code: string) => Promise<void>
 
+    getScreens: () => Promise<void>
+
 }
 
 export const useScreensStore = create<ScreensState>()(
@@ -150,5 +152,24 @@ export const useScreensStore = create<ScreensState>()(
                 console.log("error", error)
             }
         },
-    }))
+
+
+        getScreens: async () => {
+            try {
+                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+
+                const userId = getValueInStorage("userId")
+
+                const res = await axios.post(`${SERVER}screens/owned/${userId}`)
+
+                console.log(res.data)
+
+
+            } catch (e: any) {
+            }
+
+
+        }
+    },
+}))
 )
