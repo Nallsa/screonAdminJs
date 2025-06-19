@@ -35,8 +35,10 @@ export interface GroupData {
 }
 
 export interface ScheduledBlock {
-    day: string
-    start: string
-    end: string
-    playlist: string
+    dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'
+    startDate: string | null
+    endDate: string | null
+    startTime: string
+    endTime: string
+    playlistId: string
 }
