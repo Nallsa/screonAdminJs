@@ -16,8 +16,6 @@ export default function ScheduleSettingsPanel() {
         togglePlayRecurring,
         isFixedSchedule,
         toggleFixedSchedule,
-        isShowBackground,
-        toggleShowBackground,
         selectedPlaylist,
         setSelectedPlaylist,
         startTime,
@@ -26,25 +24,11 @@ export default function ScheduleSettingsPanel() {
         setEndTime,
         selectedDays,
         toggleDay,
-        showMode,
-        cycleMinutes,
-        pauseMinutes,
-        intervalMinutes,
-        setShowMode,
-        setCycleMinutes,
-        setPauseMinutes,
-        setIntervalMinutes,
-        maxPerDay,
-        maxPerHour,
-        maxTotalDuration,
-        setMaxPerDay,
-        setMaxPerHour,
-        setMaxTotalDuration,
-        addBlock,
-        scheduledItemsFixed,
-        scheduledItemsCalendar,
         selectedScreens,
         toggleScreen,
+        scheduledFixedMap,
+        scheduledCalendarMap,
+        addBlock
     } = useScheduleStore()
 
     const {allScreens} = useScreensStore()
@@ -52,62 +36,66 @@ export default function ScheduleSettingsPanel() {
     const {playlistItems} = usePlaylistStore()
 
     const handleAdd = () => {
-        if (playlistItems.length === 0 || !selectedPlaylist) {
-            window.alert('Выберите, пожалуйста, плейлист');
-            return;
+        if (!selectedPlaylist) {
+            window.alert('Выберите, пожалуйста, плейлист')
+            return
+        }
+        if (selectedScreens.length === 0) {
+            window.alert('Выберите хотя бы один экран')
+            return
+        }
+        if (selectedDays.length === 0) {
+            window.alert('Выберите хотя бы один день')
+            return
         }
 
-        const targetList = isFixedSchedule
-            ? scheduledItemsFixed
-            : scheduledItemsCalendar;
+        const newStart = timeToMinutes(startTime)
+        const newEnd = timeToMinutes(endTime)
 
-        const newStart = timeToMinutes(startTime);
-        const newEnd = timeToMinutes(endTime);
+        // для каждого экрана проверяем конфликты
+        for (const screenId of selectedScreens) {
+            const mapKey = isFixedSchedule ? scheduledFixedMap : scheduledCalendarMap
+            const existing: typeof mapKey[string] = mapKey[screenId] ?? []
 
-        for (const dayShort of selectedDays) {
-            // 1. Общая часть: найдём ISO-дату и русский индекс
-            const dateObj = parseDayToDate(dayShort, getCurrentWeekByDate(selectedDate));
-            const isoDate = dateObj.toISOString().slice(0, 10);
-            const ruIndex = RU_DAYS.indexOf(dayShort);  // 0 для 'ПН', 1 для 'ВТ' и т.д.
-            if (ruIndex < 0) continue; // на всякий случай
+            for (const dayShort of selectedDays) {
 
-            // 2. Составляем ключ дня недели
-            const dayOfWeekKey = WEEK_DAYS[ruIndex]; // e.g. 'MONDAY'
+                const dateObj = parseDayToDate(dayShort, getCurrentWeekByDate(selectedDate))
+                const isoDate = dateObj.toISOString().slice(0, 10)
+                const ruIndex = RU_DAYS.indexOf(dayShort)
+                if (ruIndex < 0) continue
 
-            // 3. Человеческое имя плейлиста для алерта
-            const playlistName =
-                playlistItems.find(p => p.id === selectedPlaylist)?.name
-                ?? selectedPlaylist;
 
-            // 4. Ищем конфликт в нужном листе
-            const conflict = targetList.find(b => {
-                if (isFixedSchedule) {
-                    // фиксированное расписание – используем только день недели
-                    if (b.dayOfWeek !== dayOfWeekKey) return false;
-                } else {
-                    // календарное – конкретная дата
-                    if (b.startDate !== isoDate) return false;
+                const dayOfWeekKey = WEEK_DAYS[ruIndex]
+
+                const playlistName = playlistItems.find(p => p.id === selectedPlaylist)?.name ?? selectedPlaylist
+
+
+                const conflict = existing.find(b => {
+                    if (isFixedSchedule) {
+                        if (b.dayOfWeek !== dayOfWeekKey) return false
+                    } else {
+                        if (b.startDate !== isoDate) return false
+                    }
+                    if (b.playlistId !== selectedPlaylist) return false
+
+                    const existStart = timeToMinutes(b.startTime)
+                    const existEnd = timeToMinutes(b.endTime)
+                    return newStart < existEnd && existStart < newEnd
+                })
+
+                if (conflict) {
+                    window.alert(
+                        `На экране ${screenId} плейлист «${playlistName}» уже назначен в ${dayShort} ` +
+                        `с ${conflict.startTime} до ${conflict.endTime}.`
+                    )
+                    return
                 }
-
-                if (b.playlistId !== selectedPlaylist) return false;
-
-                const existStart = timeToMinutes(b.startTime);
-                const existEnd = timeToMinutes(b.endTime);
-                return newStart < existEnd && existStart < newEnd;
-            });
-
-            if (conflict) {
-                window.alert(
-                    `Плейлист «${playlistName}» уже назначен в ${dayShort} ` +
-                    `с ${conflict.startTime} до ${conflict.endTime}.`
-                );
-                return;
             }
         }
 
-        // если ни для одного дня конфликта нет — добавляем новый блок
-        addBlock();
-    };
+        // если для всех экранов конфликтов нет — добавляем
+        addBlock()
+    }
 
     return (
         <>
@@ -132,39 +120,31 @@ export default function ScheduleSettingsPanel() {
                         </motion.div>
                     )}
 
-
                     {/* Как показывать */}
                     <motion.div layout className="mb-1">
                         <Card>
                             <Card.Header>Как показывать</Card.Header>
                             <Card.Body>
-
-
-                                <motion.div layout>
-                                    <Form.Check
-                                        inline
-                                        label="Фикс. расписание"
-                                        type="checkbox"
-                                        checked={isFixedSchedule}
-                                        onChange={toggleFixedSchedule}
-                                    />
-                                </motion.div>
-
-                                <motion.div layout>
-                                    <Form.Check
-                                        inline
-                                        label="Зациклено"
-                                        type="checkbox"
-                                        checked={isRecurring}
-                                        onChange={togglePlayRecurring}
-                                        className="form-check-square mb-1"
-                                    />
-                                </motion.div>
+                                <Form.Check
+                                    inline
+                                    label="Фикс. расписание"
+                                    type="checkbox"
+                                    checked={isFixedSchedule}
+                                    onChange={toggleFixedSchedule}
+                                />
+                                <Form.Check
+                                    inline
+                                    label="Зациклено"
+                                    type="checkbox"
+                                    checked={isRecurring}
+                                    onChange={togglePlayRecurring}
+                                    className="form-check-square mb-1"
+                                />
                             </Card.Body>
                         </Card>
                     </motion.div>
 
-
+                    {/* Время */}
                     <motion.div layout>
                         <InputGroup style={{maxWidth: 300}}>
                             <InputGroup.Text>С</InputGroup.Text>
@@ -182,53 +162,43 @@ export default function ScheduleSettingsPanel() {
                         </InputGroup>
                     </motion.div>
 
-
-                    {/*Экраны, плейлисты, дни недели, добавить*/}
+                    {/* Экраны / Плейлисты / Дни / Добавить */}
                     <Row className="g-3 d-flex align-items-center justify-content-center">
                         <Col xs="auto">
                             <Dropdown autoClose="outside">
                                 <Dropdown.Toggle>Экраны</Dropdown.Toggle>
                                 <Dropdown.Menu style={{padding: 0}}>
-                                    {/* пункт "Выбрать всё" */}
+                                    {/* Выбрать всё */}
                                     <Dropdown.Item
                                         as="label"
-                                        htmlFor="screen-checkbox-all"
-                                        key="select-all"
+                                        htmlFor="screen-all"
                                         className="d-flex align-items-center px-3 py-2"
-                                        style={{cursor: 'pointer'}}
                                     >
                                         <Form.Check
                                             type="checkbox"
-                                            id="screen-checkbox-all"
+                                            id="screen-all"
                                             checked={selectedScreens.length === allScreens.length}
                                             onChange={() => {
                                                 if (selectedScreens.length === allScreens.length) {
-                                                    // если все уже выбраны — снимаем выбор со всех
-                                                    selectedScreens.forEach(id => toggleScreen(id));
+                                                    selectedScreens.forEach(id => toggleScreen(id))
                                                 } else {
-                                                    // иначе — выбираем недостающие
                                                     allScreens.forEach(s => {
-                                                        if (!selectedScreens.includes(s.id)) {
-                                                            toggleScreen(s.id);
-                                                        }
-                                                    });
+                                                        if (!selectedScreens.includes(s.id)) toggleScreen(s.id)
+                                                    })
                                                 }
                                             }}
                                             className="me-2 mb-0"
                                         />
                                         <span>Выбрать всё</span>
                                     </Dropdown.Item>
-
-                                    {/* список экранов */}
                                     {allScreens.map(s => {
-                                        const inputId = `screen-checkbox-${s.id}`;
+                                        const inputId = `screen-${s.id}`
                                         return (
                                             <Dropdown.Item
                                                 as="label"
                                                 htmlFor={inputId}
                                                 key={s.id}
                                                 className="d-flex align-items-center px-3 py-2"
-                                                style={{cursor: 'pointer'}}
                                             >
                                                 <Form.Check
                                                     type="checkbox"
@@ -239,18 +209,16 @@ export default function ScheduleSettingsPanel() {
                                                 />
                                                 <span>{s.name}</span>
                                             </Dropdown.Item>
-                                        );
+                                        )
                                     })}
                                 </Dropdown.Menu>
                             </Dropdown>
                         </Col>
 
-
                         <Col xs="auto">
                             <Dropdown onSelect={k => setSelectedPlaylist(k!)}>
                                 <Dropdown.Toggle>
-                                    {playlistItems.find(p => p.id === selectedPlaylist)?.name
-                                        ?? 'Плейлист'}
+                                    {playlistItems.find(p => p.id === selectedPlaylist)?.name ?? 'Плейлист'}
                                 </Dropdown.Toggle>
                                 <Dropdown.Menu>
                                     {playlistItems.map(pl => (
@@ -263,25 +231,22 @@ export default function ScheduleSettingsPanel() {
                         </Col>
 
                         <Col xs="auto">
-                            <motion.div layout style={{display: 'flex', gap: 8}}>
+                            <div style={{display: 'flex', gap: 8}}>
                                 {RU_DAYS.map(d => (
-                                    <motion.div layout key={d}>
-                                        <Button
-                                            size="sm"
-                                            variant={selectedDays.includes(d) ? 'success' : 'outline-secondary'}
-                                            onClick={() => toggleDay(d)}
-                                        >
-                                            {d}
-                                        </Button>
-                                    </motion.div>
+                                    <Button
+                                        key={d}
+                                        size="sm"
+                                        variant={selectedDays.includes(d) ? 'success' : 'outline-secondary'}
+                                        onClick={() => toggleDay(d)}
+                                    >
+                                        {d}
+                                    </Button>
                                 ))}
-                            </motion.div>
+                            </div>
                         </Col>
 
                         <Col xs="auto">
-                            <motion.div layout>
-                                <Button onClick={handleAdd}>Добавить</Button>
-                            </motion.div>
+                            <Button onClick={handleAdd}>Добавить</Button>
                         </Col>
                     </Row>
                 </motion.div>

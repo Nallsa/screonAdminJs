@@ -11,6 +11,7 @@ import {PlaylistItem, ScheduledBlock, ScreenData} from "@/public/types/interface
 import axios from "axios";
 
 type ShowMode = 'cycle' | 'interval'
+type ByScreen<T> = Record<string, T[]>
 
 interface ScheduleState {
     // --- Основные параметры расписания ---
@@ -57,10 +58,10 @@ interface ScheduleState {
     setMaxTotalDuration: (n: number) => void
 
     // --- Блоки расписания ---
-    scheduledItemsFixed: ScheduledBlock[]
-    scheduledItemsCalendar: ScheduledBlock[]
+    scheduledFixedMap: ByScreen<ScheduledBlock>
+    scheduledCalendarMap: ByScreen<ScheduledBlock>
     addBlock: () => void
-    removeBlock: (b: ScheduledBlock) => void
+    removeBlock: (screenId: string, b: ScheduledBlock) => void
 
     // --- Ховер для блока в таблице ---
     hoveredBlock: ScheduledBlock | null
@@ -85,8 +86,8 @@ export const useScheduleStore = create<ScheduleState>()(
 
         return {
             // Основные параметры расписания
-            scheduledItemsFixed: [],
-            scheduledItemsCalendar: [],
+            scheduledFixedMap: {},
+            scheduledCalendarMap: {},
             selectedDate: zero,
             currentWeek: getCurrentWeekByDate(zero),
             isFixedSchedule: false,
@@ -94,61 +95,10 @@ export const useScheduleStore = create<ScheduleState>()(
             isShowBackground: false,
             priority: 1,
 
-
-            sendSchedule: async () => {
-                const {
-                    selectedScreens,
-                    isFixedSchedule,
-                    isRecurring,
-                    priority,
-                    selectedDate,
-                    scheduledItemsFixed,
-                    scheduledItemsCalendar
-                } = get()
-
-                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-                const token = typeof window !== 'undefined'
-                    ? localStorage.getItem('accessToken')
-                    : null
-
-
-                const source = isFixedSchedule
-                    ? scheduledItemsFixed
-                    : scheduledItemsCalendar
-
-
-                const timeSlots = source.map(b => ({
-                    dayOfWeek: b.dayOfWeek,
-                    startDate: b.startDate,
-                    endDate: b.endDate,
-                    startTime: b.startTime,
-                    endTime: b.endTime,
-                    playlistId: b.playlistId
-                }))
-
-                const payload = {
-                    screenIds: selectedScreens,
-                    groupIds: [] as string[],
-                    startDate: isFixedSchedule
-                        ? null
-                        : selectedDate.toISOString().slice(0, 10),
-                    endDate: null,
-                    isRecurring,
-                    priority,
-                    timeSlots
-                }
-
-                try {
-                    const res = await axios.post(
-                        `${SERVER}schedule`,
-                        payload,
-                        {headers: {Authorization: `Bearer ${token}`}}
-                    )
-                    console.log('Schedule saved:', res.data)
-                } catch (e: any) {
-                    console.error('Error save schedule:', e.response?.data || e.message)
-                }
-            },
+            hoveredBlock: null as ScheduledBlock | null,
+            setHoveredBlock: (b: ScheduledBlock | null) => set(s => {
+                s.hoveredBlock = b
+            }),
 
 
             // Выбор экранов
@@ -173,6 +123,147 @@ export const useScheduleStore = create<ScheduleState>()(
                 const idx = s.selectedDays.indexOf(day)
                 if (idx >= 0) s.selectedDays.splice(idx, 1)
                 else s.selectedDays.push(day)
+            }),
+
+            // Блоки расписания
+            addBlock: () => {
+                const {
+                    selectedScreens,
+                    currentWeek,
+                    startTime,
+                    endTime,
+                    selectedPlaylist,
+                    isFixedSchedule,
+                } = get()
+                if (!selectedScreens.length) return
+
+                selectedScreens.forEach(screenId => {
+                    // инициализируем, если ещё нет
+                    const mapKey = isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
+                    set(s => {
+                        if (!(s as any)[mapKey][screenId]) {
+                            (s as any)[mapKey][screenId] = []
+                        }
+                    })
+
+                    // для каждого выбранного дня
+                    get().selectedDays.forEach(dayShort => {
+                        const dateObj = parseDayToDate(dayShort, currentWeek)
+                        const isoDate = dateObj.toISOString().slice(0, 10)
+                        const ruIndex = RU_DAYS.indexOf(dayShort)
+                        const dow = WEEK_DAYS[ruIndex]
+
+                        const b: ScheduledBlock = {
+                            dayOfWeek: dow,
+                            startDate: isFixedSchedule ? null : isoDate,
+                            endDate: isFixedSchedule ? null : isoDate,
+                            startTime: normalizeTime(startTime) + ':00',
+                            endTime: normalizeTime(endTime) + ':00',
+                            playlistId: selectedPlaylist,
+                        }
+
+                        set(s => {
+                            ;(s as any)[mapKey][screenId].push(b)
+                        })
+                    })
+                })
+            },
+
+            removeBlock: (screenId, block) => {
+                const mapKey = get().isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
+                set(s => {
+                    const arr = (s as any)[mapKey][screenId] || []
+                    const idx = arr.findIndex((b: ScheduledBlock) =>
+                        b.dayOfWeek === block.dayOfWeek &&
+                        b.startTime === block.startTime &&
+                        b.endTime === block.endTime &&
+                        b.playlistId === block.playlistId
+                    )
+                    if (idx >= 0) arr.splice(idx, 1)
+                })
+            },
+
+
+            sendSchedule: async () => {
+                const {
+                    selectedScreens,
+                    isFixedSchedule,
+                    isRecurring,
+                    priority,
+                    selectedDate,
+                    scheduledFixedMap,
+                    scheduledCalendarMap
+                } = get()
+
+                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+                const token = typeof window !== 'undefined'
+                    ? localStorage.getItem('accessToken')
+                    : null
+
+                // выбираем нужную мапу
+                const map = isFixedSchedule
+                    ? scheduledFixedMap
+                    : scheduledCalendarMap
+
+                // собираем все слоты по выбранным экранам
+                const allSlots = selectedScreens.flatMap(id => map[id] ?? [])
+
+                // дедуплицируем по всем полям
+                const uniqueSlots = Array.from(
+                    new Map(
+                        allSlots.map(b => [
+                            `${b.dayOfWeek}|${b.startDate}|${b.startTime}|${b.endTime}|${b.playlistId}`,
+                            b
+                        ])
+                    ).values()
+                )
+
+                const payload = {
+                    screenIds: selectedScreens,
+                    groupIds: [] as string[],
+                    startDate: isFixedSchedule
+                        ? null
+                        : selectedDate.toISOString().slice(0, 10),
+                    endDate: null,
+                    isRecurring,
+                    priority,
+                    timeSlots: uniqueSlots
+                }
+
+                try {
+                    const res = await axios.post(
+                        `${SERVER}schedule`,
+                        payload,
+                        {headers: {Authorization: `Bearer ${token}`}}
+                    )
+                    console.log('Schedule saved:', res.data)
+                } catch (e: any) {
+                    console.error('Error save schedule:', e.response?.data || e.message)
+                }
+            },
+
+            /////////////////////////////////////////////////////////
+
+            //  Прочие экшены
+            onDateSelected: d => set(s => {
+                s.selectedDate = d
+                s.currentWeek = getCurrentWeekByDate(d)
+            }),
+            toggleFixedSchedule: () => set(s => {
+                s.isFixedSchedule = !s.isFixedSchedule
+            }),
+            togglePlayRecurring: () => set(s => {
+                s.isRecurring = !s.isRecurring
+            }),
+            toggleShowBackground: () => set(s => {
+                s.isShowBackground = !s.isShowBackground
+            }),
+
+            setStartTime: t => set(s => {
+                s.startTime = normalizeTime(t)
+            }),
+            setEndTime: t => set(s => {
+                s.endTime = normalizeTime(t)
             }),
 
             // Как показывать
@@ -205,91 +296,6 @@ export const useScheduleStore = create<ScheduleState>()(
             }),
             setMaxTotalDuration: n => set(s => {
                 s.maxTotalDuration = n
-            }),
-
-            // Блоки расписания
-
-            addBlock: () => {
-                const {
-                    selectedDays,
-                    currentWeek,
-                    startTime,
-                    endTime,
-                    selectedPlaylist,
-                    isFixedSchedule
-                } = get();
-                if (!selectedDays.length) return;
-
-                selectedDays.forEach(dayShort => {
-                    const dateObj = parseDayToDate(dayShort, currentWeek);
-                    const isoDate = dateObj.toISOString().slice(0, 10);
-
-                    // находим порядковый номер дня в RU_DAYS
-                    const ruIndex = RU_DAYS.indexOf(dayShort);
-                    // для фиксированного берём из WEEK_DAYS по этому индексу
-                    const dow = isFixedSchedule
-                        ? WEEK_DAYS[ruIndex]
-                        : WEEK_DAYS[dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1];
-
-                    const block: ScheduledBlock = {
-                        dayOfWeek: dow,
-                        startDate: isFixedSchedule ? null : isoDate,
-                        endDate: isFixedSchedule ? null : isoDate,
-                        startTime: normalizeTime(startTime) + ':00',
-                        endTime: normalizeTime(endTime) + ':00',
-                        playlistId: selectedPlaylist
-                    };
-
-                    set(s => {
-                        if (isFixedSchedule)
-                            s.scheduledItemsFixed.push(block);
-                        else
-                            s.scheduledItemsCalendar.push(block);
-                    });
-                });
-            },
-
-
-            removeBlock: b => set(s => {
-                const arr = s.isFixedSchedule
-                    ? s.scheduledItemsFixed
-                    : s.scheduledItemsCalendar
-
-                const idx = arr.findIndex(x =>
-                    x.dayOfWeek === b.dayOfWeek &&
-                    x.startTime === b.startTime &&
-                    x.endTime === b.endTime &&
-                    x.playlistId === b.playlistId
-                )
-                if (idx >= 0) arr.splice(idx, 1)
-            }),
-
-            // Ховер для блока в таблице
-            hoveredBlock: null,
-            setHoveredBlock: b => set(s => {
-                s.hoveredBlock = b
-            }),
-
-            //  Прочие экшены
-            onDateSelected: d => set(s => {
-                s.selectedDate = d
-                s.currentWeek = getCurrentWeekByDate(d)
-            }),
-            toggleFixedSchedule: () => set(s => {
-                s.isFixedSchedule = !s.isFixedSchedule
-            }),
-            togglePlayRecurring: () => set(s => {
-                s.isRecurring = !s.isRecurring
-            }),
-            toggleShowBackground: () => set(s => {
-                s.isShowBackground = !s.isShowBackground
-            }),
-
-            setStartTime: t => set(s => {
-                s.startTime = normalizeTime(t)
-            }),
-            setEndTime: t => set(s => {
-                s.endTime = normalizeTime(t)
             }),
         }
     })

@@ -1,86 +1,84 @@
 'use client'
-import React, {useLayoutEffect, useRef, useState} from 'react'
+import React, {useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import {generateTimeSlots, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {ScheduledBlock} from "@/public/types/interfaces";
 import {usePlaylistStore} from "@/app/store/playlistStore";
+import {useScreensStore} from "@/app/store/screensStore";
+import {Dropdown} from "react-bootstrap";
 
+// подготавливаем метаданные для позиционирования
+type Meta = {
+    screenId: string
+    block: ScheduledBlock
+    dayIndex: number
+    startRow: number
+    endRow: number
+}
 
 export default function EditableScheduleTable() {
     const {
         currentWeek,
         isFixedSchedule,
-        scheduledItemsFixed,
-        scheduledItemsCalendar,
+        scheduledFixedMap,
+        scheduledCalendarMap,
         hoveredBlock,
         setHoveredBlock,
         removeBlock,
+        selectedScreens,
     } = useScheduleStore()
-
+    const {allScreens} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
+
     const times = generateTimeSlots('00:00', '23:30', 30)
-
-    // блоки на рендер
-    const visible = isFixedSchedule
-        ? scheduledItemsFixed
-        : scheduledItemsCalendar.filter(b =>
-            currentWeek
-                .map(d => d.toISOString().slice(0, 10))
-                .includes(b.startDate!)
-        )
-
-    // мета-инфа столбец и ряды
-    type Meta = {
-        block: ScheduledBlock
-        dayIndex: number
-        startRow: number
-        endRow: number
-    }
     const step = 30
 
-    const meta: Meta[] = visible.map(b => {
-        // вычисляем индекс дня недели
-        const dayIndex = isFixedSchedule
-            // для фиксированного: по перечислению MONDAY→0, … , SUNDAY→6
-            ? WEEK_DAYS.indexOf(b.dayOfWeek)
-            // для календарного: по дате в startDate
-            : currentWeek.findIndex(
-                d => d.toISOString().slice(0, 10) === b.startDate
+    const allMeta: Meta[] = []
+
+    for (const screenId of selectedScreens) {
+        const blocks = isFixedSchedule
+            ? scheduledFixedMap[screenId] ?? []
+            : (scheduledCalendarMap[screenId] ?? []).filter(b =>
+                currentWeek.map(d => d.toISOString().slice(0, 10)).includes(b.startDate!)
             )
 
-        // парсим часы и минуты
-        const [h0, m0] = b.startTime.split(':').map(Number)
-        const [h1, m1] = b.endTime.split(':').map(Number)
+        for (const b of blocks) {
+            const dayIndex = isFixedSchedule
+                ? WEEK_DAYS.indexOf(b.dayOfWeek)
+                : currentWeek.findIndex(d => d.toISOString().slice(0, 10) === b.startDate)
 
-        // переводим в минуты от полуночи
-        const startMin = h0 * 60 + m0
-        const endMin = h1 * 60 + m1
+            const [h0, m0] = b.startTime.split(':').map(Number)
+            const [h1, m1] = b.endTime.split(':').map(Number)
+            const startMin = h0 * 60 + m0
+            const endMin = h1 * 60 + m1
 
-        // дробная строка — может быть нецелой
-        const startRow = startMin / step
-        const endRow = endMin / step
-
-        return {block: b, dayIndex, startRow, endRow}
-    })
-
+            allMeta.push({
+                screenId,
+                block: b,
+                dayIndex,
+                startRow: startMin / step,
+                endRow: endMin / step,
+            })
+        }
+    }
+    // для позиционирования
     const tableRef = useRef<HTMLTableElement>(null)
     const [headerH, setHeaderH] = useState(0)
     const [slotH, setSlotH] = useState(0)
-
-
     useLayoutEffect(() => {
         if (!tableRef.current) return
-        // высота шапки
         const thead = tableRef.current.querySelector('thead')
         if (thead) setHeaderH(thead.getBoundingClientRect().height)
-
-        // высота одной строки (берём первый <tr> tbody)
         const firstRow = tableRef.current.querySelector('tbody tr')
         if (firstRow) setSlotH(firstRow.getBoundingClientRect().height)
     }, [])
 
+    const totalCols = currentWeek.length + 1
+    const colWidth = 100 / totalCols
+
     return (
         <div style={{position: 'relative', overflowX: 'auto'}}>
+            {/* Таблица */}
             <table
                 ref={tableRef}
                 style={{
@@ -113,28 +111,31 @@ export default function EditableScheduleTable() {
                 </tbody>
             </table>
 
-            {/* блоки поверх таблицы */}
-            {meta.map((m, i) => {
+            {/* Блоки поверх таблицы */}
+            {allMeta.map((m, i) => {
+                // находим все пересекающиеся с этим блоки
+                const group = allMeta.filter(x =>
+                    x.dayIndex === m.dayIndex &&
+                    x.startRow < m.endRow &&
+                    m.startRow < x.endRow
+                )
+                const idx = group.findIndex(x => x.screenId === m.screenId && x.block === m.block)
+                const size = group.length
 
-                // группа, индекс внутри неё, количество
-                const group = meta.filter(x => x.dayIndex === m.dayIndex
-                    && x.startRow < m.endRow && m.startRow < x.endRow)
-                const idx = group.findIndex(x => x.block === m.block)
-                const groupSize = group.length
-
-                // стили колонки
-                const cols = currentWeek.length + 1
-                const colWidth = 100 / cols
-                const left = (1 + m.dayIndex + idx / groupSize) * colWidth
-                const width = colWidth / groupSize
-
-                // позиционирование по вертикали
+                const left = (1 + m.dayIndex + idx / size) * colWidth
+                const width = colWidth / size
                 const top = headerH + m.startRow * slotH
                 const height = (m.endRow - m.startRow) * slotH
 
+                const playlistName = playlistItems.find(p => p.id === m.block.playlistId)?.name
+                    ?? m.block.playlistId
+
+                const screenName = allScreens.find(s => s.id === m.screenId)?.name
+                    ?? m.screenId
+
                 return (
                     <div
-                        key={i}
+                        key={`${m.screenId}-${i}`}
                         style={{
                             position: 'absolute',
                             top,
@@ -158,17 +159,17 @@ export default function EditableScheduleTable() {
                         onMouseEnter={() => setHoveredBlock(m.block)}
                         onMouseLeave={() => setHoveredBlock(null)}
                     >
-                        {
-                            playlistItems.find(p => p.id === m.block.playlistId)?.name
-                            ?? m.block.playlistId
-                        }
+                        <div style={{fontSize: 10, opacity: 0.7, marginBottom: 2}}>
+                            {screenName}
+                        </div>
+                        <div style={{flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                            {playlistName}
+                        </div>
                         {hoveredBlock === m.block && (
                             <span
-                                onClick={() => removeBlock(m.block)}
+                                onClick={() => removeBlock(m.screenId, m.block)}
                                 style={removeCircle()}
-                            >
-                ×
-              </span>
+                            >×</span>
                         )}
                     </div>
                 )
@@ -176,6 +177,7 @@ export default function EditableScheduleTable() {
         </div>
     )
 }
+
 
 function removeCircle(): React.CSSProperties {
     return {
