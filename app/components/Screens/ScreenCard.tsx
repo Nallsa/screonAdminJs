@@ -21,9 +21,10 @@ export default function ScreenCard({
 
     const groups = useScreensStore(state => state.groups)
 
-    // const groupNames = screen.groupIds
-    //     .map(id => groups.find((g: GroupData) => g.id === id)?.name)
-    //     .filter(Boolean) as string[]
+    // Собираем имена групп, в которые входит этот экран
+    const groupNames = (screen.groupIds ?? [])
+        .map(id => groups.find((g: GroupData) => g.id === id)?.name)
+        .filter(Boolean) as string[]
 
     return (
         <Card
@@ -72,10 +73,10 @@ export default function ScreenCard({
                     </small>
                 </div>
 
+                {/* Список групп */}
                 <div className="mb-3">
-                    <text>Группы:</text>
-                    {' '}
-                    {/*{groupNames.length > 0 ? groupNames.join(', ') : 'Без группы'}*/}
+                    <strong>Группы:</strong>{' '}
+                    {groupNames.length > 0 ? groupNames.join(', ') : 'Без группы'}
                 </div>
 
                 {/* Действия */}

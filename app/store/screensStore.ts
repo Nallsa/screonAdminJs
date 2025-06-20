@@ -90,6 +90,10 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
             state.allScreens.forEach(screen => {
                 if (state.selectedForNewGroup.includes(screen.id)) {
+                    // Инициализируем массив, если его нет
+                    if (!Array.isArray(screen.groupIds)) {
+                        screen.groupIds = []
+                    }
                     screen.groupIds.push(newId)
                 }
             })
@@ -135,6 +139,9 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
     },
 
     addScreen: (screen) => {
+        if (!Array.isArray(screen.groupIds)) {
+            screen.groupIds = []
+        }
         set(state => {
             state.allScreens.push(screen)
         })
