@@ -31,13 +31,32 @@ export default function UploadZone() {
                 },
                 async (fileId) => {
                     if (fileId) {
+
+                        const isVideo = file.type.startsWith('video/')
+                        const previewUrl = URL.createObjectURL(file)
+
+                        let duration: number
+                        if (isVideo) {
+                            duration = await new Promise<number>((resolve) => {
+                                const video = document.createElement('video')
+                                video.preload = 'metadata'
+                                video.src = previewUrl
+                                video.onloadedmetadata = () => {
+                                    resolve(Math.ceil(video.duration))
+                                    URL.revokeObjectURL(previewUrl)
+                                }
+                            })
+                        } else {
+                            duration = 15
+                        }
+
                         const newItem: FileItem = {
                             id: fileId,
                             file,
                             name: file.name,
                             type: file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE',
                             size: file.size,
-                            duration: 0,
+                            duration,
                             previewUrl: URL.createObjectURL(file),
                             orderIndex: 0
                         }

@@ -161,28 +161,26 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
     getScreens: async () => {
         try {
             const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-
             const userId = getValueInStorage("userId")
             const accessToken = getValueInStorage("accessToken")
 
-            console.log(accessToken)
-
-            const res = await axios.get(`${SERVER}screens/owned/${userId}`,
+            const res = await axios.get<ScreenData[]>(
+                `${SERVER}screens/owned/${userId}`,
                 {headers: {Authorization: `Bearer ${accessToken}`}}
             )
-
-
-            const screens: ScreenData[] = await res.data
-
+            // Нормализуем каждый screen.groupIds
+            const screens = res.data.map(s => ({
+                ...s,
+                groupIds: Array.isArray(s.groupIds) ? s.groupIds : []
+            }))
 
             set(state => {
-                state.filteredScreens = screens;
-                state.allScreens = screens;
+                state.allScreens = screens
+                state.filteredScreens = screens
             })
         } catch (e: any) {
+            console.error(e)
         }
-
-
     }
 })
 

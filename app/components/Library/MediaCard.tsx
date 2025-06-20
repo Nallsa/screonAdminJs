@@ -109,7 +109,7 @@ export default function MediaCard({item, onDelete, onUpdate}: Props) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(0, 0, 0, 0.05)',
+                    background: '#cccccc',
                     borderRadius: 4,
                     zIndex: 10,
                     userSelect: 'none',
