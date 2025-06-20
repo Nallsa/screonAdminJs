@@ -156,7 +156,7 @@ export default function EditableScheduleTable() {
                     screenColorsMap.set(screen.id, color)
                 })
 
-                const backgroundColor = screenColorsMap.get(m.screenId) ?? '#cccccc' // на всякий случай дефолт
+                const backgroundColor = screenColorsMap.get(m.screenId) ?? '#cccccc'
 
                 return (
                     <div
