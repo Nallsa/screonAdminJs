@@ -41,7 +41,12 @@ interface ScreensState {
 
 // Тип creator с поддержкой immer
 const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]], [], ScreensState> = (set, get) => ({
-    allScreens: [] as ScreenData [],
+    allScreens: [
+        //{id: 'screen1', name: 'Экран 1', online: true, groupIds: [] as string[]},
+//         {id: 'screen2', name: 'Экран 2', online: false, groupIds: [] as string[]},
+//         {id: 'screen3', name: 'Экран 3', online: true, groupIds: [] as string[]},
+//         {id: 'screen4', name: 'Экран 4', online: false, groupIds: [] as string[]},
+    ] as ScreenData [],
     filteredScreens: [],
     groups: [],
 

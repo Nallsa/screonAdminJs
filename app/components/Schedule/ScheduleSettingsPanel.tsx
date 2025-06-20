@@ -1,5 +1,5 @@
 'use client'
-import React from 'react'
+import React, {useEffect} from 'react'
 import {Form, Button, Dropdown, InputGroup, Card, Col, Row} from 'react-bootstrap'
 import {getCurrentWeekByDate, parseDayToDate, RU_DAYS, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {useScheduleStore} from '@/app/store/scheduleStore'
@@ -34,6 +34,10 @@ export default function ScheduleSettingsPanel() {
     const {allScreens} = useScreensStore()
 
     const {playlistItems} = usePlaylistStore()
+
+    useEffect(() => {
+        onDateSelected(new Date())
+    }, [onDateSelected])
 
     const handleAdd = () => {
         if (!selectedPlaylist) {
