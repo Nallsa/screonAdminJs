@@ -76,6 +76,21 @@ export default function EditableScheduleTable() {
     const totalCols = currentWeek.length + 1
     const colWidth = 100 / totalCols
 
+    const screenColors = [
+        '#4dabf7',  // ярко-синий
+        '#20c997',  // мятный
+        '#ff922b',  // оранжево-персиковый
+        '#845ef7',  // фиолетовый
+        '#f06595',  // малиновый
+        '#339af0',  // светло-синий
+        '#51cf66',  // травянисто-зелёный
+        '#fcc419',  // жёлто-золотой
+        '#ff6b6b',  // кораллово-красный
+        '#3bc9db',  // бирюзово-голубой
+        '#d0bfff',  // нежно-сиреневый
+        '#a9e34b',  // лаймово-зелёный
+    ]
+
     return (
         <div style={{position: 'relative', overflowX: 'auto'}}>
             {/* Таблица */}
@@ -133,6 +148,16 @@ export default function EditableScheduleTable() {
                 const screenName = allScreens.find(s => s.id === m.screenId)?.name
                     ?? m.screenId
 
+                // Определяем цвет по screenId
+                const screenColorsMap = new Map<string, string>()
+
+                allScreens.forEach((screen, index) => {
+                    const color = screenColors[index % screenColors.length]
+                    screenColorsMap.set(screen.id, color)
+                })
+
+                const backgroundColor = screenColorsMap.get(m.screenId) ?? '#cccccc' // на всякий случай дефолт
+
                 return (
                     <div
                         key={`${m.screenId}-${i}`}
@@ -142,15 +167,16 @@ export default function EditableScheduleTable() {
                             left: `${left}%`,
                             width: `${width}%`,
                             height,
-                            backgroundColor: '#c7dcb1',
+                            backgroundColor: backgroundColor,
                             borderRadius: 4,
                             padding: '4px 2px',
                             border: '1px solid #fff',
                             boxSizing: 'border-box',
                             fontSize: 12,
                             display: 'flex',
-                            alignItems: 'center',
+                            flexDirection: 'column',
                             justifyContent: 'center',
+                            alignItems: 'center',
                             cursor: 'pointer',
                             overflow: 'hidden',
                             whiteSpace: 'nowrap',
@@ -159,17 +185,49 @@ export default function EditableScheduleTable() {
                         onMouseEnter={() => setHoveredBlock(m.block)}
                         onMouseLeave={() => setHoveredBlock(null)}
                     >
-                        <div style={{fontSize: 10, opacity: 0.7, marginBottom: 2}}>
+                        <div
+                            style={{
+                                fontSize: 10,
+                                marginBottom: 2,
+                                width: '100%',
+                                textAlign: 'center',
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                                textOverflow: 'ellipsis',
+                            }}
+                        >
                             {screenName}
                         </div>
-                        <div style={{flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                            {playlistName}
+
+                        <div
+                            style={{
+                                flexGrow: 1,
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                            }}
+                        >
+            <span
+                style={{
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '100%',
+                }}
+            >
+                {playlistName}
+            </span>
                         </div>
+
                         {hoveredBlock === m.block && (
                             <span
                                 onClick={() => removeBlock(m.screenId, m.block)}
                                 style={removeCircle()}
-                            >×</span>
+                            >
+                ×
+            </span>
                         )}
                     </div>
                 )
