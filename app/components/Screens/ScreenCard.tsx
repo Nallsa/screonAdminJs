@@ -20,10 +20,12 @@ export default function ScreenCard({
                                    }: ScreenCardProps) {
 
     const delScreen = useScreensStore(state => state.delScreen)
+    const groups = useScreensStore(state => state.groups)
 
-    // const groupNames = screen.groupIds
-    //     .map(id => groups.find((g: GroupData) => g.id === id)?.name)
-    //     .filter(Boolean) as string[]
+    // Собираем имена групп, в которые входит этот экран
+    const groupNames = (screen.groupIds ?? [])
+        .map(id => groups.find((g: GroupData) => g.id === id)?.name)
+        .filter(Boolean) as string[]
 
 
     function handleDelete() {
@@ -77,10 +79,10 @@ export default function ScreenCard({
                     </small>
                 </div>
 
+                {/* Список групп */}
                 <div className="mb-3">
-                    <span>Привет</span>
-                    {' '}
-                    {/*{groupNames.length > 0 ? groupNames.join(', ') : 'Без группы'}*/}
+                    <strong>Группы:</strong>{' '}
+                    {groupNames.length > 0 ? groupNames.join(', ') : 'Без группы'}
                 </div>
 
                 {/* Действия */}

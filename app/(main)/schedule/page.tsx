@@ -5,9 +5,12 @@ import ScheduleSettingsPanel from '@/app/components/Schedule/ScheduleSettingsPan
 import EditableScheduleTable from '@/app/components/Schedule/EditableScheduleTable'
 import {useAuthStore} from "@/app/store/authStore";
 import {connectWebSocket} from "@/app/API/ws";
+import {useScheduleStore} from "@/app/store/scheduleStore";
 
 export default function SchedulePage() {
     const checkToken = useAuthStore(s => s.checkToken)
+    const getSchedule = useScheduleStore(s => s.getSchedule)
+    const scheduleId = useScheduleStore(s => s.scheduleId)
 
 
     useEffect(() => {
@@ -20,6 +23,12 @@ export default function SchedulePage() {
 
         initialize();
     }, [checkToken]);
+
+    useEffect(() => {
+        // if (scheduleId) {
+        getSchedule("f9a24d64-cf11-4a11-aae0-9c63a0966383")
+        // }
+    }, [scheduleId])
 
 
     return (
