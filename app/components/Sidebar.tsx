@@ -8,6 +8,7 @@ const navItems = [
     {href: "/library", label: "Библиотека", icon: "bi bi-music-note-list"},
     {href: "/schedule", label: "Расписание", icon: "bi bi-calendar-week"},
     {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
+    {href: "/createOrg", label: "Создание Организации", icon: "bi bi-gear"},
 
 ];
 const Sidebar = () => {
