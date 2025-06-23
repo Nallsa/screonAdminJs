@@ -70,6 +70,8 @@ export default function MediaCard({item, onDelete, onUpdate}: Props) {
         }
     }, [])
 
+    console.log("item.previewUrl", item.previewUrl)
+
     const [showPreview, setShowPreview] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
     const [editName, setEditName] = useState(item.name)
