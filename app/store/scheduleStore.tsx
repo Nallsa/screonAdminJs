@@ -9,6 +9,7 @@ import {
 } from '@/app/lib/scheduleUtils'
 import {PlaylistItem, ScheduledBlock, ScreenData} from "@/public/types/interfaces";
 import axios from "axios";
+import {SERVER_URL} from "@/app/API/api";
 
 type ShowMode = 'cycle' | 'interval'
 type ByScreen<T> = Record<string, T[]>
@@ -243,7 +244,9 @@ export const useScheduleStore = create<ScheduleState>()(
                         ])
                     ).values()
                 )
+                const userId = localStorage.getItem('userId')
 
+                if(userId == null) return
                 //тело
                 const payload = {
                     startDate: null,
@@ -252,7 +255,8 @@ export const useScheduleStore = create<ScheduleState>()(
                     // isFixedSchedule ? null : selectedDate.toISOString().slice(0, 10),
                     isRecurring,
                     priority,
-                    timeSlots: uniqueSlots
+                    timeSlots: uniqueSlots,
+                    userId
                 }
 
                 try {
@@ -282,7 +286,6 @@ export const useScheduleStore = create<ScheduleState>()(
 
 
             getSchedule: async (scheduleId: string) => {
-                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
                 const token = typeof window !== 'undefined'
                     ? localStorage.getItem('accessToken')
                     : null
@@ -304,11 +307,13 @@ export const useScheduleStore = create<ScheduleState>()(
                         screenId: string
                     }>
                 }>(
-                    `${SERVER}schedule/${scheduleId}`,
+                    `${SERVER_URL}schedule/${scheduleId}`,
                     {headers: {Authorization: `Bearer ${token}`}}
                 )
 
                 console.log(`Received schedule`, data)
+
+                if (data?.timeSlots?.length == 0) return
 
                 // Очистим старые карты
                 set(s => {

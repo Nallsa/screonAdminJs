@@ -17,7 +17,8 @@ import {FileItem} from "@/public/types/interfaces";
 import {useLibraryStore} from "@/app/store/libraryStore";
 import UploadZone from "@/app/components/Library/UploadZone";
 import {usePlaylistStore} from "@/app/store/playlistStore";
-import {log} from "node:util";
+import {SERVER_URL} from "@/app/API/api";
+import Image from "next/image"
 
 
 export default function PlaylistContentPage() {
@@ -198,8 +199,10 @@ export default function PlaylistContentPage() {
                                     style={{cursor: 'pointer'}}
                                     onClick={() => addToPlaylist(li)}
                                 >
-                                    <img
-                                        src={li.previewUrl}
+                                    <Image
+                                        src={`${SERVER_URL}files/${li.id}/preview`}
+                                        height={40}
+                                        width={40}
                                         alt={li.name}
                                         style={{width: 40, height: 40, objectFit: 'cover', marginRight: 8}}
                                     />

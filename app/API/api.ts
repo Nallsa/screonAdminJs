@@ -3,6 +3,8 @@
 
 import axios from 'axios';
 
+export const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+
 export async function uploadFile(
     url: string,
     file: File,
