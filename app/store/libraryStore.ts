@@ -107,8 +107,8 @@ export const useLibraryStore = create<LibraryStore>()(
                     name: item.name,
                     type: item.contentType.startsWith('video/') ? 'VIDEO' : 'IMAGE',
                     size: item.size,
-                    duration: item.duration ?? 0,
-                    file: new File([], item.name, { type: item.contentType }), // Пустой файл (не нужен для отображения)
+                    duration: item.duration ?? 15,
+                    file: new File([], item.name, {type: item.contentType}), // Пустой файл (не нужен для отображения)
                     url: item.downloadUrl,
                 }));
 
@@ -120,7 +120,6 @@ export const useLibraryStore = create<LibraryStore>()(
                 console.error('Ошибка получения файлов библиотеки', error);
             }
         },
-
 
 
         uploadFile: async (
@@ -152,7 +151,6 @@ export const useLibraryStore = create<LibraryStore>()(
                 onComplete(null);
             }
         },
-
 
 
     }))

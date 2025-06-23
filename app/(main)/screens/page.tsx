@@ -28,7 +28,8 @@ export default function ScreensPage() {
 
         filterScreens,
         addPairingConfirm,
-        getScreens
+        getScreens,
+        connectWsForScreen
     } = useScreensStore()
 
 
@@ -47,13 +48,11 @@ export default function ScreensPage() {
     useEffect(() => {
         const initialize = async () => {
             await checkToken(); // асинхронно ждем токен
-            connectWebSocket((action, payload) => {
-                console.log("Получено сообщение:", action, payload);
-            });
+            await connectWsForScreen()
         };
 
         initialize();
-    }, [checkToken]);
+    }, [checkToken, connectWsForScreen]);
 
 
     const handleOpenAddModal = () => {

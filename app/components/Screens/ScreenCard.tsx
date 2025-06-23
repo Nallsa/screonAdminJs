@@ -19,12 +19,18 @@ export default function ScreenCard({
                                        onSelect,
                                    }: ScreenCardProps) {
 
+    const delScreen = useScreensStore(state => state.delScreen)
     const groups = useScreensStore(state => state.groups)
 
     // Собираем имена групп, в которые входит этот экран
     const groupNames = (screen.groupIds ?? [])
         .map(id => groups.find((g: GroupData) => g.id === id)?.name)
         .filter(Boolean) as string[]
+
+
+    function handleDelete() {
+        delScreen(screen.id)
+    }
 
     return (
         <Card
@@ -82,12 +88,18 @@ export default function ScreenCard({
                 {/* Действия */}
                 <div className="d-flex flex-wrap gap-2">
                     {screen.status ? (
-                        ['Показать', 'Редактировать', 'Выключить'].map(label => (
+                        ['Показать', 'Редактировать', 'Выключить', 'Удалить'].map(label => (
                             <Button
                                 key={label}
                                 size="sm"
                                 variant="outline-primary"
                                 className="flex-grow-1"
+
+                                onClick={() => {
+                                    if (label == 'Удалить') {
+                                        handleDelete()
+                                    }
+                                }}
                             >
                                 {label}
                             </Button>
