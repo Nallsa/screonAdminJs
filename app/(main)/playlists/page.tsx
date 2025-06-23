@@ -21,19 +21,7 @@ const formatDuration = (sec: number) => {
 export default function PlaylistsPage() {
     const {playlistItems, getPlaylists, addPlaylist, setPlaylistToEdit, setPlaylistToCreate} = usePlaylistStore()
     const router = useRouter()
-    const checkToken = useAuthStore(s => s.checkToken)
 
-
-    useEffect(() => {
-        const initialize = async () => {
-            await checkToken(); // асинхронно ждем токен
-            connectWebSocket((action, payload) => {
-                console.log("Получено сообщение:", action, payload);
-            });
-        };
-
-        initialize();
-    }, [checkToken]);
 
     useEffect(() => {
         if (playlistItems.length === 0) {

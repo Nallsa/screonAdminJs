@@ -325,7 +325,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
                 // Соберём уникальные screenId
                 const screens = new Set<string>()
-                data.timeSlots.forEach(slot => {
+                data?.timeSlots?.forEach(slot => {
                     screens.add(slot.screenId)
                     const mapKey = slot.startDate === null
                         ? 'scheduledFixedMap'

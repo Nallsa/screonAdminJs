@@ -8,21 +8,9 @@ import {connectWebSocket} from "@/app/API/ws";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 
 export default function SchedulePage() {
-    const checkToken = useAuthStore(s => s.checkToken)
     const getSchedule = useScheduleStore(s => s.getSchedule)
     const scheduleId = useScheduleStore(s => s.scheduleId)
 
-
-    useEffect(() => {
-        const initialize = async () => {
-            await checkToken(); // асинхронно ждем токен
-            connectWebSocket((action, payload) => {
-                console.log("Получено сообщение:", action, payload);
-            });
-        };
-
-        initialize();
-    }, [checkToken]);
 
     useEffect(() => {
         // if (scheduleId) {
