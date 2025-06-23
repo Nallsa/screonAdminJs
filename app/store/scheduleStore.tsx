@@ -79,7 +79,7 @@ interface ScheduleState {
     setEndTime: (t: string) => void
 
     sendSchedule: () => Promise<void>
-    getSchedule: (id: string) => Promise<void>
+    getSchedule: () => Promise<void>
 }
 
 export const useScheduleStore = create<ScheduleState>()(
@@ -203,6 +203,9 @@ export const useScheduleStore = create<ScheduleState>()(
                 const token = typeof window !== 'undefined'
                     ? localStorage.getItem('accessToken')
                     : null
+                const userId = typeof window !== 'undefined'
+                    ? localStorage.getItem("userId")
+                    : null
 
                 // Выбираем ту мапу, где лежат слоты
                 const map = isFixedSchedule
@@ -252,23 +255,24 @@ export const useScheduleStore = create<ScheduleState>()(
                     // isFixedSchedule ? null : selectedDate.toISOString().slice(0, 10),
                     isRecurring,
                     priority,
-                    timeSlots: uniqueSlots
+                    timeSlots: uniqueSlots,
+
                 }
 
                 try {
                     if (scheduleId) {
                         const res = await axios.put(
                             `${SERVER}schedule/${scheduleId}`,
-                            {id: scheduleId, ...payload},
-                            {headers: {Authorization: `Bearer ${token}`}}
+                            {...payload, userId},
+                            // {headers: {Authorization: `Bearer ${token}`}}
                         )
                         console.log('Schedule updated:', res.data)
 
                     } else {
                         const res = await axios.post(
                             `${SERVER}schedule`,
-                            payload,
-                            {headers: {Authorization: `Bearer ${token}`}}
+                            {...payload, userId},
+                            // {headers: {Authorization: `Bearer ${token}`}}
                         )
                         set(s => {
                             s.scheduleId = res.data.id
@@ -281,20 +285,22 @@ export const useScheduleStore = create<ScheduleState>()(
             },
 
 
-            getSchedule: async (scheduleId: string) => {
+            getSchedule: async () => {
                 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
                 const token = typeof window !== 'undefined'
                     ? localStorage.getItem('accessToken')
                     : null
-
+                const userId = typeof window !== 'undefined'
+                    ? localStorage.getItem("userId")
+                    : null
 
                 const {data} = await axios.get<{
                     id: string
                     startDate: string
                     endDate: string
                     priority: number
-                    recurring: boolean
-                    timeSlots: Array<{
+                    recurring: boolean,
+                    timeSlots?: Array<{
                         dayOfWeek: ScheduledBlock['dayOfWeek']
                         startDate: string | null
                         endDate: string | null
@@ -304,8 +310,8 @@ export const useScheduleStore = create<ScheduleState>()(
                         screenId: string
                     }>
                 }>(
-                    `${SERVER}schedule/${scheduleId}`,
-                    {headers: {Authorization: `Bearer ${token}`}}
+                    `${SERVER}schedule/${userId}`,
+                    // {headers: {Authorization: `Bearer ${token}`}}
                 )
 
                 console.log(`Received schedule`, data)
