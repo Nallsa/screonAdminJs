@@ -1,7 +1,7 @@
 'use client'
 
-import React from 'react'
-import {Card, Button, Form} from 'react-bootstrap'
+import React, {useState} from 'react'
+import {Card, Button, Form, Modal} from 'react-bootstrap'
 import {useScreensStore} from '@/app/store/screensStore'
 import {DeviceStatus, GroupData, ScreenData} from "@/public/types/interfaces";
 
@@ -21,6 +21,7 @@ export default function ScreenCard({
 
     const delScreen = useScreensStore(state => state.delScreen)
     const groups = useScreensStore(state => state.groups)
+    const [showConfirm, setShowConfirm] = useState(false)
 
     // Собираем имена групп, в которые входит этот экран
     const groupNames = (screen.groupIds ?? [])
@@ -30,41 +31,43 @@ export default function ScreenCard({
 
     function handleDelete() {
         delScreen(screen.id)
+        setShowConfirm(false)
     }
 
     return (
-        <Card
-            className="shadow-sm position-relative"
-            style={{width: 240, borderRadius: 8}}
-        >
-            {isCreatingGroup && onSelect && (
-                <Form.Check
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={onSelect}
-                    className="position-absolute"
-                    style={{top: 8, right: 8, zIndex: 10}}
+        <>
+            <Card
+                className="shadow-sm position-relative"
+                style={{width: 240, borderRadius: 8}}
+            >
+                {isCreatingGroup && onSelect && (
+                    <Form.Check
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={onSelect}
+                        className="position-absolute"
+                        style={{top: 8, right: 8, zIndex: 10}}
+                    />
+                )}
+
+                {/* Превью */}
+                <div
+                    style={{
+                        height: 140,
+                        background: '#000',
+                        borderTopLeftRadius: 8,
+                        borderTopRightRadius: 8,
+                    }}
                 />
-            )}
 
-            {/* Превью */}
-            <div
-                style={{
-                    height: 140,
-                    background: '#000',
-                    borderTopLeftRadius: 8,
-                    borderTopRightRadius: 8,
-                }}
-            />
+                <Card.Body className="p-2">
+                    {/* Название */}
+                    <Card.Title as="h6" className="mb-1">
+                        {screen.name}
+                    </Card.Title>
 
-            <Card.Body className="p-2">
-                {/* Название */}
-                <Card.Title as="h6" className="mb-1">
-                    {screen.name}
-                </Card.Title>
-
-                {/* Статус */}
-                <div className="d-flex align-items-center mb-2" style={{gap: 6}}>
+                    {/* Статус */}
+                    <div className="d-flex align-items-center mb-2" style={{gap: 6}}>
           <span
               style={{
                   display: 'inline-block',
@@ -74,50 +77,91 @@ export default function ScreenCard({
                   background: screen.status ? 'green' : 'red',
               }}
           />
-                    <small className="text-muted">
-                        {screen.status ? DeviceStatus.ONLINE : 'Оффлайн'}
-                    </small>
-                </div>
+                        <small className="text-muted">
+                            {screen.status ? DeviceStatus.ONLINE : 'Оффлайн'}
+                        </small>
+                    </div>
 
-                {/* Список групп */}
-                <div className="mb-3">
-                    <strong>Группы:</strong>{' '}
-                    {groupNames.length > 0 ? groupNames.join(', ') : 'Без группы'}
-                </div>
+                    {/* Список групп */}
+                    <div className="mb-3">
+                        <strong>Группы:</strong>{' '}
+                        {groupNames.length > 0 ? groupNames.join(', ') : 'Без группы'}
+                    </div>
 
-                {/* Действия */}
-                <div className="d-flex flex-wrap gap-2">
-                    {screen.status ? (
-                        ['Показать', 'Редактировать', 'Выключить', 'Удалить'].map(label => (
-                            <Button
-                                key={label}
-                                size="sm"
-                                variant="outline-primary"
-                                className="flex-grow-1"
+                    {/* Действия */}
+                    <div className="d-flex flex-wrap gap-2">
+                        {screen.status ? (
+                            ['Показать', 'Редактировать', 'Выключить', 'Удалить'].map(label => (
+                                <Button
+                                    key={label}
+                                    size="sm"
+                                    variant="outline-primary"
+                                    className="flex-grow-1"
 
-                                onClick={() => {
-                                    if (label == 'Удалить') {
-                                        handleDelete()
-                                    }
-                                }}
-                            >
-                                {label}
-                            </Button>
-                        ))
-                    ) : (
-                        ['Перезапуск', 'Диагностика'].map(label => (
-                            <Button
-                                key={label}
-                                size="sm"
-                                variant="outline-primary"
-                                className="flex-grow-1"
-                            >
-                                {label}
-                            </Button>
-                        ))
-                    )}
-                </div>
-            </Card.Body>
-        </Card>
+                                    onClick={() => {
+                                        if (label == 'Удалить') {
+                                            setShowConfirm(true)
+                                        }
+                                    }}
+                                >
+                                    {label}
+                                </Button>
+                            ))
+                        ) : (
+                            ['Перезапуск', 'Диагностика'].map(label => (
+                                <Button
+                                    key={label}
+                                    size="sm"
+                                    variant="outline-primary"
+                                    className="flex-grow-1"
+                                >
+                                    {label}
+                                </Button>
+                            ))
+                        )}
+                    </div>
+                </Card.Body>
+            </Card>
+
+
+            {/* Модальное окно подтверждения удаления */}
+            <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered>
+                <Modal.Header
+                    className="border-0 position-relative"
+                    style={{justifyContent: 'center'}}
+                >
+                    <Modal.Title>Подтвердите удаление</Modal.Title>
+
+                    {/* Свой крестик */}
+                    <button
+                        type="button"
+                        className="btn-close"
+                        aria-label="Close"
+                        onClick={() => setShowConfirm(false)}
+                        style={{
+                            position: 'absolute',
+                            right: '1rem',
+                            top: '1rem',
+                        }}
+                    />
+                </Modal.Header>
+
+                <Modal.Body className="text-center">
+                    Вы уверены, что хотите удалить экран <strong>{screen.name}</strong>?
+                </Modal.Body>
+
+                <Modal.Footer className="border-0 justify-content-center">
+                    <Button style={{padding: '0.75rem 3rem', fontSize: '1.0rem'}} variant="secondary"
+                            onClick={() => setShowConfirm(false)}>
+                        Отмена
+                    </Button>
+                    <Button style={{padding: '0.75rem 3rem', fontSize: '1.0rem'}} variant="danger"
+                            onClick={handleDelete}>
+                        Удалить
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+        </>
+
     )
 }

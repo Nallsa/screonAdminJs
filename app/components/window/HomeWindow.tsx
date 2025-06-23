@@ -20,7 +20,7 @@ export default function HomeWindow() {
             //
             await getFilesInLibrary();
             await getPlaylists();
-            await getSchedule("f9a24d64-cf11-4a11-aae0-9c63a0966383")
+            await getSchedule("576f6ed8-559a-4c42-9c33-cdd868551666")
 
             console.log('daasdasasfafsfas');
 

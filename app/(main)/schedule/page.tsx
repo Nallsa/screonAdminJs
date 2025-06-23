@@ -26,7 +26,7 @@ export default function SchedulePage() {
 
     useEffect(() => {
         // if (scheduleId) {
-        getSchedule("f9a24d64-cf11-4a11-aae0-9c63a0966383")
+        getSchedule("576f6ed8-559a-4c42-9c33-cdd868551666")
         // }
     }, [scheduleId])
 
