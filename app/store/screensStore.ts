@@ -37,9 +37,19 @@ interface ScreensState {
 
 }
 
+//{id: 'screen1', name: 'Экран 1', online: true, groupIds: [] as string[]},
+//         {id: 'screen2', name: 'Экран 2', online: false, groupIds: [] as string[]},
+//         {id: 'screen3', name: 'Экран 3', online: true, groupIds: [] as string[]},
+//         {id: 'screen4', name: 'Экран 4', online: false, groupIds: [] as string[]},
+
 // Тип creator с поддержкой immer
 const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]], [], ScreensState> = (set, get) => ({
-    allScreens: [] as ScreenData [],
+    allScreens: [
+        //{id: 'screen1', name: 'Экран 1', online: true, groupIds: [] as string[]},
+//         {id: 'screen2', name: 'Экран 2', online: false, groupIds: [] as string[]},
+//         {id: 'screen3', name: 'Экран 3', online: true, groupIds: [] as string[]},
+//         {id: 'screen4', name: 'Экран 4', online: false, groupIds: [] as string[]},
+    ] as ScreenData [],
     filteredScreens: [],
     groups: [],
 
@@ -83,6 +93,10 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
             state.allScreens.forEach(screen => {
                 if (state.selectedForNewGroup.includes(screen.id)) {
+                    // Инициализируем массив, если его нет
+                    if (!Array.isArray(screen.groupIds)) {
+                        screen.groupIds = []
+                    }
                     screen.groupIds.push(newId)
                 }
             })
@@ -128,6 +142,9 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
     },
 
     addScreen: (screen) => {
+        if (!Array.isArray(screen.groupIds)) {
+            screen.groupIds = []
+        }
         set(state => {
             state.allScreens.push(screen)
         })
@@ -165,7 +182,6 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 state.filteredScreens = screens;
                 state.allScreens = screens;
             })
-
         } catch (e: any) {
         }
 
