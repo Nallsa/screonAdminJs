@@ -21,12 +21,13 @@ export default function CreateOrgPage() {
         console.log('accessToken', accessToken);
 
 
-        const response = await axios.post(`${SERVER_URL}organizations`, {
-            data: {
-                name: orgName,
-            },
-            headers: {Authorization: `Bearer ${accessToken}`},
-        })
+        const response = await axios.post(
+            `${SERVER_URL}organizations`,
+            { name: orgName },
+            {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            }
+        )
 
         const result: any = response.data
 
