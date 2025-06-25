@@ -40,19 +40,13 @@ export default function ScreensPage() {
     const [showAddModal, setShowAddModal] = useState(false)
     const [screenCode, setScreenCode] = useState('')
 
-
-
-    const checkToken = useAuthStore(s => s.checkToken)
-
-
     useEffect(() => {
         const initialize = async () => {
-            await checkToken(); // асинхронно ждем токен
             await connectWsForScreen()
         };
 
         initialize();
-    }, [checkToken, connectWsForScreen]);
+    }, [ connectWsForScreen]);
 
 
     const handleOpenAddModal = () => {

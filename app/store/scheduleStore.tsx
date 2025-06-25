@@ -9,6 +9,7 @@ import {
 } from '@/app/lib/scheduleUtils'
 import {PlaylistItem, ScheduledBlock, ScreenData} from "@/public/types/interfaces";
 import axios from "axios";
+import {SERVER_URL} from "@/app/API/api";
 
 type ShowMode = 'cycle' | 'interval'
 type ByScreen<T> = Record<string, T[]>
@@ -285,7 +286,7 @@ export const useScheduleStore = create<ScheduleState>()(
             },
 
 
-            getSchedule: async () => {
+            getSchedule: async (scheduleId: string) => {
                 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
                 const token = typeof window !== 'undefined'
                     ? localStorage.getItem('accessToken')
@@ -324,7 +325,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
                 // Соберём уникальные screenId
                 const screens = new Set<string>()
-                data.timeSlots.forEach(slot => {
+                data?.timeSlots?.forEach(slot => {
                     screens.add(slot.screenId)
                     const mapKey = slot.startDate === null
                         ? 'scheduledFixedMap'

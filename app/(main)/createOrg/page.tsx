@@ -7,6 +7,7 @@ import Form from 'react-bootstrap/Form';
 import Container from 'react-bootstrap/Container';
 import axios from "axios";
 import {PlaylistItem} from "@/public/types/interfaces";
+import {getValueInStorage} from "@/app/API/localStorage";
 
 export default function CreateOrgPage() {
     const [orgName, setOrgName] = useState('');
@@ -15,9 +16,16 @@ export default function CreateOrgPage() {
         console.log('Сохраняем организацию:', orgName);
         // здесь можешь добавить вызов API или редирект
         const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+        const accessToken = getValueInStorage("accessToken");
+
+        console.log('accessToken', accessToken);
+
 
         const response = await axios.post(`${SERVER_URL}organizations`, {
-            name: orgName,
+            data: {
+                name: orgName,
+            },
+            headers: {Authorization: `Bearer ${accessToken}`},
         })
 
         const result: any = response.data

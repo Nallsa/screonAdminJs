@@ -22,6 +22,8 @@ interface LibraryStore {
     ) => Promise<void>
 
     getFilesInLibrary: () => Promise<void>
+
+    delFileById: (id: string) => Promise<boolean>
 }
 
 
@@ -99,27 +101,28 @@ export const useLibraryStore = create<LibraryStore>()(
                     organizationId: getValueInStorage('organizationId'),
                 });
 
-                const filesFromBackend = response.data;
+                const filesFromBackend: FileItem[] = response.data;
 
                 // Преобразуем к FileItem[]
-                const files: FileItem[] = filesFromBackend.map((item: any) => ({
-                    id: item.id,
-                    name: item.name,
-                    type: item.contentType.startsWith('video/') ? 'VIDEO' : 'IMAGE',
-                    size: item.size,
-                    duration: item.duration ?? 15,
-                    file: new File([], item.name, {type: item.contentType}), // Пустой файл (не нужен для отображения)
-                    url: item.downloadUrl,
-                }));
+                // const files: FileItem[] = filesFromBackend.map((item: any) => ({
+                //     id: item.id,
+                //     name: item.name,
+                //     type: item.contentType.startsWith('video/') ? 'VIDEO' : 'IMAGE',
+                //     size: item.size,
+                //     duration: item.duration ?? 0,
+                //     file: new File([], item.name, {type: item.contentType}), // Пустой файл (не нужен для отображения)
+                //     url: item.downloadUrl,
+                // }));
 
                 // Сохраняем в Zustand
-                get().addLibraryItems(files);
+                get().addLibraryItems(filesFromBackend);
 
-                console.log('Загружено файлов:', files.length);
+                console.log('Загружено файлов:', filesFromBackend.length);
             } catch (error) {
                 console.error('Ошибка получения файлов библиотеки', error);
             }
         },
+
 
 
         uploadFile: async (
@@ -151,6 +154,15 @@ export const useLibraryStore = create<LibraryStore>()(
                 onComplete(null);
             }
         },
+
+
+        delFileById: async (id) => {
+            const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+
+            const response = await axios.delete(`${SERVER_URL}files/${id}`);
+
+            return response.status === 204
+        }
 
 
     }))

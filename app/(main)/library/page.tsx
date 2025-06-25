@@ -27,7 +27,8 @@ export default function LibraryPage() {
         addLibraryItems,
         deleteLibraryItem,
         updateLibraryItem,
-        getFilesInLibrary
+        getFilesInLibrary,
+        delFileById
     } = useLibraryStore(state => state)
 
 
@@ -49,6 +50,14 @@ export default function LibraryPage() {
             addLibraryItems(newItems); // тут вызывается функция, устанавливающая новые items
         }
     };
+
+
+    function handleDelItem(id: string) {
+
+        delFileById(id).then(r => r && deleteLibraryItem(id));
+
+
+    }
 
 
     return (
@@ -88,7 +97,7 @@ export default function LibraryPage() {
                             <MediaCard
                                 key={item.id}
                                 item={item}
-                                onDelete={() => deleteLibraryItem(item.id)}
+                                onDelete={() => handleDelItem(item.id)}
                                 onUpdate={(updatedItem) => updateLibraryItem(updatedItem)}
                             />
                         ))}
