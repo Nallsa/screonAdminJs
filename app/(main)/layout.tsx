@@ -14,6 +14,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const {playlistItems, getPlaylists} = usePlaylistStore()
     const {checkToken, isAuthenticated, loading} = useAuthStore()
     const {libraryItems, getFilesInLibrary} = useLibraryStore(state => state)
+    const {getSchedule, scheduleId,} = useScheduleStore()
 
     useEffect(() => {
         async function init() {
@@ -29,6 +30,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
             if (libraryItems.length == 0) {
                 await getFilesInLibrary()
             }
+
 
         }
 

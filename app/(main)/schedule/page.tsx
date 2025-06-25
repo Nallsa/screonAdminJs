@@ -8,8 +8,6 @@ import {connectWebSocket} from "@/app/API/ws";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 
 export default function SchedulePage() {
-    const getSchedule = useScheduleStore(s => s.getSchedule)
-    const scheduleId = useScheduleStore(s => s.scheduleId)
 
 
     useEffect(() => {
