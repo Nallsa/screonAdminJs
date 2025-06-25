@@ -10,11 +10,15 @@ import {useScheduleStore} from "@/app/store/scheduleStore";
 import {useLibraryStore} from "@/app/store/libraryStore";
 import {useAuthStore} from "@/app/store/authStore";
 import {useRouter} from "next/navigation";
+import {useScreensStore} from "@/app/store/screensStore";
 
 export default function MainLayout({children}: { children: React.ReactNode }) {
     const {playlistItems, getPlaylists} = usePlaylistStore()
     const {checkToken, isAuthenticated, loading} = useAuthStore()
     const {libraryItems, getFilesInLibrary} = useLibraryStore(state => state)
+    const {allScreens, getScreens} = useScreensStore(state => state)
+
+
     const router = useRouter()
 
     useEffect(() => {
@@ -26,6 +30,11 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
 
                 router.push("/auth/login")
                 return
+            }
+
+
+            if (allScreens.length == 0) {
+                await getScreens()
             }
 
             if (libraryItems.length == 0) {

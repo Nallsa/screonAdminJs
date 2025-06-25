@@ -129,13 +129,13 @@ export default function ScheduleSettingsPanel() {
                         <Card>
                             <Card.Header>Как показывать</Card.Header>
                             <Card.Body>
-                                <Form.Check
-                                    inline
-                                    label="Фикс. расписание"
-                                    type="checkbox"
-                                    checked={isFixedSchedule}
-                                    onChange={toggleFixedSchedule}
-                                />
+                                {/*<Form.Check*/}
+                                {/*    inline*/}
+                                {/*    label="Фикс. расписание"*/}
+                                {/*    type="checkbox"*/}
+                                {/*    checked={isFixedSchedule}*/}
+                                {/*    onChange={toggleFixedSchedule}*/}
+                                {/*/>*/}
                                 <Form.Check
                                     inline
                                     label="Зациклено"

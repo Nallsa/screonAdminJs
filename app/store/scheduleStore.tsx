@@ -312,7 +312,7 @@ export const useScheduleStore = create<ScheduleState>()(
                     }>
                 }>(
                     `${SERVER}schedule/${userId}`,
-                    // {headers: {Authorization: `Bearer ${token}`}}
+                    {headers: {Authorization: `Bearer ${token}`}}
                 )
 
                 console.log(`Received schedule`, data)
