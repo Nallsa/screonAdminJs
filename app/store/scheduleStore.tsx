@@ -10,6 +10,7 @@ import {
 import {PlaylistItem, ScheduledBlock, ScreenData} from "@/public/types/interfaces";
 import axios from "axios";
 import {SERVER_URL} from "@/app/API/api";
+import {getValueInStorage} from "@/app/API/localStorage";
 
 
 // типы
@@ -201,13 +202,34 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             },
 
             getSchedule: async () => {
-                const scheduleId = get().scheduleId
-                if (!scheduleId) return
+                // const scheduleId = get().scheduleId
+                // console.log("scheduleId", scheduleId)
+                //
+                // if (!scheduleId) return
 
                 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-                const userId = typeof window !== 'undefined' ? localStorage.getItem("userId") : null
+                const userId = getValueInStorage("userId")
+                const accessToken = getValueInStorage("accessToken")
 
-                const { data } = await axios.get(`${SERVER}schedule/${userId}`)
+                const {data} = await axios.get<{
+                    id: string
+                    startDate: string
+                    endDate: string
+                    priority: number
+                    recurring: boolean
+                    timeSlots: Array<{
+                        dayOfWeek: ScheduledBlock['dayOfWeek']
+                        startDate: string | null
+                        endDate: string | null
+                        startTime: string  // "HH:MM:SS"
+                        endTime: string    // "HH:MM:SS"
+                        playlistId: string
+                        screenId: string
+                    }>
+                }>(
+                    `${SERVER}schedule/${userId}`,
+                    {headers: {Authorization: `Bearer ${accessToken}`}}
+                )
 
                 set(s => { s.scheduledFixedMap = {}; s.scheduledCalendarMap = {} })
 
