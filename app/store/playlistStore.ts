@@ -220,17 +220,17 @@ export const usePlaylistStore = create<usePlaylistState>()(
             try {
                 get().clearPlayLists();
 
-                const organizationId = getValueInStorage('organizationId');
+                const userId = getValueInStorage('userId');
 
-                console.log(organizationId);
+                console.log(userId);
 
-                if (!organizationId) {
+                if (!userId) {
                     console.warn('Organization ID is missing');
                     return;
                 }
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
-                const response = await axios.get(`${SERVER_URL}playlists/organizations/${organizationId}`);
+                const response = await axios.get(`${SERVER_URL}playlists/users/${userId}`);
 
                 const playlists = response.data;
 
