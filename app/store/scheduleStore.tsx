@@ -256,14 +256,14 @@ export const useScheduleStore = create<ScheduleState>()(
                     isRecurring,
                     priority,
                     timeSlots: uniqueSlots,
-
+                    userId
                 }
 
                 try {
                     if (scheduleId) {
                         const res = await axios.put(
                             `${SERVER}schedule/${scheduleId}`,
-                            {...payload, userId},
+                            payload,
                             // {headers: {Authorization: `Bearer ${token}`}}
                         )
                         console.log('Schedule updated:', res.data)
@@ -271,7 +271,7 @@ export const useScheduleStore = create<ScheduleState>()(
                     } else {
                         const res = await axios.post(
                             `${SERVER}schedule`,
-                            {...payload, userId},
+                            payload,
                             // {headers: {Authorization: `Bearer ${token}`}}
                         )
                         set(s => {
