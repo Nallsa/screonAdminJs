@@ -109,10 +109,29 @@ export default function UploadZone() {
 
             <Modal show={showUploadModal} centered>
                 <Modal.Header>
-                    <Modal.Title>Uploading files…</Modal.Title>
+                    <Modal.Title>Загрузка файлов…</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <ProgressBar now={uploadProgress} label={`${uploadProgress}%`}/>
+                    <div style={{position: 'relative'}}>
+                        <ProgressBar now={uploadProgress}/>
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                pointerEvents: 'none', // чтобы клики шли через этот слой на ProgressBar
+                            }}
+                        >
+        <span style={{color: uploadProgress > 50 ? '#fff' : '#000'}}>
+          {uploadProgress}%
+        </span>
+                        </div>
+                    </div>
                 </Modal.Body>
             </Modal>
         </>

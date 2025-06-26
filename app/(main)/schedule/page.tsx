@@ -7,15 +7,18 @@ import {useAuthStore} from "@/app/store/authStore";
 import {connectWebSocket} from "@/app/API/ws";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 import ErrorModal from "@/app/components/Common/ErrorModal";
+import {WarningModal} from "@/app/components/Common/WarningModal";
 
 export default function SchedulePage() {
-    const {errorMessage, setError} = useScheduleStore()
+    const {errorMessage, setError, successMessage, setSuccess} = useScheduleStore()
 
     return (
         <div style={{padding: 16, display: 'flex', flexDirection: 'column', gap: 24}}>
             <ScheduleHeader/>
             <ScheduleSettingsPanel/>
             <EditableScheduleTable/>
+            <WarningModal show={!!successMessage} title="Готово" message={successMessage || ''} buttonText="Ок"
+                          onClose={() => setSuccess(null)}/>
             <ErrorModal show={!!errorMessage} message={errorMessage || ''} onClose={() => setError(null)}/>
         </div>
     )

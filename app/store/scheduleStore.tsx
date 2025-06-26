@@ -71,6 +71,8 @@ interface ScheduleState {
     setStartTime: (t: string) => void
     setEndTime: (t: string) => void
 
+    successMessage: string | null,
+    setSuccess: (msg: string | null) => void,
     errorMessage: string | null
     setError: (msg: string | null) => void
 
@@ -176,7 +178,11 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 })
             },
 
+            successMessage: null,
             errorMessage: null,
+            setSuccess: msg => set(s => {
+                s.successMessage = msg
+            }),
             setError: msg => set(s => {
                 s.errorMessage = msg
             }),
@@ -230,11 +236,14 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 try {
                     if (scheduleId) {
                         await axios.put(`${SERVER}schedule/${scheduleId}`, {...payload, userId})
+                        get().setSuccess('Расписание успешно обновлено');
+
                     } else {
                         const res = await axios.post(`${SERVER}schedule`, {...payload, userId})
                         set(s => {
                             s.scheduleId = res.data.id
                         })
+                        get().setSuccess('Расписание успешно сохранено');
                     }
                 } catch (e: any) {
                     console.error('Error save schedule:', e)

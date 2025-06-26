@@ -68,3 +68,9 @@ img {
 .float-text {
     animation: floatText 2.5s ease-in-out infinite;
 }
+
+.upload-area .progress-bar {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+}
