@@ -51,7 +51,7 @@ export default function PlaylistsPage() {
         <div className="p-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <h4 className="mb-0">Плейлисты</h4>
-                <Button variant="outline-primary" onClick={handleNewPlaylist}>
+                <Button variant="primary" onClick={handleNewPlaylist}>
                     + Новый плейлист
                 </Button>
             </div>

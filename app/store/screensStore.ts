@@ -35,14 +35,10 @@ interface ScreensState {
 
     connectWsForScreen: () => Promise<void>
 
+    errorMessage: string | null
+    setError: (msg: string | null) => void
 }
 
-//{id: 'screen1', name: 'Экран 1', online: true, groupIds: [] as string[]},
-//         {id: 'screen2', name: 'Экран 2', online: false, groupIds: [] as string[]},
-//         {id: 'screen3', name: 'Экран 3', online: true, groupIds: [] as string[]},
-//         {id: 'screen4', name: 'Экран 4', online: false, groupIds: [] as string[]},
-
-// Тип creator с поддержкой immer
 const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]], [], ScreensState> = (set, get) => ({
     allScreens: [
         //{id: 'screen1', name: 'Экран 1', online: true, groupIds: [] as string[]},
@@ -58,6 +54,13 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
     selectedForNewGroup: [],
     currentQuery: '',
     currentGroupFilter: 'all',
+
+    errorMessage: null,
+    setError: (msg) => {
+        set(state => {
+            state.errorMessage = msg
+        })
+    },
 
     startCreateGroup: () => {
         set(state => {
@@ -154,9 +157,16 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
     addPairingConfirm: async (code) => {
         try {
             const userId = getValueInStorage("userId")
+
+            if (!userId) {
+                get().setError("Пользователь не авторизован. Пожалуйста, войдите в систему.")
+                return
+            }
+
             sendConfirmPairing(code, userId)
-        } catch (error) {
-            console.log("error", error)
+        } catch (error: any) {
+            console.error("Ошибка при подтверждении пары:", error)
+            get().setError(error?.message || "Не удалось подтвердить код экрана")
         }
     },
 
@@ -164,11 +174,13 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
     getScreens: async () => {
         try {
             const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-
             const userId = getValueInStorage("userId")
             const accessToken = getValueInStorage("accessToken")
 
-            console.log(accessToken)
+            if (!userId || !accessToken) {
+                get().setError("Не хватает данных для загрузки экранов. Пожалуйста, войдите в систему заново.")
+                return
+            }
 
             const res = await axios.get(`${SERVER}screens/owned/${userId}`,
                 {headers: {Authorization: `Bearer ${accessToken}`}}
@@ -182,7 +194,9 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 state.filteredScreens = screens;
                 state.allScreens = screens;
             })
-        } catch (e: any) {
+        } catch (error: any) {
+            console.error("Ошибка при загрузке экранов:", error)
+            get().setError(error?.response?.data?.message || "Не удалось получить список экранов")
         }
 
 
@@ -193,6 +207,11 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             const SERVER = process.env.NEXT_PUBLIC_SERVER_URL;
             const userId = getValueInStorage("userId");
             const accessToken = getValueInStorage("accessToken");
+
+            if (!userId || !accessToken) {
+                get().setError("Не удалось удалить экран: отсутствуют данные пользователя или токен.")
+                return
+            }
 
             const data = {userId, screenId};
 
@@ -209,15 +228,15 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     state.filteredScreens = state.filteredScreens.filter(screen => screen.id !== screenId);
                 });
             }
-        } catch (e: any) {
-            console.error("Ошибка при удалении экрана:", e);
+        } catch (error: any) {
+            console.error("Ошибка при удалении экрана:", error)
+            get().setError(error?.response?.data?.message || "Не удалось удалить экран")
         }
     },
 
     connectWsForScreen: async () => {
         try {
             connectWebSocket((action, payload) => {
-                console.log("Получено сообщениеaa:", action, payload);
 
                 switch (action) {
                     case 'PAIRING_CONFIRMED':
@@ -238,6 +257,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
                     case 'ERROR':
                         console.error("Ошибка:", payload.message);
+                        get().setError(payload.message || "Неизвестная ошибка");
                         break;
 
                     default:

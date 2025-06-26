@@ -64,20 +64,15 @@ export default function LibraryPage() {
         <div className="p-4">
             <div className="d-flex justify-content-between align-libraryItems-center mb-3">
                 <h4>Библиотека</h4>
-                <div>
-                    <Button variant="outline-primary">
-                        Сохранить
-                    </Button>
-                </div>
             </div>
 
 
-            <div className="d-flex justify-content-end mb-3">
+            <div className="d-flex justify-content-start mb-3">
 
                 <Form.Control
-                    size="sm"
+
                     type="search"
-                    placeholder="Search"
+                    placeholder="Поиск по названию..."
                     style={{maxWidth: 300}}
                 />
             </div>

@@ -184,34 +184,38 @@ export default function MediaCard({item, onDelete, onUpdate}: Props) {
                             </small>
                         </div>
                         <div className="d-flex justify-content-between align-items-center px-2">
-  <span
-      style={{
-          width: 24,
-          height: 24,
-          lineHeight: '24px',
-          textAlign: 'center',
-          cursor: 'pointer',
-          userSelect: 'none',
-      }}
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={() => setIsEditing(true)}
-  >
+                            {(item.type != "VIDEO") && (
+
+                                <>
+                                <span
+                                    style={{
+                                        width: 24,
+                                        height: 24,
+                                        lineHeight: '24px',
+                                        textAlign: 'center',
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                    }}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onClick={() => setIsEditing(true)}
+                                >
     ✏️
   </span>
-                            <span
-                                style={{
-                                    width: 24,
-                                    height: 24,
-                                    lineHeight: '24px',
-                                    textAlign: 'center',
-                                    cursor: 'pointer',
-                                    userSelect: 'none',
-                                }}
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onClick={() => setShowPreview(true)}
-                            >
-    👁️
-  </span>
+                                    <span
+                                        style={{
+                                            width: 24,
+                                            height: 24,
+                                            lineHeight: '24px',
+                                            textAlign: 'center',
+                                            cursor: 'pointer',
+                                            userSelect: 'none',
+                                        }}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onClick={() => setShowPreview(true)}
+                                    >
+                            👁️
+                        </span></>
+                            )}
                             <span
                                 style={{
                                     width: 24,

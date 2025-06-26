@@ -9,27 +9,27 @@ import {useScreensStore} from '@/app/store/screensStore'
 import {log} from "node:util";
 import {useAuthStore} from "@/app/store/authStore";
 import {connectWebSocket} from "@/app/API/ws";
+import ErrorModal from "@/app/components/Common/ErrorModal";
 
 export default function ScreensPage() {
     const {
         allScreens,
         filteredScreens,
         groups,
-
         isCreatingGroup,
         newGroupName,
         setNewGroupName,
         selectedForNewGroup,
-
         startCreateGroup,
         cancelCreateGroup,
         toggleNewGroupScreen,
         saveGroup,
-
         filterScreens,
         addPairingConfirm,
         getScreens,
-        connectWsForScreen
+        connectWsForScreen,
+        errorMessage,
+        setError
     } = useScreensStore()
 
 
@@ -83,13 +83,17 @@ export default function ScreensPage() {
     return (
         <div className="p-4">
             {/* хэдер */}
-            <div className="d-flex justify-content-between align-items-center mb-3 p-3 rounded">
+            <div className="d-flex justify-content-between align-items-center mb-3 rounded">
                 <h4 className="mb-0">Экраны</h4>
-                <div className="d-flex gap-2">
-                    <Button variant="success" onClick={handleOpenAddModal}>
+                <div className="d-flex gap-4">
+                    <Button variant="primary" onClick={handleOpenAddModal}>
                         Добавить экран
                     </Button>
-                    <Button variant="primary" onClick={startCreateGroup}>
+                    <Button
+                        variant="success"
+                        onClick={startCreateGroup}
+                        disabled={allScreens.length === 0}
+                    >
                         Создать группу
                     </Button>
                 </div>
@@ -100,13 +104,14 @@ export default function ScreensPage() {
                 <Form.Control
                     type="text"
                     placeholder="Поиск по названию..."
-                    style={{maxWidth: 300}}
+                    style={{maxWidth: 1500}}
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
 
                 <Dropdown onSelect={k => setGroupFilter(k!)}>
-                    <Dropdown.Toggle variant="secondary">
+                    <Dropdown.Toggle disabled={allScreens.length === 0} style={{paddingLeft: 20, paddingRight: 20}}
+                                     variant="success">
                         {groupFilter === 'all'
                             ? 'Все группы'
                             : groupFilter === 'nogroup'
@@ -202,11 +207,21 @@ export default function ScreensPage() {
                 </Modal.Body>
 
                 <Modal.Footer className="border-0 justify-content-center">
-                    <Button variant="success" onClick={handleConfirmAdd}>
+                    <Button
+                        variant="success"
+                        onClick={handleConfirmAdd}
+                        disabled={screenCode.length < 8 || screenCode.length > 8}
+                    >
                         Добавить экран
                     </Button>
                 </Modal.Footer>
             </Modal>
+
+            <ErrorModal
+                show={!!errorMessage}
+                message={errorMessage || ''}
+                onClose={() => setError(null)}
+            />
         </div>
     )
 }

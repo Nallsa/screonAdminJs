@@ -17,7 +17,7 @@ export default function SettingsPage() {
 
     return (
         <div className="p-4">
-            <Button size="sm" variant="outline-danger" onClick={handleLogout}>
+            <Button variant="outline-danger" onClick={handleLogout}>
                 Выйти
             </Button>
         </div>

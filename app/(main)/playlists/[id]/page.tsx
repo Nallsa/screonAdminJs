@@ -19,6 +19,7 @@ import UploadZone from "@/app/components/Library/UploadZone";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {SERVER_URL} from "@/app/API/api";
 import Image from "next/image"
+import ConfirmModal from "@/app/components/Common/ConfirmModal";
 
 
 export default function PlaylistContentPage() {
@@ -36,11 +37,11 @@ export default function PlaylistContentPage() {
     } = usePlaylistStore(state => state)
 
     const [items, setItems] = useState<FileItem[]>([])
-
-
     const [isEditingName, setIsEditingName] = useState(false)
-    const [name, setName] = useState('Default Playlist')
+    const [name, setName] = useState('Новый плейлист')
     const [priority, setPriority] = useState<'normal' | 'high' | 'override'>('normal')
+
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
 
 
     useEffect(() => {
@@ -52,14 +53,6 @@ export default function PlaylistContentPage() {
             setItems(playlistToEdit.childFiles)
         }
     }, [playlistToEdit])
-
-    //
-    // useEffect(() => {
-    //
-    //     return () => {
-    //         setPlaylistToEdit(null)
-    //     }
-    // }, [setPlaylistToEdit])
 
 
     const handleDragEnd = (event: DragEndEvent) => {
@@ -77,10 +70,23 @@ export default function PlaylistContentPage() {
     const addToPlaylist = (item: FileItem) => {
         if (!items.find(i => i.id === item.id)) {
             setItems(prev => [...prev, item])
+        } else {
+            alert('Этот файл уже добавлен в плейлист')
         }
     }
 
     async function handleSavePlaylist() {
+
+        if (name.trim() === '') {
+            alert('Введите название плейлиста')
+            return
+        }
+
+        if (items.length === 0) {
+            alert('Добавьте хотя бы один файл в плейлист')
+            return
+        }
+
         if (playlistToEdit) {
             const res = await updatePlaylist(items, name)
 
@@ -109,110 +115,140 @@ export default function PlaylistContentPage() {
 
 
     return (
-        <div className="p-4">
-            <div className="d-flex justify-content-between align-items-center mb-4 rounded">
-                <div className="d-flex align-items-center gap-2">
-                    {isEditingName ? (
-                        <>
-                            <Form.Control
-                                value={name}
-                                onChange={e => setName(e.target.value)}
-                                style={{width: 200}}
-                                size="sm"
-                            />
-                            <Button size="sm" onClick={() => {
-                                setIsEditingName(false);
-                                setName('Default Playlist')
-                            }}>
-                                Отмена
-                            </Button>
-                            <Button size="sm" onClick={() => setIsEditingName(false)}>
-                                Сохранить
-                            </Button>
-                        </>
-                    ) : (
-                        <>
-                            <h5 className="mb-0">{name}</h5>
-                            <Button size="sm" onClick={() => setIsEditingName(true)}>
-                                Редактировать
-                            </Button>
-                        </>
-                    )}
-                </div>
-                <div className="d-flex align-items-center gap-2">
-                    <Button size="sm" variant="success" onClick={handleSavePlaylist}>
-                        Сохранить
-                    </Button>
-                    <Dropdown onSelect={k => setPriority(k as any)}>
-                        <Dropdown.Toggle size="sm" variant="success">
-                            {priority === 'normal'
-                                ? 'Обычный приоритет'
-                                : priority === 'high'
-                                    ? 'Высокий приоритет'
-                                    : 'Перекрывать всё'}
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu>
-                            <Dropdown.Item eventKey="normal">Обычный приоритет</Dropdown.Item>
-                            <Dropdown.Item eventKey="high">Высокий приоритет</Dropdown.Item>
-                            <Dropdown.Item eventKey="override">Перекрывать всё</Dropdown.Item>
-                        </Dropdown.Menu>
-                    </Dropdown>
-                    <Button size="sm" variant="danger" onClick={() => handleDeletePlaylist()}>
-                        Удалить
-                    </Button>
-                </div>
-            </div>
+        <>
+            <div className="p-4">
+                <div className="d-flex justify-content-between align-items-end mb-4 rounded">
+                    <div className="d-flex align-items-center gap-3">
+                        {isEditingName ? (
+                            <>
+                                <Form.Control
+                                    value={name}
+                                    maxLength={150}
+                                    onChange={e => setName(e.target.value)}
+                                    style={{width: 200}}
+                                />
+                                <Button disabled={name.trim() === ''} onClick={() => setIsEditingName(false)}>
+                                    Сохранить
+                                </Button>
+                                <Button onClick={() => {
+                                    setIsEditingName(false);
+                                    setName('Default Playlist')
+                                }}>
+                                    Отмена
+                                </Button>
 
-            <div className="d-flex gap-4">
-                <div className="flex-grow-1">
-                    <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                        <SortableContext items={items.map(i => i.id)} strategy={horizontalListSortingStrategy}>
-                            <div className="d-flex flex-wrap gap-3">
-                                {items.map(item => (
-                                    <MediaCard
-                                        key={item.id}
-                                        item={item}
-                                        onDelete={id => setItems(prev => prev.filter(i => i.id !== id))}
-                                        onUpdate={upd => setItems(prev => prev.map(i => i.id === upd.id ? upd : i))}
-                                    />
+                            </>
+                        ) : (
+                            <>
+                                <h5 className="mb-0">{name}</h5>
+                                <Button onClick={() => setIsEditingName(true)}>
+                                    Редактировать
+                                </Button>
+                            </>
+                        )}
+                    </div>
+                    <div className="d-flex align-items-center gap-3">
+                        <Button
+
+                            variant="primary"
+                            onClick={handleSavePlaylist}
+                            disabled={items.length === 0 || name.trim() === ''}
+                        >
+                            Сохранить
+                        </Button>
+                        <Dropdown onSelect={k => setPriority(k as any)}>
+                            <Dropdown.Toggle variant="success">
+                                {priority === 'normal'
+                                    ? 'Обычный приоритет'
+                                    : priority === 'high'
+                                        ? 'Высокий приоритет'
+                                        : 'Перекрывать всё'}
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu>
+                                <Dropdown.Item eventKey="normal">Обычный приоритет</Dropdown.Item>
+                                <Dropdown.Item eventKey="high">Высокий приоритет</Dropdown.Item>
+                                <Dropdown.Item eventKey="override">Перекрывать всё</Dropdown.Item>
+                            </Dropdown.Menu>
+                        </Dropdown>
+                        <Button
+                            variant="danger"
+                            onClick={() => setShowDeleteModal(true)}
+                        >
+                            Удалить
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="d-flex gap-4">
+                    <div className="flex-grow-1">
+                        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                            <SortableContext items={items.map(i => i.id)} strategy={horizontalListSortingStrategy}>
+                                <div className="d-flex flex-wrap gap-3">
+                                    {items.map(item => (
+                                        <MediaCard
+                                            key={item.id}
+                                            item={item}
+                                            onDelete={id => setItems(prev => prev.filter(i => i.id !== id))}
+                                            onUpdate={upd => setItems(prev => prev.map(i => i.id === upd.id ? upd : i))}
+                                        />
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
+                    </div>
+
+                    <div style={{width: 300}}>
+
+                        <UploadZone/>
+
+                        {libraryItems.length > 0 ? (
+                            <div className="list-group">
+                                {libraryItems.map(li => (
+                                    <div
+                                        key={li.id}
+                                        className="list-group-item d-flex align-items-center justify-content-between"
+                                        style={{cursor: 'pointer'}}
+                                        onClick={() => addToPlaylist(li)}
+                                    >
+                                        <Image
+                                            src={`${SERVER_URL}files/${li.id}/preview`}
+                                            height={40}
+                                            width={40}
+                                            alt={li.name}
+                                            style={{width: 40, height: 40, objectFit: 'cover', marginRight: 8}}
+                                        />
+                                        <div className="flex-grow-1">{li.name}</div>
+                                        <div className="text-success fw-bold">+</div>
+                                    </div>
                                 ))}
                             </div>
-                        </SortableContext>
-                    </DndContext>
-                </div>
+                        ) : (
 
-                <div style={{width: 300}}>
 
-                    <UploadZone/>
-
-                    {libraryItems.length > 0 ? (
-                        <div className="list-group">
-                            {libraryItems.map(li => (
-                                <div
-                                    key={li.id}
-                                    className="list-group-item d-flex align-items-center justify-content-between"
-                                    style={{cursor: 'pointer'}}
-                                    onClick={() => addToPlaylist(li)}
-                                >
-                                    <Image
-                                        src={`${SERVER_URL}files/${li.id}/preview`}
-                                        height={40}
-                                        width={40}
-                                        alt={li.name}
-                                        style={{width: 40, height: 40, objectFit: 'cover', marginRight: 8}}
-                                    />
-                                    <div className="flex-grow-1">{li.name}</div>
-                                    <div className="text-success fw-bold">+</div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center text-muted p-3">
-                            Чтобы начать, добавьте медиа контент в библиотеку
-                        </div>
-                    )}
+                            <div className="text-center text-muted p-3">
+                                Чтобы начать, добавьте медиа контент в библиотеку
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+
+
+            <ConfirmModal
+                show={showDeleteModal}
+                title="Удаление плейлиста"
+                message="Вы уверены, что хотите удалить этот плейлист?"
+                confirmText="Удалить"
+                cancelText="Отмена"
+                onCancel={() => setShowDeleteModal(false)}
+                onConfirm={() => {
+                    setShowDeleteModal(false)
+                    handleDeletePlaylist()
+                }}
+            />
+
+
+        </>
+
     )
 }

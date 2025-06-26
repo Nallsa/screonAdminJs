@@ -96,12 +96,15 @@ export default function UploadZone() {
                         open()
                     },
                 })}
-                className="upload-area border border-dashed p-4 mb-4 text-center text-muted bg-light rounded"
-                style={{cursor: 'pointer'}}
+                className="upload-area p-4 mb-4 text-center text-muted rounded"
+                style={{
+                    cursor: 'pointer',
+                    border: '2px dashed #ced4da',
+                }}
             >
                 <input {...getInputProps()} />
-                <div>📤 Drop files here to upload, or click to select files</div>
-                <small>Supports: jpg, png, gif, webp, mp4, mpeg, mov, avi</small>
+                <div>📤 Перетащите файлы сюда для загрузки или нажмите, чтобы выбрать</div>
+                <small>Поддерживаются форматы: jpg, png, gif, webp, mp4, mpeg, mov, avi</small>
             </div>
 
             <Modal show={showUploadModal} centered>
