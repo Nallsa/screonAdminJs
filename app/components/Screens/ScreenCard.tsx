@@ -4,6 +4,7 @@ import React, {useState} from 'react'
 import {Card, Button, Form, Modal} from 'react-bootstrap'
 import {useScreensStore} from '@/app/store/screensStore'
 import {DeviceStatus, GroupData, ScreenData} from "@/public/types/interfaces";
+import ConfirmModal from "@/app/components/Common/ConfirmModal";
 
 interface ScreenCardProps {
     screen: ScreenData
@@ -125,42 +126,15 @@ export default function ScreenCard({
 
 
             {/* Модальное окно подтверждения удаления */}
-            <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered>
-                <Modal.Header
-                    className="border-0 position-relative"
-                    style={{justifyContent: 'center'}}
-                >
-                    <Modal.Title>Подтвердите удаление</Modal.Title>
-
-                    {/* Свой крестик */}
-                    <button
-                        type="button"
-                        className="btn-close"
-                        aria-label="Close"
-                        onClick={() => setShowConfirm(false)}
-                        style={{
-                            position: 'absolute',
-                            right: '1rem',
-                            top: '1rem',
-                        }}
-                    />
-                </Modal.Header>
-
-                <Modal.Body className="text-center">
-                    Вы уверены, что хотите удалить экран <strong>{screen.name}</strong>?
-                </Modal.Body>
-
-                <Modal.Footer className="border-0 justify-content-center">
-                    <Button style={{padding: '0.75rem 3rem', fontSize: '1.0rem'}} variant="secondary"
-                            onClick={() => setShowConfirm(false)}>
-                        Отмена
-                    </Button>
-                    <Button style={{padding: '0.75rem 3rem', fontSize: '1.0rem'}} variant="danger"
-                            onClick={handleDelete}>
-                        Удалить
-                    </Button>
-                </Modal.Footer>
-            </Modal>
+            <ConfirmModal
+                show={showConfirm}
+                title="Подтвердите удаление"
+                message={`Вы уверены, что хотите удалить экран «${screen.name}»?`}
+                confirmText="Удалить"
+                cancelText="Отмена"
+                onConfirm={handleDelete}
+                onCancel={() => setShowConfirm(false)}
+            />
         </>
 
     )
