@@ -46,7 +46,7 @@ export default function ScreensPage() {
         };
 
         initialize();
-    }, [ connectWsForScreen]);
+    }, [connectWsForScreen]);
 
 
     const handleOpenAddModal = () => {
@@ -78,9 +78,6 @@ export default function ScreensPage() {
     useEffect(() => {
         filterScreens(search, groupFilter)
     }, [search, groupFilter, filterScreens])
-
-
-
 
 
     return (
@@ -192,11 +189,14 @@ export default function ScreensPage() {
                         <Form.Control
                             size="sm"
                             type="text"
-                            inputMode="numeric"
-                            pattern="\d*"
-                            placeholder="12345"
+                            inputMode="text"
+                            pattern="[A-Z0-9]*"
+                            placeholder="ABC123"
                             value={screenCode}
-                            onChange={e => setScreenCode(e.target.value)}
+                            onChange={e => {
+                                const upper = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+                                setScreenCode(upper)
+                            }}
                         />
                     </Form.Group>
                 </Modal.Body>

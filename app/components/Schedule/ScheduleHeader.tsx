@@ -5,7 +5,7 @@ import {useScheduleStore} from "@/app/store/scheduleStore";
 
 export default function ScheduleHeader() {
 
-    const sendSchedule = useScheduleStore(s => s.sendSchedule)
+    const {sendSchedule, selectedScreens, selectedPlaylist} = useScheduleStore()
 
     return (
         <header
@@ -19,6 +19,7 @@ export default function ScheduleHeader() {
             <Button
                 onClick={sendSchedule}
                 variant="primary"
+                disabled={selectedScreens.length === 0 || !selectedPlaylist}
             >
                 Сохранить
             </Button>

@@ -250,7 +250,12 @@ export default function ScheduleSettingsPanel() {
                         </Col>
 
                         <Col xs="auto">
-                            <Button onClick={handleAdd}>Добавить</Button>
+                            <Button
+                                onClick={handleAdd}
+                                disabled={selectedScreens.length === 0 || !selectedPlaylist}
+                            >
+                                Добавить
+                            </Button>
                         </Col>
                     </Row>
                 </motion.div>
