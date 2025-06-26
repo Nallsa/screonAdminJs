@@ -35,6 +35,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
 
     signIn: async (email, password) => {
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('organizationId')
+
         set({loading: true, error: null})
         try {
             const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
@@ -62,6 +67,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
 
     signUp: async (username, phone, password, email) => {
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('organizationId')
+
         set({loading: true, error: null})
         try {
             const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
@@ -96,6 +106,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
         localStorage.removeItem('userId')
+        localStorage.removeItem('organizationId')
         set({
             accessToken: null,
             refreshToken: null,

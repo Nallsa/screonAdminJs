@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react';
-import { useRouter } from 'next/router';
+import {useRouter} from 'next/navigation'
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Container from 'react-bootstrap/Container';
@@ -11,6 +11,7 @@ import {addValueInStorage, getValueInStorage} from "@/app/API/localStorage";
 
 export default function CreateOrgPage() {
     const [orgName, setOrgName] = useState('');
+    const router = useRouter()
 
     const handleSave =async () => {
         console.log('Сохраняем организацию:', orgName);
@@ -29,9 +30,22 @@ export default function CreateOrgPage() {
 
         const result: any = response.data
 
-        console.log("result", result);
 
-        addValueInStorage('organizationId', result.id)
+        if(response.status === 200){
+
+            console.log("result", result);
+
+            addValueInStorage('organizationId', result.id)
+
+
+
+            router.push("/screens")
+
+
+
+
+        }
+
 
         console.log(result)
     };
