@@ -19,7 +19,11 @@ export default function ScheduleHeader() {
             <Button
                 onClick={sendSchedule}
                 variant="primary"
-                disabled={selectedScreens.length === 0 || !selectedPlaylist}
+                disabled={selectedScreens.length === 0
+                    // || !selectedPlaylist
+                }
+
+
             >
                 Сохранить
             </Button>
