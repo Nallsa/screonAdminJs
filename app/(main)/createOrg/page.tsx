@@ -7,7 +7,7 @@ import Form from 'react-bootstrap/Form';
 import Container from 'react-bootstrap/Container';
 import axios from "axios";
 import {PlaylistItem} from "@/public/types/interfaces";
-import {getValueInStorage} from "@/app/API/localStorage";
+import {addValueInStorage, getValueInStorage} from "@/app/API/localStorage";
 
 export default function CreateOrgPage() {
     const [orgName, setOrgName] = useState('');
@@ -21,14 +21,17 @@ export default function CreateOrgPage() {
         console.log('accessToken', accessToken);
 
 
-        const response = await axios.post(`${SERVER_URL}organizations`, {
-            data: {
-                name: orgName,
-            },
-            headers: {Authorization: `Bearer ${accessToken}`},
-        })
+        const response = await axios.post(
+            `${SERVER_URL}organizations`,
+            { name: orgName },
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
 
         const result: any = response.data
+
+        console.log("result", result);
+
+        addValueInStorage('organizationId', result.id)
 
         console.log(result)
     };

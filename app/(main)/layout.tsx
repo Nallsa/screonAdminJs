@@ -9,26 +9,32 @@ import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 import {useLibraryStore} from "@/app/store/libraryStore";
 import {useAuthStore} from "@/app/store/authStore";
+import {useRouter} from "next/navigation";
 
 export default function MainLayout({children}: { children: React.ReactNode }) {
     const {playlistItems, getPlaylists} = usePlaylistStore()
     const {checkToken, isAuthenticated, loading} = useAuthStore()
     const {libraryItems, getFilesInLibrary} = useLibraryStore(state => state)
-    const {getSchedule, scheduleId,} = useScheduleStore()
+    const router = useRouter()
 
     useEffect(() => {
         async function init() {
             console.log("dasdasdasasdasd")
             const resCheck = await checkToken(); // асинхронно ждем токен
 
-            if (!resCheck) return;
+            if (!resCheck) {
 
-            if (playlistItems.length === 0) {
-                await getPlaylists()
+                router.push("/auth/login")
+                return
             }
 
             if (libraryItems.length == 0) {
                 await getFilesInLibrary()
+            }
+
+
+            if (playlistItems.length === 0) {
+                await getPlaylists()
             }
 
 

@@ -1,6 +1,7 @@
 'use client'
 import {create} from 'zustand'
 import axios from 'axios'
+import {addValueInStorage} from "@/app/API/localStorage";
 
 interface AuthState {
     // токены и юзер
@@ -120,11 +121,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const accessToken = res.data.accessToken
 
             const refreshToken = res.data.refreshToken
+            const userId = res.data.userId
 
-            localStorage.setItem('accessToken', accessToken)
-
-            localStorage.setItem('refreshToken', refreshToken)
-
+            addValueInStorage('accessToken', accessToken)
+            addValueInStorage('refreshToken', refreshToken)
+            addValueInStorage('userId', userId)
 
             console.log("ok", ok)
             set({isAuthenticated: ok})
