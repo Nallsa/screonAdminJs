@@ -24,6 +24,9 @@ interface LibraryStore {
     getFilesInLibrary: () => Promise<void>
 
     delFileById: (id: string) => Promise<boolean>
+
+    errorMessage: string | null
+    setError: (msg: string | null) => void
 }
 
 
@@ -32,6 +35,10 @@ export const useLibraryStore = create<LibraryStore>()(
         libraryItems: [],
         isUploadingMetadata: false,
         uploadError: null,
+        errorMessage: null,
+        setError: (msg) => set(state => {
+            state.errorMessage = msg
+        }),
 
         addLibraryItem: (item) => {
             set((state) => ({
@@ -88,10 +95,13 @@ export const useLibraryStore = create<LibraryStore>()(
                     alert('Upload failed');
                 }
 
-            } catch (error) {
-                set(state => {
-                    state.uploadError = 'Ошибка при загрузке метаданных'
-                })
+            } catch (err: any) {
+                console.error('uploadFileMetaData error:', err)
+                get().setError(
+                    err?.response?.data?.message
+                    || err.message
+                    || 'Ошибка при загрузке метаданных'
+                )
             } finally {
                 set(state => {
                     state.isUploadingMetadata = false
@@ -100,6 +110,9 @@ export const useLibraryStore = create<LibraryStore>()(
         },
 
         getFilesInLibrary: async () => {
+            set(state => {
+                state.errorMessage = null
+            })
             try {
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
@@ -110,23 +123,17 @@ export const useLibraryStore = create<LibraryStore>()(
 
                 const filesFromBackend: FileItem[] = response.data;
 
-                // Преобразуем к FileItem[]
-                // const files: FileItem[] = filesFromBackend.map((item: any) => ({
-                //     id: item.id,
-                //     name: item.name,
-                //     type: item.contentType.startsWith('video/') ? 'VIDEO' : 'IMAGE',
-                //     size: item.size,
-                //     duration: item.duration ?? 0,
-                //     file: new File([], item.name, {type: item.contentType}), // Пустой файл (не нужен для отображения)
-                //     url: item.downloadUrl,
-                // }));
-
                 // Сохраняем в Zustand
                 get().addLibraryItems(filesFromBackend);
 
                 console.log('Загружено файлов:', filesFromBackend.length);
-            } catch (error) {
-                console.error('Ошибка получения файлов библиотеки', error);
+            } catch (err: any) {
+                console.error('getFilesInLibrary error:', err)
+                get().setError(
+                    err?.response?.data?.message
+                    || err.message
+                    || 'Ошибка при получении файлов библиотеки'
+                )
             }
         },
 
@@ -137,6 +144,9 @@ export const useLibraryStore = create<LibraryStore>()(
             onProgress,
             onComplete
         ) => {
+            set(state => {
+                state.errorMessage = null
+            })
             const formData = new FormData();
             formData.append('file', file, file.name);
 
@@ -155,19 +165,37 @@ export const useLibraryStore = create<LibraryStore>()(
 
                 const fileId = response.data?.fileId ?? null;
                 onComplete(fileId);
-            } catch (error) {
-                console.error('❌ Upload failed', error);
-                onComplete(null);
+            } catch (err: any) {
+                console.error('uploadFile error:', err)
+                get().setError(
+                    err?.response?.data?.message
+                    || err.message
+                    || 'Ошибка при загрузке файла'
+                )
+                onComplete(null)
             }
         },
 
 
         delFileById: async (id) => {
-            const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+            set(state => {
+                state.errorMessage = null
+            })
+            try {
+                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
-            const response = await axios.delete(`${SERVER_URL}files/${id}`);
+                const response = await axios.delete(`${SERVER_URL}files/${id}`);
 
-            return response.status === 204
+                return response.status === 204
+            } catch (err: any) {
+                console.error('delFileById error:', err)
+                get().setError(
+                    err?.response?.data?.message
+                    || err.message
+                    || 'Ошибка при удалении файла'
+                )
+                return false
+            }
         }
 
 

@@ -19,6 +19,7 @@ import {useDropzone} from 'react-dropzone';
 import {v4 as uuid} from 'uuid';
 import {useLibraryStore} from "@/app/store/libraryStore";
 import UploadZone from "@/app/components/Library/UploadZone";
+import ErrorModal from "@/app/components/Common/ErrorModal";
 
 
 export default function LibraryPage() {
@@ -28,7 +29,9 @@ export default function LibraryPage() {
         deleteLibraryItem,
         updateLibraryItem,
         getFilesInLibrary,
-        delFileById
+        delFileById,
+        errorMessage,
+        setError
     } = useLibraryStore(state => state)
 
 
@@ -61,44 +64,51 @@ export default function LibraryPage() {
 
 
     return (
-        <div className="p-4">
-            <div className="d-flex justify-content-between align-libraryItems-center mb-3">
-                <h4>Библиотека</h4>
-            </div>
+        <>
+            <div className="p-4">
+                <div className="d-flex justify-content-between align-libraryItems-center mb-3">
+                    <h4>Библиотека</h4>
+                </div>
 
 
-            <div className="d-flex justify-content-start mb-3">
+                <div className="d-flex justify-content-start mb-3">
 
-                <Form.Control
+                    <Form.Control
 
-                    type="search"
-                    placeholder="Поиск по названию..."
-                    style={{maxWidth: 300}}
-                />
-            </div>
+                        type="search"
+                        placeholder="Поиск по названию..."
+                        style={{maxWidth: 300}}
+                    />
+                </div>
 
-            <UploadZone/>
+                <UploadZone/>
 
-            <DndContext
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-            >
-                <SortableContext
-                    items={libraryItems.map((i) => i.id)}
-                    strategy={horizontalListSortingStrategy}
+                <DndContext
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
                 >
-                    <div className="d-flex flex-wrap gap-3">
-                        {libraryItems.map((item) => (
-                            <MediaCard
-                                key={item.id}
-                                item={item}
-                                onDelete={() => handleDelItem(item.id)}
-                                onUpdate={(updatedItem) => updateLibraryItem(updatedItem)}
-                            />
-                        ))}
-                    </div>
-                </SortableContext>
-            </DndContext>
-        </div>
+                    <SortableContext
+                        items={libraryItems.map((i) => i.id)}
+                        strategy={horizontalListSortingStrategy}
+                    >
+                        <div className="d-flex flex-wrap gap-3">
+                            {libraryItems.map((item) => (
+                                <MediaCard
+                                    key={item.id}
+                                    item={item}
+                                    onDelete={() => handleDelItem(item.id)}
+                                    onUpdate={(updatedItem) => updateLibraryItem(updatedItem)}
+                                />
+                            ))}
+                        </div>
+                    </SortableContext>
+                </DndContext>
+            </div>
+            <ErrorModal
+                show={!!errorMessage}
+                message={errorMessage || ''}
+                onClose={() => setError(null)}
+            />
+        </>
     )
 }

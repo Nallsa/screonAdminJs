@@ -71,8 +71,13 @@ interface ScheduleState {
     setStartTime: (t: string) => void
     setEndTime: (t: string) => void
 
+    errorMessage: string | null
+    setError: (msg: string | null) => void
+
     sendSchedule: () => Promise<void>
     getSchedule: () => Promise<void>
+
+
 }
 
 export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]>(
@@ -171,7 +176,16 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 })
             },
 
+            errorMessage: null,
+            setError: msg => set(s => {
+                s.errorMessage = msg
+            }),
+
             sendSchedule: async () => {
+                set(s => {
+                    s.errorMessage = null
+                })
+
                 const {
                     selectedScreens,
                     isFixedSchedule,
@@ -223,65 +237,85 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         })
                     }
                 } catch (e: any) {
-                    console.error('Error save schedule:', e.response?.data || e.message)
+                    console.error('Error save schedule:', e)
+                    const serverMsg = e?.response?.data?.message
+                    const ruMsg = 'Не удалось сохранить расписание'
+                    const finalMsg = serverMsg
+                        ? `${serverMsg}. ${ruMsg}`
+                        : ruMsg
+
+                    get().setError(finalMsg)
                 }
             },
 
             getSchedule: async () => {
-                const scheduleId = get().scheduleId
-                // if (!scheduleId) return
-
-                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-                const userId = getValueInStorage("userId")
-                const accessToken = getValueInStorage("accessToken")
-
-                const {data} = await axios.get<{
-                    id: string
-                    startDate: string
-                    endDate: string
-                    priority: number
-                    recurring: boolean
-                    timeSlots: Array<{
-                        dayOfWeek: ScheduledBlock['dayOfWeek']
-                        startDate: string | null
-                        endDate: string | null
-                        startTime: string  // "HH:MM:SS"
-                        endTime: string    // "HH:MM:SS"
-                        playlistId: string
-                        screenId: string
-                    }>
-                }>(
-                    `${SERVER}schedule/${userId}`,
-                    {headers: {Authorization: `Bearer ${accessToken}`}}
-                )
-
                 set(s => {
-                    s.scheduledFixedMap = {};
-                    s.scheduledCalendarMap = {}
+                    s.errorMessage = null
                 })
+                try {
+                    const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+                    const userId = getValueInStorage("userId")
+                    const accessToken = getValueInStorage("accessToken")
 
-                const screens = new Set<string>()
-                data?.timeSlots?.forEach((slot: any) => {
-                    screens.add(slot.screenId)
-                    const mapKey = slot.startDate === null ? 'scheduledFixedMap' : 'scheduledCalendarMap'
-                    set((s: any) => {
-                        if (!(s[mapKey][slot.screenId])) s[mapKey][slot.screenId] = []
-                        s[mapKey][slot.screenId].push({
-                            dayOfWeek: slot.dayOfWeek,
-                            startDate: slot.startDate,
-                            endDate: slot.endDate,
-                            startTime: slot.startTime,
-                            endTime: slot.endTime,
-                            playlistId: slot.playlistId
+                    const {data} = await axios.get<{
+                        id: string
+                        startDate: string
+                        endDate: string
+                        priority: number
+                        recurring: boolean
+                        timeSlots: Array<{
+                            dayOfWeek: ScheduledBlock['dayOfWeek']
+                            startDate: string | null
+                            endDate: string | null
+                            startTime: string  // "HH:MM:SS"
+                            endTime: string    // "HH:MM:SS"
+                            playlistId: string
+                            screenId: string
+                        }>
+                    }>(
+                        `${SERVER}schedule/${userId}`,
+                        {headers: {Authorization: `Bearer ${accessToken}`}}
+                    )
+
+                    set(s => {
+                        s.scheduledFixedMap = {};
+                        s.scheduledCalendarMap = {}
+                    })
+
+                    const screens = new Set<string>()
+                    data?.timeSlots?.forEach((slot: any) => {
+                        screens.add(slot.screenId)
+                        const mapKey = slot.startDate === null ? 'scheduledFixedMap' : 'scheduledCalendarMap'
+                        set((s: any) => {
+                            if (!(s[mapKey][slot.screenId])) s[mapKey][slot.screenId] = []
+                            s[mapKey][slot.screenId].push({
+                                dayOfWeek: slot.dayOfWeek,
+                                startDate: slot.startDate,
+                                endDate: slot.endDate,
+                                startTime: slot.startTime,
+                                endTime: slot.endTime,
+                                playlistId: slot.playlistId
+                            })
                         })
                     })
-                })
-                set(s => {
-                    s.selectedScreens = Array.from(screens);
-                    s.isRecurring = data.recurring;
-                    s.priority = data.priority
-                    s.scheduleId = data.id
-                })
+                    set(s => {
+                        s.selectedScreens = Array.from(screens);
+                        s.isRecurring = data.recurring;
+                        s.priority = data.priority
+                        s.scheduleId = data.id
+                    })
+
+                } catch (e: any) {
+                    console.error('Error load schedule:', e)
+
+                    const serverMsg = e?.response?.data?.message
+                    const ruMsg = 'Не удалось загрузить расписание'
+                    const finalMsg = serverMsg
+                        ? `${serverMsg}. ${ruMsg}`
+                        : ruMsg
+
+                    get().setError(finalMsg)
+                }
             },
 
             onDateSelected: d => set(s => {

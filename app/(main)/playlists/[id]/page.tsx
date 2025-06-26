@@ -20,6 +20,7 @@ import {usePlaylistStore} from "@/app/store/playlistStore";
 import {SERVER_URL} from "@/app/API/api";
 import Image from "next/image"
 import ConfirmModal from "@/app/components/Common/ConfirmModal";
+import ErrorModal from "@/app/components/Common/ErrorModal";
 
 
 export default function PlaylistContentPage() {
@@ -33,7 +34,9 @@ export default function PlaylistContentPage() {
         playlistToEdit,
         setPlaylistToEdit,
         updatePlaylist,
-        deletePlaylist
+        deletePlaylist,
+        errorMessage,
+        setError
     } = usePlaylistStore(state => state)
 
     const [items, setItems] = useState<FileItem[]>([])
@@ -247,7 +250,11 @@ export default function PlaylistContentPage() {
                 }}
             />
 
-
+            <ErrorModal
+                show={!!errorMessage}
+                message={errorMessage || ''}
+                onClose={() => setError(null)}
+            />
         </>
 
     )

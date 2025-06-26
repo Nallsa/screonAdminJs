@@ -1,11 +1,13 @@
 'use client'
-import React, {useEffect} from 'react'
+import React, {useEffect, useState} from 'react'
 import {Form, Button, Dropdown, InputGroup, Card, Col, Row} from 'react-bootstrap'
 import {getCurrentWeekByDate, parseDayToDate, RU_DAYS, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import {motion, LayoutGroup, AnimatePresence} from 'framer-motion'
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScreensStore} from "@/app/store/screensStore";
+import {WarningModal} from "@/app/components/Common/WarningModal";
+import {useRouter} from "next/navigation";
 
 
 export default function ScheduleSettingsPanel() {
@@ -32,12 +34,29 @@ export default function ScheduleSettingsPanel() {
     } = useScheduleStore()
 
     const {allScreens} = useScreensStore()
-
     const {playlistItems} = usePlaylistStore()
+    const [noScreensModal, setNoScreensModal] = useState(false)
+    const [noPlaylistsModal, setNoPlaylistsModal] = useState(false)
+    const router = useRouter();
 
     useEffect(() => {
         onDateSelected(new Date())
     }, [onDateSelected])
+
+    const handleScreensToggle = (e: React.MouseEvent) => {
+        if (allScreens.length === 0) {
+            e.preventDefault()
+            setNoScreensModal(true)
+        }
+    }
+
+    const handlePlaylistToggle = (e: React.MouseEvent) => {
+        if (playlistItems.length === 0) {
+            e.preventDefault()
+            setNoPlaylistsModal(true)
+        }
+    }
+
 
     const handleAdd = () => {
         if (!selectedPlaylist) {
@@ -155,13 +174,26 @@ export default function ScheduleSettingsPanel() {
                             <Form.Control
                                 type="time"
                                 value={startTime}
-                                onChange={e => setStartTime(e.target.value)}
+                                onChange={e => {
+                                    const t = e.target.value
+                                    setStartTime(t)
+                                    if (endTime < t) {
+                                        setEndTime(t)
+                                    }
+                                }}
+                                max={endTime}
                             />
                             <InputGroup.Text>До</InputGroup.Text>
                             <Form.Control
                                 type="time"
                                 value={endTime}
-                                onChange={e => setEndTime(e.target.value)}
+                                onChange={e => {
+                                    const t = e.target.value
+                                    if (t >= startTime) {
+                                        setEndTime(t)
+                                    }
+                                }}
+                                min={startTime}
                             />
                         </InputGroup>
                     </motion.div>
@@ -170,7 +202,7 @@ export default function ScheduleSettingsPanel() {
                     <Row className="g-3 d-flex align-items-center justify-content-center">
                         <Col xs="auto">
                             <Dropdown autoClose="outside">
-                                <Dropdown.Toggle>Экраны</Dropdown.Toggle>
+                                <Dropdown.Toggle onClick={handleScreensToggle}>Экраны</Dropdown.Toggle>
                                 <Dropdown.Menu style={{padding: 0}}>
                                     {/* Выбрать всё */}
                                     <Dropdown.Item
@@ -221,7 +253,7 @@ export default function ScheduleSettingsPanel() {
 
                         <Col xs="auto">
                             <Dropdown onSelect={k => setSelectedPlaylist(k!)}>
-                                <Dropdown.Toggle>
+                                <Dropdown.Toggle onClick={handlePlaylistToggle}>
                                     {playlistItems.find(p => p.id === selectedPlaylist)?.name ?? 'Плейлист'}
                                 </Dropdown.Toggle>
                                 <Dropdown.Menu>
@@ -260,6 +292,29 @@ export default function ScheduleSettingsPanel() {
                     </Row>
                 </motion.div>
             </LayoutGroup>
+
+
+            <WarningModal
+                show={noScreensModal}
+                title="Нет экранов"
+                message="У вас ещё не добавлено ни одного экрана."
+                buttonText="Перейти к экранам"
+                onClose={() => {
+                    setNoScreensModal(false)
+                    router.push('/screens')
+                }}
+            />
+
+            <WarningModal
+                show={noPlaylistsModal}
+                title="Нет плейлистов"
+                message="У вас ещё нет созданных плейлистов."
+                buttonText="Перейти к плейлистам"
+                onClose={() => {
+                    setNoPlaylistsModal(false)
+                    router.push('/playlists')
+                }}
+            />
         </>
     )
 }

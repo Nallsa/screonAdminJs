@@ -33,7 +33,8 @@ interface usePlaylistState {
 
     delPlaylistById: (playlistId: string) => void,
 
-
+    errorMessage: string | null
+    setError: (msg: string | null) => void
 }
 
 
@@ -42,19 +43,23 @@ export const usePlaylistStore = create<usePlaylistState>()(
         playlistItems: [],
         playlistToEdit: null,
         playlistToCreate: null,
+        errorMessage: null,
+        setError: (msg) => set(state => {
+            state.errorMessage = msg
+        }),
 
         getPlaylists: async () => {
             try {
                 get().clearPlayLists();
 
                 const userId = getValueInStorage('userId');
+                const accessToken = getValueInStorage('accessToken')
 
-                console.log(userId);
-
-                if (!userId) {
-                    console.warn('Organization ID is missing');
-                    return;
+                if (!userId || !accessToken) {
+                    get().setError("Невозможно загрузить плейлисты: отсутствуют учетные данные.")
+                    return
                 }
+
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
                 const response = await axios.get(`${SERVER_URL}playlists/users/${userId}`);
@@ -62,51 +67,64 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 const playlists = response.data;
 
                 get().addPlaylists(playlists);
-            } catch (error) {
-                console.error('Ошибка при получении плейлистов:', error);
+            } catch (err: any) {
+                console.error('Ошибка при получении плейлистов:', err)
+                get().setError(err?.response?.data?.message || "Не удалось получить плейлисты.")
             }
         },
 
         createPlaylist: async (playlistChildren: FileItem[], name: string) => {
-            const {addPlaylist} = get()
-            const data = {
-                playListName: name,
-                userId: getValueInStorage('userId'),
-                organizationId: getValueInStorage('organizationId'),
-                isPublic: true,
-                childFiles: playlistChildren
+            try {
+                const {addPlaylist} = get()
+                const data = {
+                    playListName: name,
+                    userId: getValueInStorage('userId'),
+                    organizationId: getValueInStorage('organizationId'),
+                    isPublic: true,
+                    childFiles: playlistChildren
+                }
+
+                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+
+                const response = await axios.post(`${SERVER_URL}playlists/create`, data)
+                const result: PlaylistItem = response.data
+
+                console.log(result)
+
+                addPlaylist(result)
+
+                return !!result
+            } catch (err: any) {
+                console.error('Ошибка при создании плейлиста:', err)
+                get().setError(err?.response?.data?.message || "Не удалось создать плейлист.")
+                return false
             }
-
-            const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
-
-            const response = await axios.post(`${SERVER_URL}playlists/create`, data)
-            const result: PlaylistItem = response.data
-
-            console.log(result)
-
-            addPlaylist(result)
-
-            return !!result
         },
 
 
         updatePlaylist: async (playlistChildren: FileItem[], name: string) => {
-            const {playlistToEdit, updatePlaylistItem} = get()
-            if (!playlistToEdit) return false
+            try {
+                const {playlistToEdit, updatePlaylistItem} = get()
+                if (!playlistToEdit) return false
 
-            const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
-            const formatted: PlaylistItem = {
-                ...playlistToEdit,
-                name: name,
-                childFiles: playlistChildren,
+                const formatted: PlaylistItem = {
+                    ...playlistToEdit,
+                    name: name,
+                    childFiles: playlistChildren,
+                }
+
+                const response = await axios.put(`${SERVER_URL}playlists/update`, formatted)
+                const result: PlaylistItem = response.data
+                updatePlaylistItem(result)
+
+                return !!result
+            } catch (err: any) {
+                console.error('Ошибка при обновлении плейлиста:', err)
+                get().setError(err?.response?.data?.message || "Не удалось обновить плейлист.")
+                return false
             }
-
-            const response = await axios.put(`${SERVER_URL}playlists/update`, formatted)
-            const result: PlaylistItem = response.data
-            updatePlaylistItem(result)
-
-            return !!result
         },
 
 
@@ -138,8 +156,9 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 } else {
                     return false
                 }
-            } catch (error) {
-                console.error('[deletePlaylist] Error during deletion:', error)
+            } catch (err: any) {
+                console.error('Ошибка при удалении плейлиста:', err)
+                get().setError(err?.response?.data?.message || "Не удалось удалить плейлист.")
                 return false
             }
         },
@@ -183,15 +202,12 @@ export const usePlaylistStore = create<usePlaylistState>()(
             set(state => {
                 const exists = state.playlistItems.some(item => item.id === updatedPlaylist.id);
                 if (!exists) {
-                    console.warn(`[updatePlaylistItem] Плейлист с id ${updatedPlaylist.id} не найден`);
+                    console.warn(`Плейлист не найден`);
                 }
 
                 const updatedItems = state.playlistItems.map(item =>
                     item.id === updatedPlaylist.id ? updatedPlaylist : item
                 );
-
-                console.log('[updatePlaylistItem] Результат после обновления:', updatedItems);
-
                 return {
                     playlistItems: updatedItems
                 };
