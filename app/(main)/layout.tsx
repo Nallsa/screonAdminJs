@@ -4,13 +4,14 @@
 import BootstrapClient from "@/app/components/BootstrapClient";
 import Sidebar from "@/app/components/Sidebar";
 import Footer from "@/app/components/Footer";
-import React, {useEffect} from "react";
+import React, {useEffect, useState} from "react";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 import {useLibraryStore} from "@/app/store/libraryStore";
 import {useAuthStore} from "@/app/store/authStore";
-import {useRouter} from "next/navigation";
+import {usePathname, useRouter} from "next/navigation";
 import {useScreensStore} from "@/app/store/screensStore";
+import OrgCheckModal from "@/app/components/Common/OrgCheckModal";
 
 export default function MainLayout({children}: { children: React.ReactNode }) {
     const {playlistItems, getPlaylists} = usePlaylistStore()
@@ -18,13 +19,15 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const {libraryItems, getFilesInLibrary} = useLibraryStore(state => state)
     const {allScreens, getScreens} = useScreensStore(state => state)
     const {getSchedule, scheduledFixedMap, scheduledCalendarMap} = useScheduleStore();
+    const [showOrgModal, setShowOrgModal] = useState(false);
+    const pathname = usePathname();
 
     const router = useRouter()
 
     useEffect(() => {
         async function init() {
             console.log("dasdasdasasdasd")
-            const resCheck = await checkToken(); // асинхронно ждем токен
+            const resCheck = await checkToken();
 
             if (!resCheck) {
 
@@ -69,12 +72,15 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     return (
         <>
             <BootstrapClient/>
+            <OrgCheckModal/>
+
             <div className="d-flex">
                 <Sidebar/>
                 <main style={{marginLeft: 220, width: '100%'}}>
                     {children}
                 </main>
             </div>
+
             <Footer/>
         </>
     )
