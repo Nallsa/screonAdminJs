@@ -71,16 +71,23 @@ export const useLibraryStore = create<LibraryStore>()(
 
             try {
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+                const userId = getValueInStorage('userId')
+                const organizationId = getValueInStorage('organizationId')
 
+                if (userId?.trim() && organizationId?.trim()) {
+                    const response = await axios.post(`${SERVER_URL}files/assign-metadata`, {
+                        fileId: item.id,
+                        uploadedBy: getValueInStorage('userId'),
+                        organizationId: getValueInStorage('organizationId'),
+                        isPublic: true,
+                    })
 
-                const response = await axios.post(`${SERVER_URL}files/assign-metadata`, {
-                    fileId: item.id,
-                    uploadedBy: getValueInStorage('userId'),
-                    organizationId: getValueInStorage('organizationId'),
-                    isPublic: true,
-                })
+                    console.log('uploadMediaData response:', response.data)
 
-                console.log('uploadMediaData response:', response.data)
+                } else {
+                    alert('Upload failed');
+                }
+
             } catch (error) {
                 set(state => {
                     state.uploadError = 'Ошибка при загрузке метаданных'
@@ -122,7 +129,6 @@ export const useLibraryStore = create<LibraryStore>()(
                 console.error('Ошибка получения файлов библиотеки', error);
             }
         },
-
 
 
         uploadFile: async (

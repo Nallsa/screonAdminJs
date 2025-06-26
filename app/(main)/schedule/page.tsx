@@ -10,13 +10,6 @@ import {useScheduleStore} from "@/app/store/scheduleStore";
 export default function SchedulePage() {
 
 
-    useEffect(() => {
-        // if (scheduleId) {
-        getSchedule()
-        // }
-    }, [scheduleId])
-
-
     return (
         <div style={{padding: 16, display: 'flex', flexDirection: 'column', gap: 24}}>
             <ScheduleHeader/>
