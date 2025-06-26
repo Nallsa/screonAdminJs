@@ -37,7 +37,7 @@ export default function PlaylistsPage() {
         if (userId?.trim() && organizationId?.trim()) {
             router.push(`/playlists/0`)
         } else {
-            console.warn("userId или organizationId отсутствует или пуст");
+            alert("userId или organizationId отсутствует или пуст");
         }
     }
 
