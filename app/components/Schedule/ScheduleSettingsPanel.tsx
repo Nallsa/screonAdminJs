@@ -263,7 +263,7 @@ export default function ScheduleSettingsPanel() {
                             ) : (
                                 <Dropdown onSelect={k => setSelectedPlaylist(k!)}>
                                     <Dropdown.Toggle>
-                                        {playlistItems.find(p => p.id === selectedPlaylist)?.name ?? 'Плейлист'}
+                                        {playlistItems.find(p => p.id === selectedPlaylist)?.name ?? 'Выберите плейлист'}
                                     </Dropdown.Toggle>
                                     <Dropdown.Menu>
                                         {playlistItems.map(pl => (
