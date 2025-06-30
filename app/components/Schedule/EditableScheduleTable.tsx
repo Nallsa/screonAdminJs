@@ -5,7 +5,7 @@ import {generateTimeSlots, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {ScheduledBlock} from "@/public/types/interfaces";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScreensStore} from "@/app/store/screensStore";
-import {Dropdown} from "react-bootstrap";
+import {Button, Dropdown, Form, Modal} from "react-bootstrap";
 
 // подготавливаем метаданные для позиционирования
 type Meta = {
@@ -26,6 +26,7 @@ export default function EditableScheduleTable() {
         setHoveredBlock,
         removeBlock,
         selectedScreens,
+        addEditedBlock
     } = useScheduleStore()
     const {allScreens} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
@@ -91,6 +92,110 @@ export default function EditableScheduleTable() {
         '#a9e34b',  // лаймово-зелёный
     ]
 
+
+    //модалка таймслота
+    const [editingMeta, setEditingMeta] = useState<Meta | null>(null)
+    const [editStart, setEditStart] = useState('')
+    const [editEnd, setEditEnd] = useState('')
+    const [editPlaylist, setEditPlaylist] = useState('')
+    const [editPriority, setEditPriority] = useState(1)
+    const [editScreens, setEditScreens] = useState<string[]>([])
+    const [error, setError] = useState<string | null>(null)
+
+    // при открытии модалки инициализируем поля
+    useEffect(() => {
+        if (!editingMeta) return
+        const b = editingMeta.block
+        setEditStart(b.startTime.slice(0, 5))
+        setEditEnd(b.endTime.slice(0, 5))
+        setEditPlaylist(b.playlistId)
+        // setEditPriority(b.priority ?? 1)
+        setEditScreens([editingMeta.screenId])
+        setError(null)
+    }, [editingMeta])
+
+    // переключатель экрана
+    const toggleEditScreen = (screenId: string) => {
+        setEditScreens(prev =>
+            prev.includes(screenId)
+                ? prev.filter(id => id !== screenId)
+                : [...prev, screenId]
+        )
+    }
+
+    // чистая проверка без сообщений
+    const canSave = () => {
+        if (!editingMeta) return false
+        if (!editStart || !editEnd) return false
+        if (editStart >= editEnd) return false
+        if (!playlistItems.some(p => p.id === editPlaylist)) return false
+        if (editScreens.length === 0) return false
+
+        const blocks = (isFixedSchedule
+            ? scheduledFixedMap[editingMeta.screenId]
+            : scheduledCalendarMap[editingMeta.screenId]) ?? []
+
+        return !blocks.some(other => {
+            if (other === editingMeta.block) return false
+            if (other.dayOfWeek !== editingMeta.block.dayOfWeek) return false
+            return editStart < other.endTime && other.startTime < editEnd
+        })
+    }
+
+    // валидация
+    const validateAndSetError = (): boolean => {
+        setError(null)
+        if (!editingMeta) {
+            setError('Нечего сохранять')
+            return false
+        }
+        if (!editStart || !editEnd) {
+            setError('Введите время')
+            return false
+        }
+        if (editStart >= editEnd) {
+            setError('Начало должно быть раньше конца')
+            return false
+        }
+        if (!playlistItems.some(p => p.id === editPlaylist)) {
+            setError('Выберите плейлист')
+            return false
+        }
+        if (editScreens.length === 0) {
+            setError('Выберите экран(ы)')
+            return false
+        }
+
+        const blocks = (isFixedSchedule
+            ? scheduledFixedMap[editingMeta.screenId]
+            : scheduledCalendarMap[editingMeta.screenId]) ?? []
+
+        for (const other of blocks) {
+            if (other === editingMeta.block) continue
+            if (other.dayOfWeek !== editingMeta.block.dayOfWeek) continue
+            if (editStart < other.endTime && other.startTime < editEnd) {
+                setError(`Конфликт с ${other.startTime}-${other.endTime}`)
+                return false
+            }
+        }
+        return true
+    }
+
+    // сохранить изменения таймслота
+    const onSave = () => {
+        if (!validateAndSetError()) return
+        removeBlock(editingMeta!.screenId, editingMeta!.block)
+        editScreens.forEach(screenId =>
+            addEditedBlock(screenId, {
+                ...editingMeta!.block,
+                startTime: editStart + ':00',
+                endTime: editEnd + ':00',
+                playlistId: editPlaylist,
+                // priority:   editPriority,
+            })
+        )
+        setEditingMeta(null)
+    }
     return (
         <div style={{position: 'relative', overflowX: 'auto'}}>
             {/* Таблица */}
@@ -184,6 +289,7 @@ export default function EditableScheduleTable() {
                         }}
                         onMouseEnter={() => setHoveredBlock(m.block)}
                         onMouseLeave={() => setHoveredBlock(null)}
+                        onClick={() => setEditingMeta(m)}
                     >
                         <div
                             style={{
@@ -232,6 +338,101 @@ export default function EditableScheduleTable() {
                     </div>
                 )
             })}
+
+
+            {/* --- МОДАЛКА РЕДАКТИРОВАНИЯ ТАЙМСЛОТА --- */}
+            <Modal show={!!editingMeta} onHide={() => setEditingMeta(null)} centered>
+                <Modal.Header className="border-0" closeButton>
+                    <Modal.Title>Редактировать слот</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {error && <div className="text-danger mb-2">{error}</div>}
+
+                    <Form>
+
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Время с</Form.Label>
+                            <Form.Control
+                                type="time"
+                                value={editStart}
+                                onChange={e => setEditStart(e.target.value)}
+                            />
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label>До</Form.Label>
+                            <Form.Control
+                                type="time"
+                                value={editEnd}
+                                onChange={e => setEditEnd(e.target.value)}
+                            />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Экраны</Form.Label>
+                            <Form.Select
+                                value={editScreens}
+                                onChange={e => toggleEditScreen(e.target.value)}
+                            >
+                                {allScreens.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Плейлист</Form.Label>
+                            <Form.Select
+                                value={editPlaylist}
+                                onChange={e => setEditPlaylist(e.target.value)}
+                            >
+                                {playlistItems.map(pl => (
+                                    <option key={pl.id} value={pl.id}>{pl.name}</option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Приоритет</Form.Label>
+                            <Form.Select
+                                value={editPriority}
+                                onChange={e => setEditPriority(Number(e.target.value))}
+                            >
+                                {Array.from({length: 10}, (_, i) => i + 1).map(n => (
+                                    <option key={n} value={n}>{n}</option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+                    </Form>
+                    <div style={{display: "flex", justifyContent: "end"}}>
+
+                    </div>
+                </Modal.Body>
+                <Modal.Footer style={{display: "flex", justifyContent: "center", paddingBottom: 20, paddingTop: 0,}}
+                              className="gap-4 border-0">
+
+                    <Button
+                        variant="primary"
+                        onClick={onSave}
+                        disabled={!editingMeta || !canSave()}
+                    >
+                        Сохранить
+                    </Button>
+
+                    <Button
+                        variant="danger" block
+                        onClick={() => {
+                            removeBlock(editingMeta!.screenId, editingMeta!.block)
+                            setEditingMeta(null)
+                        }}
+                    >
+                        Удалить слот
+                    </Button>
+
+                    {/*<Button variant="secondary" onClick={() => setEditingMeta(null)}>*/}
+                    {/*    Отмена*/}
+                    {/*</Button>*/}
+                </Modal.Footer>
+            </Modal>
         </div>
     )
 }

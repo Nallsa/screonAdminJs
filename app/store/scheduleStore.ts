@@ -79,7 +79,7 @@ interface ScheduleState {
     sendSchedule: () => Promise<void>
     getSchedule: () => Promise<void>
 
-
+    addEditedBlock: (screenId: string, block: ScheduledBlock) => void
 }
 
 export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]>(
@@ -175,6 +175,18 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         b.endTime === block.endTime &&
                         b.playlistId === block.playlistId)
                     if (idx >= 0) arr.splice(idx, 1)
+                })
+            },
+
+            addEditedBlock: (screenId, block) => {
+                const mapKey = get().isFixedSchedule
+                    ? 'scheduledFixedMap'
+                    : 'scheduledCalendarMap'
+                set(s => {
+                    if (!(s as any)[mapKey][screenId]) {
+                        (s as any)[mapKey][screenId] = []
+                    }
+                    ;(s as any)[mapKey][screenId].push(block)
                 })
             },
 

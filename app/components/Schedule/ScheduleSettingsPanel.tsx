@@ -30,7 +30,9 @@ export default function ScheduleSettingsPanel() {
         toggleScreen,
         scheduledFixedMap,
         scheduledCalendarMap,
-        addBlock
+        addBlock,
+        priority,
+        setPriority
     } = useScheduleStore()
 
     const {allScreens} = useScreensStore()
@@ -262,7 +264,7 @@ export default function ScheduleSettingsPanel() {
                                 </Button>
                             ) : (
                                 <Dropdown onSelect={k => setSelectedPlaylist(k!)}>
-                                    <Dropdown.Toggle>
+                                    <Dropdown.Toggle variant="primary">
                                         {playlistItems.find(p => p.id === selectedPlaylist)?.name ?? 'Выберите плейлист'}
                                     </Dropdown.Toggle>
                                     <Dropdown.Menu>
@@ -274,6 +276,21 @@ export default function ScheduleSettingsPanel() {
                                     </Dropdown.Menu>
                                 </Dropdown>
                             )}
+                        </Col>
+
+                        <Col xs="auto">
+                            <Dropdown onSelect={k => setPriority(Number(k))}>
+                                <Dropdown.Toggle variant="primary">
+                                    Приоритет: {priority}
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu>
+                                    {Array.from({length: 10}, (_, i) => (
+                                        <Dropdown.Item key={i + 1} eventKey={(i + 1).toString()}>
+                                            {i + 1}
+                                        </Dropdown.Item>
+                                    ))}
+                                </Dropdown.Menu>
+                            </Dropdown>
                         </Col>
 
                         <Col xs="auto">
@@ -290,6 +307,7 @@ export default function ScheduleSettingsPanel() {
                                 ))}
                             </div>
                         </Col>
+
 
                         <Col xs="auto">
                             <Button

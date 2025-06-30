@@ -49,5 +49,6 @@ export interface ScheduledBlock {
     endDate: string | null
     startTime: string
     endTime: string
-    playlistId: string
+    playlistId: string,
+    // priority: number,
 }
