@@ -62,7 +62,9 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
-                const response = await axios.get(`${SERVER_URL}playlists/users/${userId}`);
+                const response = await axios.get(`${SERVER_URL}playlists/users`,
+                    {headers: {Authorization: `Bearer ${accessToken}`}}
+                );
 
                 const playlists = response.data;
 
@@ -75,6 +77,8 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
         createPlaylist: async (playlistChildren: FileItem[], name: string) => {
             try {
+                const accessToken = getValueInStorage('accessToken')
+
                 const {addPlaylist} = get()
                 const data = {
                     playListName: name,
@@ -86,7 +90,8 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
-                const response = await axios.post(`${SERVER_URL}playlists/create`, data)
+                const response = await axios.post(`${SERVER_URL}playlists/create`, data,
+                    {headers: {Authorization: `Bearer ${accessToken}`}})
                 const result: PlaylistItem = response.data
 
                 console.log(result)
@@ -106,7 +111,7 @@ export const usePlaylistStore = create<usePlaylistState>()(
             try {
                 const {playlistToEdit, updatePlaylistItem} = get()
                 if (!playlistToEdit) return false
-
+                const accessToken = getValueInStorage('accessToken')
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
                 const formatted: PlaylistItem = {
@@ -115,7 +120,9 @@ export const usePlaylistStore = create<usePlaylistState>()(
                     childFiles: playlistChildren,
                 }
 
-                const response = await axios.put(`${SERVER_URL}playlists/update`, formatted)
+                const response = await axios.put(`${SERVER_URL}playlists/update`, formatted
+                    ,
+                    {headers: {Authorization: `Bearer ${accessToken}`}})
                 const result: PlaylistItem = response.data
                 updatePlaylistItem(result)
 
@@ -186,6 +193,7 @@ export const usePlaylistStore = create<usePlaylistState>()(
         setPlaylistToCreate: (playlist) => {
             set(state => {
                 state.playlistToCreate = playlist;
+                state.playlistToEdit = null;
             });
         },
 

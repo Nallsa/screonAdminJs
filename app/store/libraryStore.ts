@@ -80,14 +80,17 @@ export const useLibraryStore = create<LibraryStore>()(
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
                 const userId = getValueInStorage('userId')
                 const organizationId = getValueInStorage('organizationId')
+                const accessToken = getValueInStorage("accessToken")
 
                 if (userId?.trim() && organizationId?.trim()) {
                     const response = await axios.post(`${SERVER_URL}files/assign-metadata`, {
-                        fileId: item.id,
-                        uploadedBy: getValueInStorage('userId'),
-                        organizationId: getValueInStorage('organizationId'),
-                        isPublic: true,
-                    })
+                            fileId: item.id,
+                            uploadedBy: getValueInStorage('userId'),
+                            organizationId: getValueInStorage('organizationId'),
+                            isPublic: true,
+                        },
+                        {headers: {Authorization: `Bearer ${accessToken}`}}
+                    )
 
                     console.log('uploadMediaData response:', response.data)
 
@@ -115,11 +118,14 @@ export const useLibraryStore = create<LibraryStore>()(
             })
             try {
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+                const accessToken = getValueInStorage("accessToken")
 
                 const response = await axios.post(`${SERVER_URL}files/user-files`, {
-                    userId: getValueInStorage('userId'),
-                    organizationId: getValueInStorage('organizationId'),
-                });
+                        userId: getValueInStorage('userId'),
+                        organizationId: getValueInStorage('organizationId'),
+                    },
+                    {headers: {Authorization: `Bearer ${accessToken}`}}
+                );
 
                 const filesFromBackend: FileItem[] = response.data;
 

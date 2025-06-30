@@ -182,7 +182,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 return
             }
 
-            const res = await axios.get(`${SERVER}screens/owned/${userId}`,
+            const res = await axios.get(`${SERVER}screens/owned`,
                 {headers: {Authorization: `Bearer ${accessToken}`}}
             )
 

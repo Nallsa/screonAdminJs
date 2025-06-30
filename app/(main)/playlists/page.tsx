@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import {useRouter} from 'next/navigation'
 import {usePlaylistStore} from "@/app/store/playlistStore";
-import {PlaylistItem} from "@/public/types/interfaces";
+import {FileItem, PlaylistItem} from "@/public/types/interfaces";
 import {getValueInStorage} from "@/app/API/localStorage";
 import {useAuthStore} from "@/app/store/authStore";
 import {connectWebSocket} from "@/app/API/ws";
@@ -35,16 +35,24 @@ export default function PlaylistsPage() {
 
 
     const handleNewPlaylist = () => {
-        const userId = getValueInStorage('userId')
-        const organizationId = getValueInStorage('organizationId')
+        const userId = getValueInStorage('userId')!;
+        const organizationId = getValueInStorage('organizationId')!;
 
         if (userId?.trim() && organizationId?.trim()) {
-            router.push(`/playlists/0`)
+
+            setPlaylistToCreate({
+                id: '0',
+                name: '',
+                organizationId: organizationId,
+                createdBy: userId,
+                previewUrl: null,
+                childFiles: [] as FileItem[],
+            });
+            router.push(`/playlists/0`);
         } else {
             alert("Id пользователя или Id организации отсутствуют");
         }
-    }
-
+    };
 
     const handleEditPlaylist = (playlist: PlaylistItem) => {
         setPlaylistToEdit(playlist)

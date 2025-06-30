@@ -188,6 +188,10 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             }),
 
             sendSchedule: async () => {
+
+                const accessToken = getValueInStorage("accessToken")
+
+
                 set(s => {
                     s.errorMessage = null
                 })
@@ -235,11 +239,13 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                 try {
                     if (scheduleId) {
-                        await axios.put(`${SERVER}schedule/${scheduleId}`, {...payload, userId})
+                        await axios.put(`${SERVER}schedule/${scheduleId}`, {...payload, userId},
+                            {headers: {Authorization: `Bearer ${accessToken}`}})
                         get().setSuccess('Расписание успешно обновлено');
 
                     } else {
-                        const res = await axios.post(`${SERVER}schedule`, {...payload, userId})
+                        const res = await axios.post(`${SERVER}schedule`, {...payload, userId},
+                            {headers: {Authorization: `Bearer ${accessToken}`}})
                         set(s => {
                             s.scheduleId = res.data.id
                         })
@@ -282,7 +288,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             screenId: string
                         }>
                     }>(
-                        `${SERVER}schedule/${userId}`,
+                        `${SERVER}schedule/user`,
                         {headers: {Authorization: `Bearer ${accessToken}`}}
                     )
 
