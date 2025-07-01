@@ -32,7 +32,13 @@ export default function ScheduleSettingsPanel() {
         scheduledCalendarMap,
         addBlock,
         priority,
-        setPriority
+        setPriority,
+        showMode,
+        setShowMode,
+        setIntervalMinutes,
+        intervalMinutes,
+        pauseMinutes,
+        setPauseMinutes,
     } = useScheduleStore()
 
     const {allScreens} = useScreensStore()
@@ -105,7 +111,7 @@ export default function ScheduleSettingsPanel() {
 
                     const existStart = timeToMinutes(b.startTime)
                     const existEnd = timeToMinutes(b.endTime)
-                    return newStart < existEnd && existStart < newEnd
+                    // return newStart < existEnd && existStart < newEnd
                 })
 
                 if (conflict) {
@@ -139,7 +145,7 @@ export default function ScheduleSettingsPanel() {
                         <motion.div layout>
                             <input
                                 type="date"
-                                value={selectedDate.toISOString().slice(0, 10)}
+                                value={selectedDate.toISOString().slice(0, 10) || ''}
                                 onChange={e => onDateSelected(new Date(e.target.value))}
                             />
                         </motion.div>
@@ -150,22 +156,61 @@ export default function ScheduleSettingsPanel() {
                         <Card>
                             <Card.Header>Как показывать</Card.Header>
                             <Card.Body>
-                                {/*<Form.Check*/}
-                                {/*    inline*/}
-                                {/*    label="Фикс. расписание"*/}
-                                {/*    type="checkbox"*/}
-                                {/*    checked={isFixedSchedule}*/}
-                                {/*    onChange={toggleFixedSchedule}*/}
-                                {/*/>*/}
-                                <Form.Check
-                                    inline
-                                    label="Зациклено"
-                                    type="checkbox"
-                                    checked={isRecurring}
-                                    onChange={togglePlayRecurring}
-                                    className="form-check-square mb-1"
-                                />
+                                <Form.Group>
+                                    <div className="d-flex gap-3">
+                                        <Form.Check
+                                            inline
+                                            type="checkbox"
+                                            id="mode-recurring"
+                                            name="showMode"
+                                            label="Зациклено"
+                                            checked={showMode === 'cycle'}
+                                            onChange={() => {
+                                                setShowMode('cycle')
+                                                setPauseMinutes(0)
+                                                setIntervalMinutes(0)
+                                            }}
+                                        />
+                                        <Form.Check
+                                            inline
+                                            type="checkbox"
+                                            id="mode-repeat-interval"
+                                            name="showMode"
+                                            label="Играть X минут, потом пауза Y минут"
+                                            checked={showMode === 'repeatInterval'}
+                                            onChange={() => setShowMode('repeatInterval')}
+                                        />
+                                    </div>
+                                </Form.Group>
+
+                                {showMode === 'repeatInterval' && (
+                                    <div className="d-flex align-items-center gap-3 ps-4 mt-2">
+                                        <InputGroup style={{width: 240}}>
+                                            <InputGroup.Text>Играть</InputGroup.Text>
+                                            <Form.Control
+                                                type="number"
+                                                min={0}
+                                                value={intervalMinutes != null ? intervalMinutes : ''}
+                                                onChange={e => setIntervalMinutes(+e.target.value)}
+                                            />
+                                            <InputGroup.Text>мин</InputGroup.Text>
+                                        </InputGroup>
+
+                                        <InputGroup style={{width: 240}}>
+                                            <InputGroup.Text>Пауза</InputGroup.Text>
+                                            <Form.Control
+                                                type="number"
+                                                min={0}
+                                                value={pauseMinutes != null ? pauseMinutes : ''}
+                                                onChange={e => setPauseMinutes(+e.target.value)}
+                                            />
+                                            <InputGroup.Text>мин</InputGroup.Text>
+                                        </InputGroup>
+                                    </div>
+                                )}
                             </Card.Body>
+
+
                         </Card>
                     </motion.div>
 
@@ -175,7 +220,7 @@ export default function ScheduleSettingsPanel() {
                             <InputGroup.Text>С</InputGroup.Text>
                             <Form.Control
                                 type="time"
-                                value={startTime}
+                                value={startTime || ''}
                                 onChange={e => {
                                     const t = e.target.value
                                     setStartTime(t)
@@ -188,7 +233,7 @@ export default function ScheduleSettingsPanel() {
                             <InputGroup.Text>До</InputGroup.Text>
                             <Form.Control
                                 type="time"
-                                value={endTime}
+                                value={endTime || ''}
                                 onChange={e => {
                                     const t = e.target.value
                                     if (t >= startTime) {
@@ -279,18 +324,26 @@ export default function ScheduleSettingsPanel() {
                         </Col>
 
                         <Col xs="auto">
-                            <Dropdown onSelect={k => setPriority(Number(k))}>
-                                <Dropdown.Toggle variant="primary">
-                                    Приоритет: {priority}
-                                </Dropdown.Toggle>
-                                <Dropdown.Menu>
-                                    {Array.from({length: 10}, (_, i) => (
-                                        <Dropdown.Item key={i + 1} eventKey={(i + 1).toString()}>
-                                            {i + 1}
-                                        </Dropdown.Item>
-                                    ))}
-                                </Dropdown.Menu>
-                            </Dropdown>
+                            {showMode === "cycle" ? (
+                                    <Dropdown onSelect={k => setPriority(Number(k))}>
+                                        <Dropdown.Toggle variant="primary">
+                                            Приоритет: {priority}
+                                        </Dropdown.Toggle>
+                                        <Dropdown.Menu>
+                                            {Array.from({length: 10}, (_, i) => (
+                                                <Dropdown.Item key={i + 1} eventKey={(i + 1).toString()}>
+                                                    {i + 1}
+                                                </Dropdown.Item>
+                                            ))}
+                                        </Dropdown.Menu>
+                                    </Dropdown>
+                                )
+                                :
+                                (
+                                    <span>Высокий приоритет</span>
+                                )
+                            }
+
                         </Col>
 
                         <Col xs="auto">
@@ -365,144 +418,6 @@ export default function ScheduleSettingsPanel() {
 {/*    />*/
 }
 {/*</motion.div>*/
-}
-
-{/*{!isRecurring && (*/
-}
-{/*    <motion.div*/
-}
-{/*        layout*/
-}
-{/*        key="show-mode-block"*/
-}
-{/*        initial={{opacity: 0, height: 0}}*/
-}
-{/*        animate={{opacity: 1, height: 'auto'}}*/
-}
-{/*        exit={{opacity: 0, height: 0}}*/
-}
-{/*        className="overflow-hidden"*/
-}
-{/*    >*/
-}
-
-{/*        <Form.Check*/
-}
-{/*            type="checkbox"*/
-}
-{/*            id="mode-cycle"*/
-}
-{/*            name="showMode"*/
-}
-{/*            label="Играть X минут, потом пауза Y минут"*/
-}
-{/*            checked={showMode === 'cycle'}*/
-}
-{/*            onChange={() => setShowMode('cycle')}*/
-}
-{/*            className="form-check-square mb-2"*/
-}
-{/*        />*/
-}
-
-{/*        {showMode === 'cycle' && (*/
-}
-{/*            <div className="d-flex align-items-center gap-3 ps-4 mb-3">*/
-}
-{/*                <InputGroup style={{width: 240}}>*/
-}
-{/*                    <InputGroup.Text>Играть</InputGroup.Text>*/
-}
-{/*                    <Form.Control*/
-}
-{/*                        type="number"*/
-}
-{/*                        min={0}*/
-}
-{/*                        value={cycleMinutes}*/
-}
-{/*                        onChange={e => setCycleMinutes(+e.target.value)}*/
-}
-{/*                    />*/
-}
-{/*                    <InputGroup.Text>мин</InputGroup.Text>*/
-}
-{/*                </InputGroup>*/
-}
-
-{/*                <InputGroup style={{width: 240}}>*/
-}
-{/*                    <InputGroup.Text>Пауза</InputGroup.Text>*/
-}
-{/*                    <Form.Control*/
-}
-{/*                        type="number"*/
-}
-{/*                        min={0}*/
-}
-{/*                        value={pauseMinutes}*/
-}
-{/*                        onChange={e => setPauseMinutes(+e.target.value)}*/
-}
-{/*                    />*/
-}
-{/*                    <InputGroup.Text>мин</InputGroup.Text>*/
-}
-{/*                </InputGroup>*/
-}
-{/*            </div>*/
-}
-{/*        )}*/
-}
-
-{/*        <Form.Check*/
-}
-{/*            type="checkbox"*/
-}
-{/*            id="mode-interval"*/
-}
-{/*            name="showMode"*/
-}
-{/*            label="Показывать раз в X минут"*/
-}
-{/*            checked={showMode === 'interval'}*/
-}
-{/*            onChange={() => setShowMode('interval')}*/
-}
-{/*            className="form-check-square mb-2"*/
-}
-{/*        />*/
-}
-
-{/*        {showMode === 'interval' && (*/
-}
-{/*            <div className="ps-4" style={{maxWidth: 240}}>*/
-}
-{/*                <InputGroup>*/
-}
-{/*                    <Form.Control*/
-}
-{/*                        type="number"*/
-}
-{/*                        min={0}*/
-}
-{/*                        value={intervalMinutes}*/
-}
-{/*                        onChange={e => setIntervalMinutes(+e.target.value)}*/
-}
-{/*                    />*/
-}
-{/*                    <InputGroup.Text>мин</InputGroup.Text>*/
-}
-{/*                </InputGroup>*/
-}
-{/*            </div>*/
-}
-{/*        )}*/
-}
-{/*    </motion.div>*/
-}
-{/*)}*/
 }
 
 {/*/!* Ограничения *!/*/

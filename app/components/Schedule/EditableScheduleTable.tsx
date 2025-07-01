@@ -5,8 +5,8 @@ import {generateTimeSlots, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {ScheduledBlock} from "@/public/types/interfaces";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScreensStore} from "@/app/store/screensStore";
-import {Button, Dropdown, Form, Modal} from "react-bootstrap";
-
+import {Button, Dropdown, Form, InputGroup, Modal} from "react-bootstrap";
+import type {ShowMode} from '@/app/store/scheduleStore'
 // подготавливаем метаданные для позиционирования
 type Meta = {
     screenId: string
@@ -26,7 +26,8 @@ export default function EditableScheduleTable() {
         setHoveredBlock,
         removeBlock,
         selectedScreens,
-        addEditedBlock
+        addEditedBlock,
+        showMode
     } = useScheduleStore()
     const {allScreens} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
@@ -101,15 +102,28 @@ export default function EditableScheduleTable() {
     const [editPriority, setEditPriority] = useState(1)
     const [editScreens, setEditScreens] = useState<string[]>([])
     const [error, setError] = useState<string | null>(null)
+    const [editShowMode, setEditShowMode] = useState<ShowMode>('cycle')
+    const [editInterval, setEditInterval] = useState<number>(0)
+    const [editPause, setEditPause] = useState<number>(0)
 
-    // при открытии модалки инициализируем поля
+// при открытии модалки инициализировать:
     useEffect(() => {
         if (!editingMeta) return
         const b = editingMeta.block
         setEditStart(b.startTime.slice(0, 5))
         setEditEnd(b.endTime.slice(0, 5))
         setEditPlaylist(b.playlistId)
-        // setEditPriority(b.priority ?? 1)
+        setEditPriority(b.priority)
+        // если есть поля интервала — режим интервал:
+        if (b.repeatIntervalMinutes != null && b.durationMinutes != null) {
+            setEditShowMode(b.isRecurring ? "cycle" : "repeatInterval")
+            setEditPause(b.repeatIntervalMinutes)
+            setEditInterval(b.durationMinutes)
+        } else {
+            setEditShowMode('cycle')
+            setEditPause(0)
+            setEditInterval(0)
+        }
         setEditScreens([editingMeta.screenId])
         setError(null)
     }, [editingMeta])
@@ -191,7 +205,10 @@ export default function EditableScheduleTable() {
                 startTime: editStart + ':00',
                 endTime: editEnd + ':00',
                 playlistId: editPlaylist,
-                // priority:   editPriority,
+                priority: editPriority,
+                isRecurring: editShowMode === 'cycle',
+                repeatIntervalMinutes: editShowMode === 'repeatInterval' ? editPause : undefined,
+                durationMinutes: editShowMode === 'repeatInterval' ? editInterval : undefined,
             })
         )
         setEditingMeta(null)
@@ -329,7 +346,10 @@ export default function EditableScheduleTable() {
 
                         {hoveredBlock === m.block && (
                             <span
-                                onClick={() => removeBlock(m.screenId, m.block)}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    removeBlock(m.screenId, m.block)
+                                }}
                                 style={removeCircle()}
                             >
                 ×
@@ -349,6 +369,56 @@ export default function EditableScheduleTable() {
                     {error && <div className="text-danger mb-2">{error}</div>}
 
                     <Form>
+
+
+                        <Form.Group style={{display: "flex", justifyContent: "center"}} className="mb-3">
+                            <div className="d-flex gap-3">
+                                <Form.Check
+                                    inline
+                                    type="radio"
+                                    id="edit-mode-cycle"
+                                    name="editShowMode"
+                                    label="Зациклено"
+                                    checked={editShowMode === 'cycle'}
+                                    onChange={() => setEditShowMode('cycle')}
+                                />
+                                <Form.Check
+                                    inline
+                                    type="radio"
+                                    id="edit-mode-repeat"
+                                    name="editShowMode"
+                                    label="Играть X мин, пауза Y мин"
+                                    checked={editShowMode === 'repeatInterval'}
+                                    onChange={() => setEditShowMode('repeatInterval')}
+                                />
+                            </div>
+
+                        </Form.Group>
+
+                        {editShowMode === 'repeatInterval' && (
+                            <div className="d-flex justify-content-center gap-3 ps-4 mb-3">
+                                <InputGroup style={{width: 200}}>
+                                    <InputGroup.Text>Играть</InputGroup.Text>
+                                    <Form.Control
+                                        type="number"
+                                        min={0}
+                                        value={editInterval}
+                                        onChange={e => setEditInterval(+e.target.value)}
+                                    />
+                                    <InputGroup.Text>мин</InputGroup.Text>
+                                </InputGroup>
+                                <InputGroup style={{width: 200}}>
+                                    <InputGroup.Text>Пауза</InputGroup.Text>
+                                    <Form.Control
+                                        type="number"
+                                        min={0}
+                                        value={editPause}
+                                        onChange={e => setEditPause(+e.target.value)}
+                                    />
+                                    <InputGroup.Text>мин</InputGroup.Text>
+                                </InputGroup>
+                            </div>
+                        )}
 
 
                         <Form.Group className="mb-3">
@@ -371,6 +441,7 @@ export default function EditableScheduleTable() {
                         <Form.Group className="mb-3">
                             <Form.Label>Экраны</Form.Label>
                             <Form.Select
+
                                 value={editScreens}
                                 onChange={e => toggleEditScreen(e.target.value)}
                             >
@@ -391,17 +462,27 @@ export default function EditableScheduleTable() {
                                 ))}
                             </Form.Select>
                         </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Приоритет</Form.Label>
-                            <Form.Select
-                                value={editPriority}
-                                onChange={e => setEditPriority(Number(e.target.value))}
-                            >
-                                {Array.from({length: 10}, (_, i) => i + 1).map(n => (
-                                    <option key={n} value={n}>{n}</option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
+
+                        {editShowMode === 'cycle' ? (
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Приоритет</Form.Label>
+                                    <Form.Select
+                                        value={editPriority}
+                                        onChange={e => setEditPriority(Number(e.target.value))}
+                                    >
+                                        {Array.from({length: 10}, (_, i) => i + 1).map(n => (
+                                            <option key={n} value={n}>{n}</option>
+                                        ))}
+                                    </Form.Select>
+                                </Form.Group>
+                            )
+                            :
+                            (
+                                <span>Высокий приоритет</span>
+                            )
+                        }
+
+
                     </Form>
                     <div style={{display: "flex", justifyContent: "end"}}>
 
@@ -419,7 +500,7 @@ export default function EditableScheduleTable() {
                     </Button>
 
                     <Button
-                        variant="danger" block
+                        variant="danger"
                         onClick={() => {
                             removeBlock(editingMeta!.screenId, editingMeta!.block)
                             setEditingMeta(null)

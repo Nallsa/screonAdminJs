@@ -14,7 +14,7 @@ import {getValueInStorage} from "@/app/API/localStorage";
 
 
 // типы
-type ShowMode = 'cycle' | 'interval'
+export type ShowMode = 'cycle' | 'repeatInterval'
 type ByScreen<T> = Record<string, T[]>
 
 interface ScheduleState {
@@ -48,11 +48,11 @@ interface ScheduleState {
 
     isShowBackground: boolean
     showMode: ShowMode
-    cycleMinutes: number
+    // cycleMinutes: number
     pauseMinutes: number
     intervalMinutes: number
     setShowMode: (m: ShowMode) => void
-    setCycleMinutes: (m: number) => void
+    // setCycleMinutes: (m: number) => void
     setPauseMinutes: (m: number) => void
     setIntervalMinutes: (m: number) => void
 
@@ -136,7 +136,12 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     endTime,
                     selectedPlaylist,
                     isFixedSchedule,
-                    selectedDays
+                    selectedDays,
+                    priority,
+                    isRecurring,
+                    showMode,
+                    pauseMinutes,
+                    intervalMinutes
                 } = get()
                 if (!selectedScreens.length) return
                 const mapKey = isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
@@ -157,6 +162,17 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             startTime: normalizeTime(startTime) + ':00',
                             endTime: normalizeTime(endTime) + ':00',
                             playlistId: selectedPlaylist,
+                            isRecurring,
+                            ...(showMode === 'repeatInterval'
+                                    ? {
+                                        repeatIntervalMinutes: pauseMinutes,
+                                        durationMinutes: intervalMinutes,
+                                        priority: 100
+                                    }
+                                    : {
+                                        priority
+                                    }
+                            )
                         }
                         set(s => {
                             (s as any)[mapKey][screenId].push(b)
@@ -215,39 +231,46 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     priority,
                     scheduledFixedMap,
                     scheduledCalendarMap,
-                    scheduleId
+                    scheduleId,
+                    pauseMinutes,
+                    intervalMinutes,
+                    showMode,
                 } = get()
                 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
                 const userId = typeof window !== 'undefined' ? localStorage.getItem("userId") : null
 
-                const fixedSlots = selectedScreens.flatMap(screenId =>
-                    (scheduledFixedMap[screenId] ?? []).map(b => ({
+                const slots = selectedScreens.flatMap(screenId => {
+                    const blocks = (isFixedSchedule ? scheduledFixedMap : scheduledCalendarMap)[screenId] ?? [];
+                    return blocks.map(b => ({
                         dayOfWeek: b.dayOfWeek,
-                        startDate: null,
-                        endDate: null,
                         startTime: b.startTime.slice(0, 5),
                         endTime: b.endTime.slice(0, 5),
                         playlistId: b.playlistId,
-                        screenId
-                    }))
-                )
-                const calendarSlots = selectedScreens.flatMap(screenId =>
-                    (scheduledCalendarMap[screenId] ?? []).map(b => ({
-                        dayOfWeek: b.dayOfWeek,
-                        startDate: b.startDate!,
-                        endDate: b.endDate!,
-                        startTime: b.startTime.slice(0, 5),
-                        endTime: b.endTime.slice(0, 5),
-                        playlistId: b.playlistId,
-                        screenId
-                    }))
-                )
-                const allSlots = [...fixedSlots, ...calendarSlots]
-                const uniqueSlots = Array.from(new Map(allSlots.map(s => [
+                        screenId,
+
+                        // берём именно из блока
+                        isRecurring: b.isRecurring,
+                        startDate: isFixedSchedule ? null : b.startDate,
+                        endDate: isFixedSchedule ? null : b.endDate,
+
+                        // поля интервала могут быть undefined
+                        repeatIntervalMinutes: b.repeatIntervalMinutes,
+                        durationMinutes: b.durationMinutes,
+
+                        // приоритет тоже из блока
+                        priority: b.priority,
+                    }));
+                });
+
+
+                const uniqueSlots = Array.from(new Map(slots.map(s => [
                     `${s.screenId}|${s.dayOfWeek}|${s.startDate}|${s.startTime}|${s.endTime}|${s.playlistId}`, s
                 ])).values())
 
-                const payload = {startDate: null, endDate: null, isRecurring, priority, timeSlots: uniqueSlots}
+                const payload = {startDate: null, endDate: null, isRecurring, timeSlots: slots}
+
+                console.log('slots:', slots)
+                console.log('payload:', payload)
 
                 try {
                     if (scheduleId) {
@@ -276,72 +299,79 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             },
 
             getSchedule: async () => {
-                set(s => {
-                    s.errorMessage = null
-                })
-                try {
-                    const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-                    const userId = getValueInStorage("userId")
-                    const accessToken = getValueInStorage("accessToken")
+                const accessToken = getValueInStorage("accessToken");
+                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL;
 
+                try {
                     const {data} = await axios.get<{
                         id: string
                         startDate: string
                         endDate: string
-                        priority: number
-                        recurring: boolean
+                        isRecurring: boolean
                         timeSlots: Array<{
-                            dayOfWeek: ScheduledBlock['dayOfWeek']
+                            dayOfWeek: string
                             startDate: string | null
                             endDate: string | null
-                            startTime: string  // "HH:MM:SS"
-                            endTime: string    // "HH:MM:SS"
+                            startTime: string
+                            endTime: string
                             playlistId: string
                             screenId: string
+                            isRecurring: boolean
+                            priority: number
+                            repeatIntervalMinutes?: number
+                            durationMinutes?: number
                         }>
-                    }>(
-                        `${SERVER}schedule/user`,
-                        {headers: {Authorization: `Bearer ${accessToken}`}}
-                    )
+                    }>(`${SERVER}schedule/user`, {
+                        headers: {Authorization: `Bearer ${accessToken}`}
+                    });
 
+                    console.log('getSchedule response data:', data)
+                    console.log('timeSlots:', data.timeSlots)
+                    // Сбрасываем карту
                     set(s => {
                         s.scheduledFixedMap = {};
-                        s.scheduledCalendarMap = {}
-                    })
+                        s.scheduledCalendarMap = {};
+                        s.isRecurring = data.isRecurring ?? false;
+                        s.startDate = data.startDate;
+                        s.endDate = data.endDate;
+                        s.scheduleId = data.id;
+                    });
 
-                    const screens = new Set<string>()
-                    data?.timeSlots?.forEach((slot: any) => {
-                        screens.add(slot.screenId)
-                        const mapKey = slot.startDate === null ? 'scheduledFixedMap' : 'scheduledCalendarMap'
-                        set((s: any) => {
-                            if (!(s[mapKey][slot.screenId])) s[mapKey][slot.screenId] = []
+                    // Заполняем
+                    const screens = new Set<string>();
+                    data.timeSlots.forEach(slot => {
+                        screens.add(slot.screenId);
+                        const mapKey =
+                            (slot.repeatIntervalMinutes != null || slot.durationMinutes != null)
+                                ? 'scheduledCalendarMap'
+                                : slot.startDate === null
+                                    ? 'scheduledFixedMap'
+                                    : 'scheduledCalendarMap';
+
+                        set(s => {
+                            if (!s[mapKey][slot.screenId]) s[mapKey][slot.screenId] = [];
                             s[mapKey][slot.screenId].push({
                                 dayOfWeek: slot.dayOfWeek,
                                 startDate: slot.startDate,
                                 endDate: slot.endDate,
-                                startTime: slot.startTime,
-                                endTime: slot.endTime,
-                                playlistId: slot.playlistId
-                            })
-                        })
-                    })
+                                startTime: slot.startTime + ':00',
+                                endTime: slot.endTime + ':00',
+                                playlistId: slot.playlistId,
+                                isRecurring: Boolean(slot.isRecurring),
+                                priority: slot.priority,
+                                repeatIntervalMinutes: slot.repeatIntervalMinutes ?? 0,
+                                durationMinutes: slot.durationMinutes ?? 0,
+                            });
+                        });
+                    });
+
                     set(s => {
                         s.selectedScreens = Array.from(screens);
-                        s.isRecurring = data.recurring;
-                        s.priority = data.priority
-                        s.scheduleId = data.id
-                    })
-
+                    });
                 } catch (e: any) {
-                    console.error('Error load schedule:', e)
-
-                    const serverMsg = e?.response?.data?.message
-                    const ruMsg = 'Не удалось загрузить расписание'
-                    const finalMsg = serverMsg
-                        ? `${serverMsg}. ${ruMsg}`
-                        : ruMsg
-
-                    get().setError(finalMsg)
+                    set(s => {
+                        s.errorMessage = e.response?.data?.message || 'Ошибка загрузки';
+                    });
                 }
             },
 
@@ -366,15 +396,13 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             }),
 
             showMode: 'cycle',
-            cycleMinutes: 10,
+            // cycleMinutes: 10,
             pauseMinutes: 50,
-            intervalMinutes: 60,
+            intervalMinutes: 10,
             setShowMode: m => set(s => {
                 s.showMode = m
             }),
-            setCycleMinutes: m => set(s => {
-                s.cycleMinutes = m
-            }),
+
             setPauseMinutes: m => set(s => {
                 s.pauseMinutes = m
             }),

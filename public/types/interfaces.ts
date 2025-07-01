@@ -50,5 +50,8 @@ export interface ScheduledBlock {
     startTime: string
     endTime: string
     playlistId: string,
-    // priority: number,
+    priority: number,
+    repeatIntervalMinutes?: number
+    durationMinutes?: number
+    isRecurring: boolean,
 }
