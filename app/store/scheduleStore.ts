@@ -29,6 +29,9 @@ interface ScheduleState {
     addBlock: () => void
     removeBlock: (screenId: string, b: ScheduledBlock) => void
 
+    startDate: string | null
+    endDate: string | null
+
     priority: number
     setPriority: (p: number) => void
 
@@ -98,6 +101,9 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             priority: 1,
             scheduleId: null,
 
+            startDate: null,
+            endDate: null,
+
             setPriority: (p) => set(s => {
                 s.priority = p
             }),
@@ -162,7 +168,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             startTime: normalizeTime(startTime) + ':00',
                             endTime: normalizeTime(endTime) + ':00',
                             playlistId: selectedPlaylist,
-                            isRecurring,
+                            isRecurring: showMode === 'cycle',
                             ...(showMode === 'repeatInterval'
                                     ? {
                                         repeatIntervalMinutes: pauseMinutes,
@@ -351,7 +357,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         set(s => {
                             if (!s[mapKey][slot.screenId]) s[mapKey][slot.screenId] = [];
                             s[mapKey][slot.screenId].push({
-                                dayOfWeek: slot.dayOfWeek,
+                                dayOfWeek: slot.dayOfWeek as ScheduledBlock['dayOfWeek'],
                                 startDate: slot.startDate,
                                 endDate: slot.endDate,
                                 startTime: slot.startTime + ':00',

@@ -19,13 +19,13 @@ export default function CreateOrgPage() {
         // здесь можешь добавить вызов API или редирект
         const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
         const accessToken = getValueInStorage("accessToken");
-
+        const userId = getValueInStorage("userId");
         console.log('accessToken', accessToken);
 
 
         const response = await axios.post(
             `${SERVER_URL}organizations`,
-            {name: orgName},
+            {name: orgName, creatorUserId: userId},
             {headers: {Authorization: `Bearer ${accessToken}`}}
         );
 
