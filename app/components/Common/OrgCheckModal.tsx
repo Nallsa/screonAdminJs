@@ -2,6 +2,7 @@
 
 import React, {useEffect, useState} from "react";
 import {usePathname, useRouter} from "next/navigation";
+import axios from "axios";
 
 export default function OrgCheckModal() {
     const [show, setShow] = useState(false);
@@ -9,13 +10,51 @@ export default function OrgCheckModal() {
     const router = useRouter();
 
     useEffect(() => {
-        const organizationId = localStorage.getItem("organizationId");
-        if (!organizationId?.trim() && pathname !== "/createOrg") {
-            setShow(true);
-        }
-    }, [pathname]);
+        async function checkOrg() {
+            if (pathname === '/createOrg') {
+                setShow(false)
+                return
+            }
 
-    if (!show) return null;
+            const storedOrgId = localStorage.getItem('organizationId')?.trim()
+            if (storedOrgId) {
+                setShow(false)
+                return
+            }
+
+            const userId = localStorage.getItem('userId')?.trim()
+            if (!userId) {
+                setShow(true)
+                return
+            }
+
+            const accessToken = localStorage.getItem('accessToken')
+
+            try {
+                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+                const res = await axios.get(
+                    `${SERVER}organizations/organization`,
+                    {headers: {Authorization: `Bearer ${accessToken}`}}
+                )
+
+                console.log("Полученная организация", res.data)
+
+                if (res.status === 200 && res.data?.id) {
+                    localStorage.setItem('organizationId', res.data.id)
+                    setShow(false)
+                    return
+                }
+            } catch (e) {
+                console.error('Ошибка при получении организации:', e)
+            }
+
+            setShow(true)
+        }
+
+        checkOrg()
+    }, [pathname])
+
+    if (!show) return null
 
     return (
         <>
