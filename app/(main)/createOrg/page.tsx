@@ -40,8 +40,6 @@ export default function CreateOrgPage() {
 
 
             router.push("/screens")
-
-
         }
 
 

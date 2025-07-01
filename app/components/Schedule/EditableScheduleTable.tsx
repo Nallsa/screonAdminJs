@@ -145,15 +145,7 @@ export default function EditableScheduleTable() {
         if (!playlistItems.some(p => p.id === editPlaylist)) return false
         if (editScreens.length === 0) return false
 
-        const blocks = (isFixedSchedule
-            ? scheduledFixedMap[editingMeta.screenId]
-            : scheduledCalendarMap[editingMeta.screenId]) ?? []
-
-        return !blocks.some(other => {
-            if (other === editingMeta.block) return false
-            if (other.dayOfWeek !== editingMeta.block.dayOfWeek) return false
-            return editStart < other.endTime && other.startTime < editEnd
-        })
+        return true
     }
 
     // валидация
@@ -172,7 +164,7 @@ export default function EditableScheduleTable() {
             return false
         }
         if (!playlistItems.some(p => p.id === editPlaylist)) {
-            setError('Выберите плейлист')
+            setError('Выберите плейlist')
             return false
         }
         if (editScreens.length === 0) {
@@ -180,18 +172,6 @@ export default function EditableScheduleTable() {
             return false
         }
 
-        const blocks = (isFixedSchedule
-            ? scheduledFixedMap[editingMeta.screenId]
-            : scheduledCalendarMap[editingMeta.screenId]) ?? []
-
-        for (const other of blocks) {
-            if (other === editingMeta.block) continue
-            if (other.dayOfWeek !== editingMeta.block.dayOfWeek) continue
-            if (editStart < other.endTime && other.startTime < editEnd) {
-                setError(`Конфликт с ${other.startTime}-${other.endTime}`)
-                return false
-            }
-        }
         return true
     }
 

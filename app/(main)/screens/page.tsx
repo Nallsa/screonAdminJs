@@ -104,7 +104,7 @@ export default function ScreensPage() {
                 <Form.Control
                     type="text"
                     placeholder="Поиск по названию..."
-                    style={{maxWidth: 1500}}
+                    style={{maxWidth: 3500}}
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
