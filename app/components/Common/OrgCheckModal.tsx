@@ -30,23 +30,23 @@ export default function OrgCheckModal() {
 
             const accessToken = localStorage.getItem('accessToken')
 
-            try {
-                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-                const res = await axios.get(
-                    `${SERVER}organizations/organization`,
-                    {headers: {Authorization: `Bearer ${accessToken}`}}
-                )
-
-                console.log("Полученная организация", res.data)
-
-                if (res.status === 200 && res.data?.id) {
-                    localStorage.setItem('organizationId', res.data.id)
-                    setShow(false)
-                    return
-                }
-            } catch (e) {
-                console.error('Ошибка при получении организации:', e)
-            }
+            // try {
+            //     const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+            //     const res = await axios.get(
+            //         `${SERVER}organizations/organization`,
+            //         {headers: {Authorization: `Bearer ${accessToken}`}}
+            //     )
+            //
+            //     console.log("Полученная организация", res.data)
+            //
+            //     if (res.status === 200 && res.data?.id) {
+            //         localStorage.setItem('organizationId', res.data.id)
+            //         setShow(false)
+            //         return
+            //     }
+            // } catch (e) {
+            //     console.error('Ошибка при получении организации:', e)
+            // }
 
             setShow(true)
         }
