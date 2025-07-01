@@ -58,6 +58,10 @@ interface ScheduleState {
 
     maxPerDay: number
     maxPerHour: number
+
+    startDate: string
+    endDate: string
+
     maxTotalDuration: number
     setMaxPerDay: (n: number) => void
     setMaxPerHour: (n: number) => void
@@ -80,6 +84,8 @@ interface ScheduleState {
     getSchedule: () => Promise<void>
 
     addEditedBlock: (screenId: string, block: ScheduledBlock) => void
+
+
 }
 
 export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]>(
@@ -97,6 +103,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             isShowBackground: false,
             priority: 1,
             scheduleId: null,
+            startDate: "",
+            endDate: "",
 
             setPriority: (p) => set(s => {
                 s.priority = p
@@ -302,8 +310,13 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 const accessToken = getValueInStorage("accessToken");
                 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL;
 
+                const WEEK_DAYS = [
+                    "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY",
+                    "FRIDAY", "SATURDAY", "SUNDAY"
+                ] as const;
+
                 try {
-                    const {data} = await axios.get<{
+                    const { data } = await axios.get<{
                         id: string
                         startDate: string
                         endDate: string
@@ -322,12 +335,13 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             durationMinutes?: number
                         }>
                     }>(`${SERVER}schedule/user`, {
-                        headers: {Authorization: `Bearer ${accessToken}`}
+                        headers: { Authorization: `Bearer ${accessToken}` }
                     });
 
                     console.log('getSchedule response data:', data)
                     console.log('timeSlots:', data.timeSlots)
-                    // Сбрасываем карту
+
+                    // Сбрасываем карту и обновляем базовые поля
                     set(s => {
                         s.scheduledFixedMap = {};
                         s.scheduledCalendarMap = {};
@@ -337,10 +351,11 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         s.scheduleId = data.id;
                     });
 
-                    // Заполняем
                     const screens = new Set<string>();
+
                     data.timeSlots.forEach(slot => {
                         screens.add(slot.screenId);
+
                         const mapKey =
                             (slot.repeatIntervalMinutes != null || slot.durationMinutes != null)
                                 ? 'scheduledCalendarMap'
@@ -350,8 +365,16 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                         set(s => {
                             if (!s[mapKey][slot.screenId]) s[mapKey][slot.screenId] = [];
+
+                            const normalizedDay = WEEK_DAYS.includes(slot.dayOfWeek as any)
+                                ? slot.dayOfWeek as ScheduledBlock['dayOfWeek']
+                                : (() => {
+                                    console.error(`Invalid dayOfWeek from server: ${slot.dayOfWeek}`);
+                                    throw new Error(`Invalid dayOfWeek from server: ${slot.dayOfWeek}`);
+                                })();
+
                             s[mapKey][slot.screenId].push({
-                                dayOfWeek: slot.dayOfWeek,
+                                dayOfWeek: normalizedDay,
                                 startDate: slot.startDate,
                                 endDate: slot.endDate,
                                 startTime: slot.startTime + ':00',
@@ -369,6 +392,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         s.selectedScreens = Array.from(screens);
                     });
                 } catch (e: any) {
+                    console.error('Error in getSchedule:', e);
                     set(s => {
                         s.errorMessage = e.response?.data?.message || 'Ошибка загрузки';
                     });
