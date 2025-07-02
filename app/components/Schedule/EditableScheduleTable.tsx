@@ -443,7 +443,7 @@ export default function EditableScheduleTable() {
                             </Form.Select>
                         </Form.Group>
 
-                        {editShowMode === 'repeatInterval' ? (
+                        {editShowMode !== 'repeatInterval' ? (
                                 <Form.Group className="mb-3">
                                     <Form.Label>Приоритет</Form.Label>
                                     <Form.Select
