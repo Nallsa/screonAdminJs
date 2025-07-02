@@ -161,6 +161,19 @@ export default function ScheduleSettingsPanel() {
                                         <Form.Check
                                             inline
                                             type="checkbox"
+                                            id="mode-once"
+                                            name="showMode"
+                                            label="Один раз"
+                                            checked={showMode === 'once'}
+                                            onChange={() => {
+                                                setShowMode('once')
+                                                setPauseMinutes(0)
+                                                setIntervalMinutes(0)
+                                            }}
+                                        />
+                                        <Form.Check
+                                            inline
+                                            type="checkbox"
                                             id="mode-recurring"
                                             name="showMode"
                                             label="Зациклено"
@@ -324,7 +337,7 @@ export default function ScheduleSettingsPanel() {
                         </Col>
 
                         <Col xs="auto">
-                            {showMode === "cycle" ? (
+                            {showMode !== "repeatInterval" ? (
                                     <Dropdown onSelect={k => setPriority(Number(k))}>
                                         <Dropdown.Toggle variant="primary">
                                             Приоритет: {priority}

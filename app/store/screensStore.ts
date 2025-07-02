@@ -236,7 +236,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
     connectWsForScreen: async () => {
         try {
-            connectWebSocket((action, payload) => {
+            connectWebSocket(`pairing`, (action, payload) => {
 
                 switch (action) {
                     case 'PAIRING_CONFIRMED':
