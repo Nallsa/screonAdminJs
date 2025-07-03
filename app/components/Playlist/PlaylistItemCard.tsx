@@ -35,7 +35,7 @@ export default function PlaylistItemCard({item}: { item: PlaylistItem }) {
     return (
         <div ref={setNodeRef} style={style} className="card shadow-sm" {...attributes} {...listeners}>
             <div className="position-relative">
-                {item.previewUrl && (<img src={item.previewUrl} alt={item.name} className="card-img-top"/>)}
+                {item.filePreviewId && (<img src={item.filePreviewId} alt={item.name} className="card-img-top"/>)}
                 <div className="position-absolute top-0 start-0 p-1">
                     <span role="img" aria-label="drag">⠿</span>
                 </div>

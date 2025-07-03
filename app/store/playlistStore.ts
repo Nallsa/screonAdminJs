@@ -141,9 +141,12 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
                 const response = await axios.put<{
                     id: string
+                    orderIndex: number
                     name: string
                     type: string
+                    size: number
                     duration: number
+                    previewUrl: string
                 }>(
                     `${SERVER_URL}playlists/update/playlist-item`,
                     update,
@@ -158,13 +161,12 @@ export const usePlaylistStore = create<usePlaylistState>()(
                             f.id === dto.id
                                 ? ({
                                     ...f,
-                                    fileId: f.fileId,
+                                    orderIndex: dto.orderIndex,
                                     name: dto.name,
                                     type: dto.type,
                                     size: dto.size,
                                     duration: dto.duration,
                                     previewUrl: dto.previewUrl,
-                                    orderIndex: dto.orderIndex
                                 } as FileItem)
                                 : f
                         )

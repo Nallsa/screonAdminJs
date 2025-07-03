@@ -51,6 +51,7 @@ export default function UploadZone() {
                         }
 
                         const newItem: FileItem = {
+                            id: "",
                             fileId: fileId,
                             file,
                             name: file.name,

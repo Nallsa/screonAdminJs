@@ -286,7 +286,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 s.errorMessage = msg
             }),
 
-            sendSchedule: () => {
+            sendSchedule: async () => {
                 const {
                     selectedScreens,
                     isFixedSchedule,
@@ -336,7 +336,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 }
             },
 
-            getSchedule: () => {
+            getSchedule: async () => {
                 const userId = typeof window !== 'undefined'
                     ? localStorage.getItem('userId')
                     : null
