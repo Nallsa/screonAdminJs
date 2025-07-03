@@ -47,14 +47,14 @@ export default function UploadZone() {
                                 }
                             })
                         } else {
-                            duration = 15
+                            duration = 30
                         }
 
                         const newItem: FileItem = {
-                            id: fileId,
+                            fileId: fileId,
                             file,
                             name: file.name,
-                            type: file.type.startsWith('video/') ? 'video/quicktime' : 'image/webp',
+                            type: file.type,
                             size: file.size,
                             duration,
                             previewUrl: URL.createObjectURL(file),
@@ -80,7 +80,7 @@ export default function UploadZone() {
         (accepted: File[]) => startUpload(accepted),
         [startUpload]
     )
-    const {getRootProps, getInputProps, open} = useDropzone({
+    const {getRootProps, getInputProps, open, isDragActive} = useDropzone({
         onDrop,
         multiple: true,
         noClick: true,
@@ -100,6 +100,10 @@ export default function UploadZone() {
                 style={{
                     cursor: 'pointer',
                     border: '2px dashed #ced4da',
+                    borderColor: isDragActive ? '#0d6efd' : '#ced4da',
+                    transition: 'border-color 150ms ease-in-out'
+
+
                 }}
             >
                 <input {...getInputProps()} />

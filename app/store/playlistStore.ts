@@ -34,7 +34,7 @@ interface usePlaylistState {
     updatePlaylistFileItem: (update: {
         id: string
         name: string
-        type: 'video/quicktime' | 'image/webp'
+        type: string
         duration: number
     }) => Promise<boolean>
 
@@ -94,8 +94,18 @@ export const usePlaylistStore = create<usePlaylistState>()(
                     userId: getValueInStorage('userId'),
                     organizationId: getValueInStorage('organizationId'),
                     isPublic: true,
-                    childFiles: playlistChildren
-                }
+                    childFiles: playlistChildren.map(f => ({
+                        fileId: f.fileId,
+                        name: f.name,
+                        type: f.type,
+                        size: f.size,
+                        duration: f.duration,
+                        previewUrl: f.previewUrl,
+                        orderIndex: f.orderIndex,
+                    }))
+                };
+
+                console.log("[createPlaylist]", data)
 
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
@@ -119,7 +129,7 @@ export const usePlaylistStore = create<usePlaylistState>()(
         updatePlaylistFileItem: async (update: {
             id: string
             name: string
-            type: 'video/quicktime' | 'image/webp'
+            type: string
             duration: number
         }) => {
 
@@ -129,11 +139,10 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 const accessToken = getValueInStorage('accessToken')
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL!
 
-                // отправляем на бэкенд только нужные поля
                 const response = await axios.put<{
                     id: string
                     name: string
-                    type: 'video/quicktime' | 'image/webp'
+                    type: string
                     duration: number
                 }>(
                     `${SERVER_URL}playlists/update/playlist-item`,
@@ -142,22 +151,20 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 )
                 const dto = response.data
 
-                // обновляем state
                 set(state => {
                     // если у нас открыта форма редактирования — поменяем там
                     if (state.playlistToEdit) {
                         state.playlistToEdit.childFiles = state.playlistToEdit.childFiles.map(f =>
                             f.id === dto.id
                                 ? ({
-                                    // сохраним оригинальный File (если он там был)
-                                    file: f.file,
-                                    id: dto.id,
-                                    orderIndex: dto.orderIndex,
+                                    ...f,
+                                    fileId: f.fileId,
                                     name: dto.name,
                                     type: dto.type,
                                     size: dto.size,
                                     duration: dto.duration,
                                     previewUrl: dto.previewUrl,
+                                    orderIndex: dto.orderIndex
                                 } as FileItem)
                                 : f
                         )

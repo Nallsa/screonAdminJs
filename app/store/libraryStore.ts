@@ -57,7 +57,7 @@ export const useLibraryStore = create<LibraryStore>()(
 
         updateLibraryItem: (updatedItem: FileItem) => {
             set((state) => {
-                const index = state.libraryItems.findIndex((i: { id: string; }) => i.id === updatedItem.id);
+                const index = state.libraryItems.findIndex((i: { id: string; }) => i.id === updatedItem.fileId);
                 if (index !== -1) {
                     state.libraryItems[index] = updatedItem;
                 }
@@ -66,7 +66,9 @@ export const useLibraryStore = create<LibraryStore>()(
 
         deleteLibraryItem: (id: string) => {
             set((state) => {
-                state.libraryItems = state.libraryItems.filter((i: { id: string; }) => i.id !== id);
+                state.libraryItems = state.libraryItems.filter(i => i.id !== id)
+                state.libraryItems = state.libraryItems.filter(i => i.fileId !== id)
+
             });
         },
 
@@ -84,7 +86,7 @@ export const useLibraryStore = create<LibraryStore>()(
 
                 if (userId?.trim() && organizationId?.trim()) {
                     const response = await axios.post(`${SERVER_URL}files/assign-metadata`, {
-                            fileId: item.id,
+                            fileId: item.fileId,
                             uploadedBy: getValueInStorage('userId'),
                             organizationId: getValueInStorage('organizationId'),
                             isPublic: true,
@@ -127,9 +129,33 @@ export const useLibraryStore = create<LibraryStore>()(
                     {headers: {Authorization: `Bearer ${accessToken}`}}
                 );
 
-                const filesFromBackend: FileItem[] = response.data;
+                const filesFromBackend = (response.data as any[]).map(raw => {
+                    const {
+                        id,
+                        fileId = raw.id,
+                        name,
+                        contentType,
+                        size,
+                        duration,
+                        previewUrl,
+                        orderIndex = 0
+                    } = raw
 
-                // Сохраняем в Zustand
+                    return {
+                        id,
+                        fileId,
+                        file: null,
+                        name,
+                        type: contentType,
+                        size,
+                        duration,
+                        previewUrl,
+                        orderIndex,
+                    } as FileItem
+                })
+                console.log("getFilesInLibrary", filesFromBackend)
+
+
                 get().addLibraryItems(filesFromBackend);
 
                 console.log('Загружено файлов:', filesFromBackend.length);

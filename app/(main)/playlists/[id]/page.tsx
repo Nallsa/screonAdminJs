@@ -63,10 +63,9 @@ export default function PlaylistContentPage() {
         const {active, over} = event;
         if (over && active.id !== over.id) {
             setItems(prev => {
-                const oldIndex = prev.findIndex(i => i.id === active.id);
-                const newIndex = prev.findIndex(i => i.id === over.id);
+                const oldIndex = prev.findIndex(i => i.fileId === active.id);
+                const newIndex = prev.findIndex(i => i.fileId === over.id);
                 const reordered = arrayMove(prev, oldIndex, newIndex);
-                // now bump each item’s orderIndex to match its array slot
                 return reordered.map((item, idx) => ({
                     ...item,
                     orderIndex: idx
@@ -77,52 +76,49 @@ export default function PlaylistContentPage() {
 
 
     const addToPlaylist = (item: FileItem) => {
-        if (!items.find(i => i.id === item.id)) {
-            setItems(prev => [...prev, item])
+        if (!items.find(i => i.fileId === item.fileId)) {
+            const duration = item.type?.startsWith('image') ? 30 : item.duration;
+            setItems(prev => [
+                ...prev,
+                {
+                    ...item,
+                    duration,
+                },
+            ]);
         } else {
-            alert('Этот файл уже добавлен в плейлист')
+            alert('Этот файл уже добавлен в плейлист');
         }
-    }
+    };
 
     async function handleSavePlaylist() {
-
+        // валидация
         if (name.trim() === '') {
-            alert('Введите название плейлиста')
-            return
+            alert('Введите название плейлиста');
+            return;
+        }
+        if (items.length === 0) {
+            alert('Добавьте хотя бы один файл в плейлист');
+            return;
         }
 
+        // пересчитываем индексы
         const itemsWithOrder = items.map((file, idx) => ({
             ...file,
-            orderIndex: idx
+            orderIndex: idx,
         }));
 
+        // сохраняем
         let res: boolean;
         if (playlistToEdit) {
             res = await updatePlaylist(itemsWithOrder, name);
         } else {
             res = await createPlaylist(itemsWithOrder, name);
         }
-        if (res) router.push('/playlists');
 
-        if (items.length === 0) {
-            alert('Добавьте хотя бы один файл в плейлист')
-            return
+        // редирект при успехе
+        if (res) {
+            router.push('/playlists');
         }
-
-        if (playlistToEdit) {
-            const res = await updatePlaylist(items, name)
-
-            if (res) {
-                router.push('/playlists')
-            }
-        } else {
-            const res = await createPlaylist(items, name)
-
-            if (res) {
-                router.push('/playlists')
-            }
-        }
-
     }
 
     async function handleDeletePlaylist() {
@@ -204,15 +200,16 @@ export default function PlaylistContentPage() {
                 <div className="d-flex gap-4">
                     <div className="flex-grow-1">
                         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                            <SortableContext items={items.map(i => i.id)} strategy={horizontalListSortingStrategy}>
+                            <SortableContext items={items.map(i => i.fileId)} strategy={horizontalListSortingStrategy}>
                                 <div className="d-flex flex-wrap gap-3">
                                     {items.map(item => (
                                         <MediaCard
-                                            key={item.id}
+                                            key={item.fileId}
                                             item={item}
                                             isPlaylist={true}
-                                            onDelete={id => setItems(prev => prev.filter(i => i.id !== id))}
-                                            onUpdate={upd => setItems(prev => prev.map(i => i.id === upd.id ? upd : i))}
+                                            canEdit={Boolean(playlistToEdit?.id)}
+                                            onDelete={id => setItems(prev => prev.filter(i => i.fileId !== id))}
+                                            onUpdate={upd => setItems(prev => prev.map(i => i.fileId === upd.fileId ? upd : i))}
                                         />
                                     ))}
                                 </div>
@@ -228,13 +225,13 @@ export default function PlaylistContentPage() {
                             <div className="list-group">
                                 {libraryItems.map(li => (
                                     <div
-                                        key={li.id}
+                                        key={li.fileId}
                                         className="list-group-item d-flex align-items-center justify-content-between"
                                         style={{cursor: 'pointer'}}
                                         onClick={() => addToPlaylist(li)}
                                     >
                                         <div style={{marginRight: 8}}>
-                                            <PreviewImage id={li.id} name={li.name}/>
+                                            <PreviewImage id={li.fileId} name={li.name}/>
                                         </div>
                                         <div className="flex-grow-1">{li.name}</div>
                                         <div className="text-success fw-bold">+</div>

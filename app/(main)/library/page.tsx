@@ -47,19 +47,16 @@ export default function LibraryPage() {
     const handleDragEnd = (event: DragEndEvent) => {
         const {active, over} = event;
         if (over && active.id !== over.id) {
-            const oldIndex = libraryItems.findIndex((i) => i.id === active.id);
-            const newIndex = libraryItems.findIndex((i) => i.id === over.id);
+            const oldIndex = libraryItems.findIndex((i) => i.fileId === active.id);
+            const newIndex = libraryItems.findIndex((i) => i.fileId === over.id);
             const newItems = arrayMove(libraryItems, oldIndex, newIndex);
-            addLibraryItems(newItems); // тут вызывается функция, устанавливающая новые items
+            addLibraryItems(newItems);
         }
     };
 
 
     function handleDelItem(id: string) {
-
         delFileById(id).then(r => r && deleteLibraryItem(id));
-
-
     }
 
 
@@ -88,16 +85,16 @@ export default function LibraryPage() {
                     onDragEnd={handleDragEnd}
                 >
                     <SortableContext
-                        items={libraryItems.map((i) => i.id)}
+                        items={libraryItems.map((i) => i.fileId)}
                         strategy={horizontalListSortingStrategy}
                     >
                         <div className="d-flex flex-wrap gap-3">
                             {libraryItems.map((item) => (
                                 <MediaCard
-                                    key={item.id}
+                                    key={item.fileId}
                                     item={item}
                                     isPlaylist={false}
-                                    onDelete={() => handleDelItem(item.id)}
+                                    onDelete={() => handleDelItem(item.fileId)}
                                     onUpdate={(updatedItem) => updateLibraryItem(updatedItem)}
                                 />
                             ))}

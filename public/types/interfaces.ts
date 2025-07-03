@@ -12,10 +12,10 @@ export interface PlaylistItem {
 
 export interface FileItem {
     id: string;
-    
+    fileId: string;
     file?: File | null;
     name: string;
-    type: 'video/quicktime' | 'image/webp';
+    type: string;
     size: number;
     duration: number;
     previewUrl: string;

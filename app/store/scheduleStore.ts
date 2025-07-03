@@ -125,7 +125,9 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         s.scheduleId = payload.id
 
                         const screens = new Set<string>()
-                        for (const slot of payload.timeSlots as any[]) {
+
+                        const slots = Array.isArray(payload.timeSlots) ? payload.timeSlots : [];
+                        for (const slot of slots) {
                             screens.add(slot.screenId)
                             const mapKey =
                                 slot.repeatIntervalMinutes != null || slot.durationMinutes != null

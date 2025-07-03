@@ -26,6 +26,7 @@ import {usePlaylistStore} from "@/app/store/playlistStore";
 interface Props {
     item: FileItem;
     isPlaylist: boolean,
+    canEdit?: boolean
 
     onDelete(id: string): void;
 
@@ -42,9 +43,9 @@ const formatDuration = (sec: number) => {
         : `${s}s`;
 };
 
-export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate}: Props) {
+export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate, canEdit = true}: Props) {
     const {setNodeRef, transform, transition, attributes, listeners, isDragging} =
-        useSortable({id: item.id})
+        useSortable({id: item.fileId})
     const {updatePlaylistFileItem} = usePlaylistStore()
 
 
@@ -105,7 +106,7 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate}:
                 ⠿
             </button>
 
-            <PreviewImage id={item.id} name={item.name} fill aspectRatio={16 / 9}/>
+            <PreviewImage id={item.fileId} name={item.name} fill aspectRatio={16 / 9}/>
 
             <div className="card-body p-2" style={{
                 display: 'flex',
@@ -123,7 +124,7 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate}:
                             onChange={(e) => setEditName(e.target.value)}
                             className="mb-1"
                         />
-                        {item.type === 'image/webp' && (
+                        {item.type?.startsWith('image/') && (
                             <Form.Control
                                 size="sm"
                                 type="number"
@@ -152,11 +153,24 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate}:
                     </>
                 ) : (
                     <>
-                        <h6 className="mb-1" style={{fontSize: '0.9rem'}}>
+                        <h6
+                            className="mb-1"
+                            style={{
+                                fontSize: '0.9rem',
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 2,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                            }}
+                        >
                             {item.name}
                         </h6>
                         <div className="mb-2">
-                            <Badge bg={item.type === 'image/webp' ? 'success' : 'primary'} className="me-1">
+                            <Badge
+                                bg={item.type?.startsWith('image/') ? 'success' : 'primary'}
+                                className="me-1"
+                            >
                                 {item.type}
                             </Badge>
                             <small className="text-muted">
@@ -164,41 +178,37 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate}:
                             </small>
                         </div>
                         <div className="d-flex justify-content-between align-items-center px-2">
-                            {(
 
-                                <>
- <span
-     style={{
-         width: 24,
-         height: 24,
-         lineHeight: '24px',
-         textAlign: 'center',
-         cursor: 'pointer',
-         userSelect: 'none',
-     }}
-     onPointerDown={(e) => e.stopPropagation()}
-     onClick={() => setIsEditing(true)}
- >
-    ✏️
-  </span>
-                                    <span
-                                        style={{
-                                            width: 24,
-                                            height: 24,
-                                            lineHeight: '24px',
-                                            textAlign: 'center',
-                                            cursor: 'pointer',
-                                            userSelect: 'none',
-                                        }}
-                                        onPointerDown={(e) => e.stopPropagation()}
-                                        onClick={() => setShowPreview(true)}
-                                    >
+                            {canEdit && isPlaylist && (
+                                <span
+                                    style={{
+                                        width: 24,
+                                        height: 24,
+                                        lineHeight: '24px',
+                                        textAlign: 'center',
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                    }}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onClick={() => setIsEditing(true)}
+                                >
+                            ✏️
+                            </span>
+                            )}
+                            <span
+                                style={{
+                                    width: 24,
+                                    height: 24,
+                                    lineHeight: '24px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    userSelect: 'none',
+                                }}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={() => setShowPreview(true)}
+                            >
                             👁️
                         </span>
-                                </>
-                            ) && (isPlaylist)}
-
-
                             <span
                                 style={{
                                     width: 24,
@@ -210,10 +220,10 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate}:
                                     color: 'red',
                                 }}
                                 onPointerDown={(e) => e.stopPropagation()}
-                                onClick={() => onDelete(item.id)}
+                                onClick={() => onDelete(item.fileId)}
                             >
-    🗑️
-  </span>
+                             🗑️
+                        </span>
                         </div>
 
                     </>
@@ -224,10 +234,28 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate}:
                 show={showPreview}
                 onHide={() => setShowPreview(false)}
                 centered
-                dialogClassName="media-preview-modal"
+                contentClassName="bg-transparent border-0"  // <— делаем фон модалки прозрачным и убираем рамку
+                dialogClassName="p-0"                        // <— убираем внутренние паддинги у диалога
             >
-                <Modal.Body className="text-center p-0 m-0">
-                    <PreviewImage id={item.id} name={item.name} fill aspectRatio={16 / 9}/>
+                <Modal.Body className="p-0 m-0 d-flex justify-content-center align-items-center">
+                    <div
+                        style={{
+                            position: 'relative',
+                            maxWidth: '90vw',
+                            maxHeight: '90vh',
+                        }}
+                    >
+                        <img
+                            src={`${SERVER_URL}files/${item.fileId}/preview`}
+                            alt={item.name}
+                            style={{
+                                width: '100%',
+                                height: 'auto',
+                                borderRadius: '12px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            }}
+                        />
+                    </div>
                 </Modal.Body>
             </Modal>
         </div>
