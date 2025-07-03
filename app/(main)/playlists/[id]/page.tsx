@@ -21,6 +21,7 @@ import {SERVER_URL} from "@/app/API/api";
 import Image from "next/image"
 import ConfirmModal from "@/app/components/Common/ConfirmModal";
 import ErrorModal from "@/app/components/Common/ErrorModal";
+import PreviewImage from "@/app/components/Common/PreviewImage";
 
 
 export default function PlaylistContentPage() {
@@ -59,15 +60,20 @@ export default function PlaylistContentPage() {
 
 
     const handleDragEnd = (event: DragEndEvent) => {
-        const {active, over} = event
+        const {active, over} = event;
         if (over && active.id !== over.id) {
             setItems(prev => {
-                const oldIndex = prev.findIndex(i => i.id === active.id)
-                const newIndex = prev.findIndex(i => i.id === over.id)
-                return arrayMove(prev, oldIndex, newIndex)
-            })
+                const oldIndex = prev.findIndex(i => i.id === active.id);
+                const newIndex = prev.findIndex(i => i.id === over.id);
+                const reordered = arrayMove(prev, oldIndex, newIndex);
+                // now bump each item’s orderIndex to match its array slot
+                return reordered.map((item, idx) => ({
+                    ...item,
+                    orderIndex: idx
+                }));
+            });
         }
-    }
+    };
 
 
     const addToPlaylist = (item: FileItem) => {
@@ -84,6 +90,19 @@ export default function PlaylistContentPage() {
             alert('Введите название плейлиста')
             return
         }
+
+        const itemsWithOrder = items.map((file, idx) => ({
+            ...file,
+            orderIndex: idx
+        }));
+
+        let res: boolean;
+        if (playlistToEdit) {
+            res = await updatePlaylist(itemsWithOrder, name);
+        } else {
+            res = await createPlaylist(itemsWithOrder, name);
+        }
+        if (res) router.push('/playlists');
 
         if (items.length === 0) {
             alert('Добавьте хотя бы один файл в плейлист')
@@ -191,6 +210,7 @@ export default function PlaylistContentPage() {
                                         <MediaCard
                                             key={item.id}
                                             item={item}
+                                            isPlaylist={true}
                                             onDelete={id => setItems(prev => prev.filter(i => i.id !== id))}
                                             onUpdate={upd => setItems(prev => prev.map(i => i.id === upd.id ? upd : i))}
                                         />
@@ -213,13 +233,9 @@ export default function PlaylistContentPage() {
                                         style={{cursor: 'pointer'}}
                                         onClick={() => addToPlaylist(li)}
                                     >
-                                        <Image
-                                            src={`${SERVER_URL}files/${li.id}/preview`}
-                                            height={40}
-                                            width={40}
-                                            alt={li.name}
-                                            style={{width: 40, height: 40, objectFit: 'cover', marginRight: 8}}
-                                        />
+                                        <div style={{marginRight: 8}}>
+                                            <PreviewImage id={li.id} name={li.name}/>
+                                        </div>
                                         <div className="flex-grow-1">{li.name}</div>
                                         <div className="text-success fw-bold">+</div>
                                     </div>

@@ -11,6 +11,7 @@ import {getValueInStorage} from "@/app/API/localStorage";
 import {useAuthStore} from "@/app/store/authStore";
 import {connectWebSocket} from "@/app/API/ws";
 import ErrorModal from "@/app/components/Common/ErrorModal";
+import PreviewImage from "@/app/components/Common/PreviewImage";
 
 
 const formatDuration = (sec: number) => {
@@ -45,7 +46,7 @@ export default function PlaylistsPage() {
                 name: '',
                 organizationId: organizationId,
                 createdBy: userId,
-                previewUrl: null,
+                filePreviewId: null,
                 childFiles: [] as FileItem[],
             });
             router.push(`/playlists/0`);
@@ -62,11 +63,13 @@ export default function PlaylistsPage() {
     return (
         <>
             <div className="p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className="d-flex justify-content-between align-items-center mb-3 gap-3">
                     <h4 className="mb-0">Плейлисты</h4>
                     <Button variant="primary" onClick={handleNewPlaylist}>
                         + Новый плейлист
                     </Button>
+
+
                 </div>
 
                 <div className="d-flex flex-wrap gap-3">
@@ -84,13 +87,10 @@ export default function PlaylistsPage() {
                                 style={{width: 240, background: "white", borderRadius: 8, cursor: 'pointer',}}
                             >
 
-                                <div style={{height: 140, overflow: 'hidden', background: '#000'}}>
-                                    <img
-                                        src={p.previewUrl ?? ""}
-                                        alt={p.name}
-                                        style={{width: '100%', height: '100%', objectFit: 'cover'}}
-                                    />
-                                </div>
+                                <PreviewImage id={p.filePreviewId as string} name={p.name} fill
+                                              aspectRatio={16 / 9}/>
+
+
                                 <div className="p-2">
                                     <div style={{fontWeight: 500}}>{p.name}</div>
                                     <div className="d-flex justify-content-between align-items-center mt-2">

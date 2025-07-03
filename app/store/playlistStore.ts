@@ -31,6 +31,13 @@ interface usePlaylistState {
 
     updatePlaylistItem: (playlist: PlaylistItem) => void,
 
+    updatePlaylistFileItem: (update: {
+        id: string
+        name: string
+        type: 'video/quicktime' | 'image/webp'
+        duration: number
+    }) => Promise<boolean>
+
     delPlaylistById: (playlistId: string) => void,
 
     errorMessage: string | null
@@ -68,6 +75,8 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
                 const playlists = response.data;
 
+                console.log("Плейлисты", playlists)
+
                 get().addPlaylists(playlists);
             } catch (err: any) {
                 console.error('Ошибка при получении плейлистов:', err)
@@ -102,6 +111,73 @@ export const usePlaylistStore = create<usePlaylistState>()(
             } catch (err: any) {
                 console.error('Ошибка при создании плейлиста:', err)
                 get().setError(err?.response?.data?.message || "Не удалось создать плейлист.")
+                return false
+            }
+        },
+
+
+        updatePlaylistFileItem: async (update: {
+            id: string
+            name: string
+            type: 'video/quicktime' | 'image/webp'
+            duration: number
+        }) => {
+
+            console.log('[updatePlaylistFileItem] sending payload:', update)
+
+            try {
+                const accessToken = getValueInStorage('accessToken')
+                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL!
+
+                // отправляем на бэкенд только нужные поля
+                const response = await axios.put<{
+                    id: string
+                    name: string
+                    type: 'video/quicktime' | 'image/webp'
+                    duration: number
+                }>(
+                    `${SERVER_URL}playlists/update/playlist-item`,
+                    update,
+                    {headers: {Authorization: `Bearer ${accessToken}`}}
+                )
+                const dto = response.data
+
+                // обновляем state
+                set(state => {
+                    // если у нас открыта форма редактирования — поменяем там
+                    if (state.playlistToEdit) {
+                        state.playlistToEdit.childFiles = state.playlistToEdit.childFiles.map(f =>
+                            f.id === dto.id
+                                ? ({
+                                    // сохраним оригинальный File (если он там был)
+                                    file: f.file,
+                                    id: dto.id,
+                                    orderIndex: dto.orderIndex,
+                                    name: dto.name,
+                                    type: dto.type,
+                                    size: dto.size,
+                                    duration: dto.duration,
+                                    previewUrl: dto.previewUrl,
+                                } as FileItem)
+                                : f
+                        )
+                    }
+
+                    // и подтянем те же изменения в список всех плейлистов
+                    state.playlistItems = state.playlistItems.map(pl =>
+                        state.playlistToEdit && pl.id === state.playlistToEdit.id
+                            ? {...pl, childFiles: state.playlistToEdit.childFiles}
+                            : pl
+                    )
+                })
+
+                return true
+            } catch (err: any) {
+                console.error('Ошибка при обновлении файла в плейлисте:', err)
+                get().setError(
+                    err?.response?.data?.message ||
+                    'Не удалось обновить информацию о файле.'
+                )
                 return false
             }
         },

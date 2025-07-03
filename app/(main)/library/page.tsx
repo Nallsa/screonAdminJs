@@ -96,6 +96,7 @@ export default function LibraryPage() {
                                 <MediaCard
                                     key={item.id}
                                     item={item}
+                                    isPlaylist={false}
                                     onDelete={() => handleDelItem(item.id)}
                                     onUpdate={(updatedItem) => updateLibraryItem(updatedItem)}
                                 />

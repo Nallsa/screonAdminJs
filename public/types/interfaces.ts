@@ -5,16 +5,17 @@ export interface PlaylistItem {
     name: string
     organizationId: string
     createdBy: string
-    previewUrl: string | null
+    filePreviewId: string | null
     childFiles: FileItem[]
 }
 
 
 export interface FileItem {
     id: string;
+    
     file?: File | null;
     name: string;
-    type: 'VIDEO' | 'IMAGE';
+    type: 'video/quicktime' | 'image/webp';
     size: number;
     duration: number;
     previewUrl: string;

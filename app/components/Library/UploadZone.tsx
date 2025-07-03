@@ -54,7 +54,7 @@ export default function UploadZone() {
                             id: fileId,
                             file,
                             name: file.name,
-                            type: file.type.startsWith('video/') ? 'VIDEO' : 'IMAGE',
+                            type: file.type.startsWith('video/') ? 'video/quicktime' : 'image/webp',
                             size: file.size,
                             duration,
                             previewUrl: URL.createObjectURL(file),
