@@ -42,8 +42,14 @@ export function connectWebSocket(channel: 'pairing' | 'schedule', onMessage: (ac
         }
     };
 
-    ws.onerror = err => console.error(`WebSocket [${channel}] error`, err)
-    ws.onclose = () => console.log(`WebSocket [${channel}] closed`)
+    ws.onerror = err => {
+        alert(`WebSocket [${channel}] error: ${err?.toString()}`)
+        console.error(`WebSocket [${channel}] error`, err)
+    }
+    ws.onclose = err => {
+        alert(`WebSocket [${channel}] closed (code=${err.code})`)
+        console.log(`WebSocket [${channel}] closed`)
+    }
 
     return ws;
 }
