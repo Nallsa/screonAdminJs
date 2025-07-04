@@ -38,7 +38,7 @@ export function connectWebSocket(channel: 'pairing' | 'schedule', onMessage: (ac
         if (msg.status === 'error') {
             onMessage(msg.action, {__status: 'error', message: msg.message});
         } else {
-            onMessage(msg.action, {__status: 'ok', ...(msg.data ?? {})});
+            onMessage(msg.action, {__status: 'ok', ...(msg.payload ?? {})});
         }
     };
 
