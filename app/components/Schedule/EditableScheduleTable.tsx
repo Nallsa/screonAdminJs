@@ -110,22 +110,34 @@ export default function EditableScheduleTable() {
     useEffect(() => {
         if (!editingMeta) return
         const b = editingMeta.block
+
+        // базовые поля
         setEditStart(b.startTime.slice(0, 5))
         setEditEnd(b.endTime.slice(0, 5))
         setEditPlaylist(b.playlistId)
         setEditPriority(b.priority)
-        // если есть поля интервала — режим интервал:
-        if (b.repeatIntervalMinutes != null && b.durationMinutes != null) {
-            setEditShowMode(b.isRecurring ? "cycle" : "repeatInterval")
-            setEditPause(b.repeatIntervalMinutes)
-            setEditInterval(b.durationMinutes)
+        setEditScreens([editingMeta.screenId])
+        setError(null)
+
+        // определяем showMode
+        const hasInterval =
+            b.repeatIntervalMinutes != null && b.durationMinutes != null
+
+        if (!b.isRecurring && !hasInterval) {
+            setEditShowMode('once')
+            setEditPause(0)
+            setEditInterval(0)
+
+        } else if (hasInterval) {
+            setEditShowMode('repeatInterval')
+            setEditPause(b.repeatIntervalMinutes!!)
+            setEditInterval(b.durationMinutes!!)
+
         } else {
             setEditShowMode('cycle')
             setEditPause(0)
             setEditInterval(0)
         }
-        setEditScreens([editingMeta.screenId])
-        setError(null)
     }, [editingMeta])
 
     // переключатель экрана
@@ -355,16 +367,33 @@ export default function EditableScheduleTable() {
                             <div className="d-flex gap-3">
                                 <Form.Check
                                     inline
-                                    type="radio"
-                                    id="edit-mode-cycle"
+                                    type="checkbox"
+                                    id="mode-once"
                                     name="editShowMode"
-                                    label="Зациклено"
-                                    checked={editShowMode === 'cycle'}
-                                    onChange={() => setEditShowMode('cycle')}
+                                    label="Один раз"
+                                    checked={editShowMode === 'once'}
+                                    onChange={() => {
+                                        setEditShowMode('once');
+                                        setEditPause(0);
+                                        setEditInterval(0);
+                                    }}
                                 />
                                 <Form.Check
                                     inline
-                                    type="radio"
+                                    type="checkbox"
+                                    id="mode-cycle"
+                                    name="editShowMode"
+                                    label="Зациклено"
+                                    checked={editShowMode === 'cycle'}
+                                    onChange={() => {
+                                        setEditShowMode('cycle');
+                                        setEditPause(0);
+                                        setEditInterval(0);
+                                    }}
+                                />
+                                <Form.Check
+                                    inline
+                                    type="checkbox"
                                     id="edit-mode-repeat"
                                     name="editShowMode"
                                     label="Играть X мин, пауза Y мин"
@@ -421,12 +450,19 @@ export default function EditableScheduleTable() {
                         <Form.Group className="mb-3">
                             <Form.Label>Экраны</Form.Label>
                             <Form.Select
-
+                                multiple
                                 value={editScreens}
-                                onChange={e => toggleEditScreen(e.target.value)}
+                                onChange={e => {
+                                    const opts = Array.from(e.target.selectedOptions)
+                                        .map(opt => opt.value)
+                                    setEditScreens(opts)
+                                }}
+                                style={{height: 100}} // можно подогнать высоту
                             >
                                 {allScreens.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                    <option key={s.id} value={s.id}>
+                                        {s.name}
+                                    </option>
                                 ))}
                             </Form.Select>
                         </Form.Group>
