@@ -12,10 +12,15 @@ interface ScreensState {
     filteredScreens: ScreenData[]
     groups: GroupData[]
 
-    // для создания новой группы
+    // для формы создания группы
     isCreatingGroup: boolean
     newGroupName: string
     selectedForNewGroup: string[]
+
+    startCreateGroup: () => void
+    cancelCreateGroup: () => void
+    setNewGroupName: (name: string) => void
+    toggleNewGroupScreen: (screenId: string) => void
 
     currentQuery: string
     currentGroupFilter: string
@@ -58,6 +63,28 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
     errorMessage: null,
     setError: msg => set(s => {
         s.errorMessage = msg
+    }),
+
+    startCreateGroup: () => set(s => {
+        s.isCreatingGroup = true
+        s.newGroupName = ''
+        s.selectedForNewGroup = []
+    }),
+
+    cancelCreateGroup: () => set(s => {
+        s.isCreatingGroup = false
+        s.newGroupName = ''
+        s.selectedForNewGroup = []
+    }),
+
+    setNewGroupName: (name: string) => set(s => {
+        s.newGroupName = name
+    }),
+
+    toggleNewGroupScreen: (screenId: string) => set(s => {
+        const idx = s.selectedForNewGroup.indexOf(screenId)
+        if (idx >= 0) s.selectedForNewGroup.splice(idx, 1)
+        else s.selectedForNewGroup.push(screenId)
     }),
 
     // ==== ФИЛЬТРАЦИЯ ====
@@ -106,13 +133,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 {headers: {Authorization: `Bearer ${accessToken}`}}
             )
 
-            console.log("Экраны получены", res.data)
-
-
-            const screens: ScreenData[] = await res.data.map(s => ({
-                ...s,
-                groupIds: Array.isArray(s.groupIds) ? s.groupIds : []
-            }));
+            const screens: ScreenData[] = res.data
 
             console.log("Экраны", screens)
 
