@@ -101,13 +101,7 @@ export default function ScreensPage() {
 
             {/* Поиск и фильтр */}
             <div className="d-flex align-items-center gap-3 mb-3">
-                <Form.Control
-                    type="text"
-                    placeholder="Поиск по названию..."
-                    style={{maxWidth: 3500}}
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                />
+
 
                 <Dropdown onSelect={k => setGroupFilter(k!)}>
                     <Dropdown.Toggle disabled={allScreens.length === 0} style={{paddingLeft: 20, paddingRight: 20}}
@@ -128,6 +122,14 @@ export default function ScreensPage() {
                         ))}
                     </Dropdown.Menu>
                 </Dropdown>
+
+                <Form.Control
+                    type="text"
+                    placeholder="Поиск по названию..."
+                    style={{maxWidth: 3500}}
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                />
             </div>
 
             {/* Форма создания группы */}

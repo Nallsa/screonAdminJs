@@ -12,162 +12,82 @@ interface ScreensState {
     filteredScreens: ScreenData[]
     groups: GroupData[]
 
+    // для создания новой группы
     isCreatingGroup: boolean
     newGroupName: string
     selectedForNewGroup: string[]
+
     currentQuery: string
     currentGroupFilter: string
 
-    startCreateGroup: () => void
-    cancelCreateGroup: () => void
-    toggleNewGroupScreen: (screenId: string) => void
-    saveGroup: () => void
-    setNewGroupName: (name: string) => void
-    filterScreens: (query: string, groupId: string) => void
-    assignGroupsToScreen: (screenId: string, newGroupIds: string[]) => void
-    addScreen: (screen: ScreenData) => void
+    // CRUD группы
+    getGroups: () => Promise<void>
+    saveGroup: () => Promise<void>
 
-    addPairingConfirm: (code: string) => Promise<void>
-
+    // CRUD экранов
     getScreens: () => Promise<void>
-
+    addScreen: (screen: ScreenData) => void
     delScreen: (screenId: string) => Promise<void>
+    updateScreenName: (screenId: string, newName: string) => void
+    assignGroupToScreen: (screenId: string, groupId: string | null) => Promise<void>
 
+    // фильтрация и утилиты
+    filterScreens: (query: string, groupId: string) => void
+
+    // WS pairing
     connectWsForScreen: () => Promise<void>
+    addPairingConfirm: (code: string) => Promise<void>
 
     errorMessage: string | null
     setError: (msg: string | null) => void
 }
 
 const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]], [], ScreensState> = (set, get) => ({
-    allScreens: [
-        //{id: 'screen1', name: 'Экран 1', online: true, groupIds: [] as string[]},
-//         {id: 'screen2', name: 'Экран 2', online: false, groupIds: [] as string[]},
-//         {id: 'screen3', name: 'Экран 3', online: true, groupIds: [] as string[]},
-//         {id: 'screen4', name: 'Экран 4', online: false, groupIds: [] as string[]},
-    ] as ScreenData [],
+
+    allScreens: [],
     filteredScreens: [],
     groups: [],
 
     isCreatingGroup: false,
     newGroupName: '',
     selectedForNewGroup: [],
+
     currentQuery: '',
     currentGroupFilter: 'all',
 
     errorMessage: null,
-    setError: (msg) => {
-        set(state => {
-            state.errorMessage = msg
-        })
-    },
+    setError: msg => set(s => {
+        s.errorMessage = msg
+    }),
 
-    startCreateGroup: () => {
-        set(state => {
-            state.isCreatingGroup = true
-            state.newGroupName = ''
-            state.selectedForNewGroup = []
-        })
-    },
-
-    cancelCreateGroup: () => {
-        set(state => {
-            state.isCreatingGroup = false
-            state.newGroupName = ''
-            state.selectedForNewGroup = []
-        })
-    },
-
-    toggleNewGroupScreen: (screenId) => {
-        set(state => {
-            const idx = state.selectedForNewGroup.indexOf(screenId)
-            if (idx >= 0) state.selectedForNewGroup.splice(idx, 1)
-            else state.selectedForNewGroup.push(screenId)
-        })
-    },
-
-    saveGroup: () => {
-        set(state => {
-            const name = state.newGroupName.trim()
-            if (!name || state.selectedForNewGroup.length === 0) return
-
-            const newId = `group${state.groups.length + 1}`
-            state.groups.push({id: newId, name})
-
-            state.allScreens.forEach(screen => {
-                if (state.selectedForNewGroup.includes(screen.id)) {
-                    // Инициализируем массив, если его нет
-                    if (!Array.isArray(screen.groupIds)) {
-                        screen.groupIds = []
-                    }
-                    screen.groupIds.push(newId)
-                }
-            })
-
-            state.isCreatingGroup = false
-            state.newGroupName = ''
-            state.selectedForNewGroup = []
-        })
-        get().filterScreens(get().currentQuery, get().currentGroupFilter)
-    },
-
-    setNewGroupName: (name) => {
-        set(state => {
-            state.newGroupName = name
-        })
-    },
-
+    // ==== ФИЛЬТРАЦИЯ ====
     filterScreens: (query, groupId) => {
-        set(state => {
-            state.currentQuery = query
-            state.currentGroupFilter = groupId
+        set(s => {
+            s.currentQuery = query
+            s.currentGroupFilter = groupId
 
-            state.filteredScreens = state.allScreens.filter(screen => {
-                const matchesName = screen.name.toLowerCase().includes(query.toLowerCase())
-                const matchesGroup = groupId === 'all'
-                    ? true
-                    : groupId === 'nogroup'
-                        ? screen.groupIds.length === 0
-                        : screen.groupIds.includes(groupId)
-                return matchesName && matchesGroup
+            s.filteredScreens = s.allScreens.filter(scr => {
+                const byName = scr.name.toLowerCase().includes(query.toLowerCase())
+                if (!byName) return false
+
+                if (groupId === 'all') return true
+                if (groupId === 'nogroup') return scr.groupId === null
+
+                return scr.groupId === groupId
             })
         })
     },
 
-    assignGroupsToScreen: (screenId, newGroupIds) => {
-        set(state => {
-            const screen = state.allScreens.find(s => s.id === screenId)
-            if (screen) {
-                screen.groupIds = [...newGroupIds]
-            }
+    // ==== ЭКРАНЫ ====
+
+
+    addScreen: screen => {
+        // WebSocket pairing payload должен содержать уже screen.groupId
+        set(s => {
+            s.allScreens.push({...screen, groupId: screen.groupId ?? null})
+            s.filteredScreens.push({...screen, groupId: screen.groupId ?? null})
         })
         get().filterScreens(get().currentQuery, get().currentGroupFilter)
-    },
-
-    addScreen: (screen) => {
-        if (!Array.isArray(screen.groupIds)) {
-            screen.groupIds = []
-        }
-        set(state => {
-            state.allScreens.push(screen)
-        })
-        get().filterScreens(get().currentQuery, get().currentGroupFilter)
-    },
-
-    addPairingConfirm: async (code) => {
-        try {
-            const userId = getValueInStorage("userId")
-
-            if (!userId) {
-                get().setError("Пользователь не авторизован. Пожалуйста, войдите в систему.")
-                return
-            }
-
-            sendConfirmPairing(code, userId)
-        } catch (error: any) {
-            console.error("Ошибка при подтверждении пары:", error)
-            get().setError(error?.message || "Не удалось подтвердить код экрана")
-        }
     },
 
 
@@ -186,8 +106,15 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 {headers: {Authorization: `Bearer ${accessToken}`}}
             )
 
+            console.log("Экраны получены", res.data)
 
-            const screens: ScreenData[] = await res.data
+
+            const screens: ScreenData[] = await res.data.map(s => ({
+                ...s,
+                groupIds: Array.isArray(s.groupIds) ? s.groupIds : []
+            }));
+
+            console.log("Экраны", screens)
 
 
             set(state => {
@@ -198,9 +125,16 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             console.error("Ошибка при загрузке экранов:", error)
             get().setError(error?.response?.data?.message || "Не удалось получить список экранов")
         }
-
-
     },
+
+    updateScreenName: (screenId, newName) => {
+        set(state => {
+            const screen = state.allScreens.find(s => s.id === screenId);
+            if (screen) screen.name = newName;
+        });
+        get().filterScreens(get().currentQuery, get().currentGroupFilter);
+    },
+
 
     delScreen: async (screenId) => {
         try {
@@ -231,6 +165,121 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
         } catch (error: any) {
             console.error("Ошибка при удалении экрана:", error)
             get().setError(error?.response?.data?.message || "Не удалось удалить экран")
+        }
+    },
+
+    // ==== ГРУППЫ ====
+
+    assignGroupToScreen: async (screenId, groupId) => {
+        try {
+            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+            const token = getValueInStorage('accessToken')
+            if (!token) throw new Error('Нет токена')
+
+            if (groupId) {
+                await axios.post(
+                    `${SERVER}screen-groups/${groupId}/adds`,
+                    [screenId],
+                    {headers: {Authorization: `Bearer ${token}`}}
+                )
+            }
+
+            set(s => {
+                const scr = s.allScreens.find(x => x.id === screenId)
+                if (scr) scr.groupId = groupId
+            })
+            get().filterScreens(get().currentQuery, get().currentGroupFilter)
+
+        } catch (e: any) {
+            console.error('Ошибка назначения группы:', e)
+            get().setError(e?.response?.data?.message || 'Не удалось обновить группу')
+        }
+    },
+
+    getGroups: async () => {
+        try {
+            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+            const token = getValueInStorage('accessToken')
+            if (!token) throw new Error('Нет токена')
+
+            const response = await axios.get<GroupData[]>(
+                `${SERVER}screen-groups`,
+                {headers: {Authorization: `Bearer ${token}`}}
+            )
+            const groups = response.data
+
+            set(s => {
+                s.groups = groups as GroupData[]
+            })
+        } catch (e: any) {
+            console.error('Ошибка загрузки групп:', e)
+            get().setError(e?.response?.data?.message || 'Не удалось получить группы')
+        }
+    },
+
+    saveGroup: async () => {
+        const {newGroupName, selectedForNewGroup} = get()
+        const name = newGroupName.trim()
+        if (!name || selectedForNewGroup.length === 0) return
+
+        try {
+            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+            const token = getValueInStorage('accessToken')
+            if (!token) throw new Error('Нет токена')
+
+            // 1) Создать новую группу
+            const createRes = await axios.post(
+                `${SERVER}screen-groups`,
+                {name, description: ''},
+                {headers: {Authorization: `Bearer ${token}`}}
+            )
+            const group: GroupData = createRes.data
+
+            // 2) Добавить выбранные экраны в эту группу
+            await axios.post(
+                `${SERVER}screen-groups/${group.id}/adds`,
+                selectedForNewGroup,
+                {headers: {Authorization: `Bearer ${token}`}}
+            )
+
+            // 3) Локально обновить:
+            set(s => {
+                s.groups.push(group)
+                // у каждого добавленного экрана записать его groupId
+                s.allScreens = s.allScreens.map(screen =>
+                    selectedForNewGroup.includes(screen.id)
+                        ? {...screen, groupId: group.id}
+                        : screen
+                )
+                // сброс формы
+                s.isCreatingGroup = false
+                s.newGroupName = ''
+                s.selectedForNewGroup = []
+            })
+            // пересчитать фильтр
+            get().filterScreens(get().currentQuery, get().currentGroupFilter)
+
+        } catch (e: any) {
+            console.error('Ошибка создания группы:', e)
+            get().setError(e?.response?.data?.message || 'Не удалось создать группу')
+        }
+    },
+
+    // ==== WS PAIRING ====
+
+    addPairingConfirm: async (code) => {
+        try {
+            const userId = getValueInStorage("userId")
+
+            if (!userId) {
+                get().setError("Пользователь не авторизован. Пожалуйста, войдите в систему.")
+                return
+            }
+
+            sendConfirmPairing(code, userId)
+        } catch (error: any) {
+            console.error("Ошибка при подтверждении пары:", error)
+            get().setError(error?.message || "Не удалось подтвердить код экрана")
         }
     },
 

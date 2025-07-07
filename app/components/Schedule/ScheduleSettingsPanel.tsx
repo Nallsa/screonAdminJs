@@ -84,42 +84,48 @@ export default function ScheduleSettingsPanel() {
         const newEnd = timeToMinutes(endTime)
 
         // для каждого экрана проверяем конфликты
-        for (const screenId of selectedScreens) {
-            const mapKey = isFixedSchedule ? scheduledFixedMap : scheduledCalendarMap
-            const existing: typeof mapKey[string] = mapKey[screenId] ?? []
+        // Если режим не интервальный — проверяем конфликты
+        if (showMode !== 'repeatInterval') {
+            for (const screenId of selectedScreens) {
+                const existing = (isFixedSchedule
+                        ? scheduledFixedMap[screenId] ?? []
+                        : scheduledCalendarMap[screenId] ?? []
+                );
 
-            for (const dayShort of selectedDays) {
+                for (const dayShort of selectedDays) {
+                    const week = getCurrentWeekByDate(selectedDate);
+                    const dateObj = parseDayToDate(dayShort, week);
+                    const isoDate = dateObj.toISOString().slice(0, 10);
+                    const dowIndex = RU_DAYS.indexOf(dayShort);
+                    if (dowIndex < 0) continue;
+                    const dowKey = WEEK_DAYS[dowIndex];
 
-                const dateObj = parseDayToDate(dayShort, getCurrentWeekByDate(selectedDate))
-                const isoDate = dateObj.toISOString().slice(0, 10)
-                const ruIndex = RU_DAYS.indexOf(dayShort)
-                if (ruIndex < 0) continue
+                    // ищем конфликт: совпадение по дню (или дате), по времени и по приоритету
+                    const conflict = existing.find(b => {
+                        // день/дата
+                        // if (isFixedSchedule) {
+                        //     if (b.dayOfWeek !== dowKey) return false;
+                        // } else {
+                        //     if (b.startDate !== isoDate) return false;
+                        // }
+                        // // время
+                        // const existStart = timeToMinutes(b.startTime);
+                        // const existEnd   = timeToMinutes(b.endTime);
+                        // if (!(newStart < existEnd && existStart < newEnd)) return false;
+                        // приоритет
+                        if (b.priority !== priority) return false;
 
+                        return true;
+                    });
 
-                const dayOfWeekKey = WEEK_DAYS[ruIndex]
-
-                const playlistName = playlistItems.find(p => p.id === selectedPlaylist)?.name ?? selectedPlaylist
-
-
-                const conflict = existing.find(b => {
-                    if (isFixedSchedule) {
-                        if (b.dayOfWeek !== dayOfWeekKey) return false
-                    } else {
-                        if (b.startDate !== isoDate) return false
+                    if (conflict) {
+                        const name = allScreens.find(s => s.id === screenId)?.name ?? screenId;
+                        window.alert(
+                            `На экране «${name}» уже есть слот с приоритетом ${priority} ` +
+                            `в ${dayShort} с ${conflict.startTime} до ${conflict.endTime}.`
+                        );
+                        return;
                     }
-                    if (b.playlistId !== selectedPlaylist) return false
-
-                    const existStart = timeToMinutes(b.startTime)
-                    const existEnd = timeToMinutes(b.endTime)
-                    // return newStart < existEnd && existStart < newEnd
-                })
-
-                if (conflict) {
-                    window.alert(
-                        `На экране ${screenId} плейлист «${playlistName}» уже назначен в ${dayShort} ` +
-                        `с ${conflict.startTime} до ${conflict.endTime}.`
-                    )
-                    return
                 }
             }
         }

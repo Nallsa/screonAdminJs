@@ -17,7 +17,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const {playlistItems, getPlaylists} = usePlaylistStore()
     const {checkToken, isAuthenticated, loading} = useAuthStore()
     const {libraryItems, getFilesInLibrary} = useLibraryStore(state => state)
-    const {allScreens, getScreens} = useScreensStore(state => state)
+    const {allScreens, getScreens, getGroups} = useScreensStore(state => state)
     const {getSchedule, scheduledFixedMap, scheduledCalendarMap} = useScheduleStore();
     const [showOrgModal, setShowOrgModal] = useState(false);
     const pathname = usePathname();
@@ -38,6 +38,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
 
             if (allScreens.length == 0) {
                 await getScreens()
+                await getGroups()
             }
 
             if (libraryItems.length == 0) {

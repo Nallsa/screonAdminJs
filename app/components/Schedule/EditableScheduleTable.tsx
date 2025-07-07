@@ -162,30 +162,52 @@ export default function EditableScheduleTable() {
 
     // валидация
     const validateAndSetError = (): boolean => {
-        setError(null)
+        setError(null);
         if (!editingMeta) {
-            setError('Нечего сохранять')
-            return false
+            setError('Нечего сохранять');
+            return false;
         }
         if (!editStart || !editEnd) {
-            setError('Введите время')
-            return false
+            setError('Введите время');
+            return false;
         }
         if (editStart >= editEnd) {
-            setError('Начало должно быть раньше конца')
-            return false
+            setError('Начало должно быть раньше конца');
+            return false;
         }
         if (!playlistItems.some(p => p.id === editPlaylist)) {
-            setError('Выберите плейlist')
-            return false
+            setError('Выберите плейлист');
+            return false;
         }
         if (editScreens.length === 0) {
-            setError('Выберите экран(ы)')
-            return false
+            setError('Выберите экран(ы)');
+            return false;
         }
 
-        return true
-    }
+        // валидация приоритета для режимов once и cycle
+        if (editShowMode !== 'repeatInterval') {
+            const store = useScheduleStore.getState();
+            const mapKey = store.isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap';
+
+            for (const screenId of editScreens) {
+                const existing = (store as any)[mapKey][screenId] as ScheduledBlock[] | undefined;
+                if (!existing) continue;
+
+                // ищем дубль по началу/концу и приоритету
+                const dupe = existing.find(b =>
+                    b.startTime.slice(0, 5) === editStart &&
+                    b.endTime.slice(0, 5) === editEnd &&
+                    b.priority === editPriority
+                );
+                if (dupe) {
+                    setError(`На экране уже есть слот в промежутке ${editStart}–${editEnd} с приоритетом ${editPriority}`);
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    };
 
     // сохранить изменения таймслота
     const onSave = () => {

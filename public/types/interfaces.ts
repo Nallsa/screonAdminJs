@@ -31,7 +31,7 @@ export enum DeviceStatus {
 export interface ScreenData {
     id: string
     name: string
-    groupIds: string[]
+    groupId: string | null
     serialNumber: string;
     model: string;
     os: string;

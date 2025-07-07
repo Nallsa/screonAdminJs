@@ -22,17 +22,39 @@ export default function ScreenCard({
 
     const delScreen = useScreensStore(state => state.delScreen)
     const groups = useScreensStore(state => state.groups)
+    const assignGroupToScreen = useScreensStore(state => state.assignGroupToScreen)
+
     const [showConfirm, setShowConfirm] = useState(false)
+    const [showEditModal, setShowEditModal] = useState(false)
+
+    const [editModalName, setEditModalName] = useState(screen.name)
+    const [editModalGroup, setEditModalGroup] = useState<string | null>(screen.groupId ?? null);
 
     // Собираем имена групп, в которые входит этот экран
-    const groupNames = (screen.groupIds ?? [])
-        .map(id => groups.find((g: GroupData) => g.id === id)?.name)
-        .filter(Boolean) as string[]
+    const groupName = screen.groupId
+        ? groups.find(g => g.id === screen.groupId)?.name || '— без группы —'
+        : '— без группы —'
 
 
     function handleDelete() {
         delScreen(screen.id)
         setShowConfirm(false)
+    }
+
+    function openEdit() {
+        setEditModalName(screen.name);
+        setEditModalGroup(screen.groupId ?? null);
+        setShowEditModal(true);
+    }
+
+    function saveEditModal() {
+        assignGroupToScreen(screen.id, editModalGroup)
+
+        useScreensStore.setState(state => {
+            const s = state.allScreens.find(x => x.id === screen.id)
+            if (s) s.name = editModalName
+        })
+        setShowEditModal(false)
     }
 
     return (
@@ -68,7 +90,7 @@ export default function ScreenCard({
                     </Card.Title>
 
                     {/* Статус */}
-                    <div className="d-flex align-items-center mb-2" style={{gap: 6}}>
+                    <div className="d-flex align-items-center mb-1" style={{gap: 6}}>
           <span
               style={{
                   display: 'inline-block',
@@ -78,15 +100,14 @@ export default function ScreenCard({
                   background: screen.status ? 'green' : 'red',
               }}
           />
-                        <small className="text-muted">
-                            {screen.status ? DeviceStatus.ONLINE : 'Оффлайн'}
-                        </small>
+
+                        Онлайн
+
                     </div>
 
-                    {/* Список групп */}
+                    {/* Группа */}
                     <div className="mb-3">
-                        <strong>Группы:</strong>{' '}
-                        {groupNames.length > 0 ? groupNames.join(', ') : 'Без группы'}
+                        <strong>Группа:</strong> {groupName}
                     </div>
 
                     {/* Действия */}
@@ -103,6 +124,8 @@ export default function ScreenCard({
                                         if (label == 'Удалить') {
                                             setShowConfirm(true)
                                         }
+                                        if (label === 'Редактировать') openEdit()
+
                                     }}
                                 >
                                     {label}
@@ -135,6 +158,51 @@ export default function ScreenCard({
                 onConfirm={handleDelete}
                 onCancel={() => setShowConfirm(false)}
             />
+
+
+            <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered size="lg">
+                <Modal.Header closeButton>
+                    <Modal.Title>Редактировать экран</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group className="mb-4">
+                            <Form.Label>Имя экрана</Form.Label>
+                            <Form.Control
+                                type="text"
+                                value={editModalName}
+                                onChange={e => setEditModalName(e.target.value)}
+                                placeholder="Введите новое имя"
+                            />
+                        </Form.Group>
+
+                        <Form.Group>
+                            <Form.Label>Группа</Form.Label>
+                            <Form.Select
+                                value={editModalGroup || ''}
+                                onChange={e => setEditModalGroup(e.target.value)}
+                            >
+                                <option value="">— без группы —</option>
+                                {groups.map(g => (
+                                    <option key={g.id} value={g.id}>{g.name}</option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer className="d-flex justify-content-between">
+                    <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={saveEditModal}
+                        disabled={!editModalName.trim()}
+                    >
+                        Сохранить
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </>
 
     )
