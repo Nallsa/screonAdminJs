@@ -103,15 +103,15 @@ export default function ScheduleSettingsPanel() {
                     // ищем конфликт: совпадение по дню (или дате), по времени и по приоритету
                     const conflict = existing.find(b => {
                         // день/дата
-                        // if (isFixedSchedule) {
-                        //     if (b.dayOfWeek !== dowKey) return false;
-                        // } else {
-                        //     if (b.startDate !== isoDate) return false;
-                        // }
-                        // // время
-                        // const existStart = timeToMinutes(b.startTime);
-                        // const existEnd   = timeToMinutes(b.endTime);
-                        // if (!(newStart < existEnd && existStart < newEnd)) return false;
+                        if (isFixedSchedule) {
+                            if (b.dayOfWeek !== dowKey) return false;
+                        } else {
+                            if (b.startDate !== isoDate) return false;
+                        }
+                        // время
+                        const existStart = timeToMinutes(b.startTime);
+                        const existEnd = timeToMinutes(b.endTime);
+                        if (!(newStart < existEnd && existStart < newEnd)) return false;
                         // приоритет
                         if (b.priority !== priority) return false;
 

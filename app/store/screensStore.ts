@@ -6,6 +6,7 @@ import {getValueInStorage} from "@/app/API/localStorage"
 import {connectWebSocket, sendConfirmPairing} from '../API/ws'
 import {StateCreator} from 'zustand'
 import axios from "axios";
+import {useScheduleStore} from "@/app/store/scheduleStore";
 
 interface ScreensState {
     allScreens: ScreenData[]
@@ -148,12 +149,30 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
         }
     },
 
-    updateScreenName: (screenId, newName) => {
-        set(state => {
-            const screen = state.allScreens.find(s => s.id === screenId);
-            if (screen) screen.name = newName;
-        });
-        get().filterScreens(get().currentQuery, get().currentGroupFilter);
+    updateScreenName: async (screenId, newName) => {
+        try {
+            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+            const token = getValueInStorage('accessToken')
+            if (!token) throw new Error('Нет токена')
+
+            // сам запрос на сервер
+            await axios.put(
+                `${SERVER}screens/${screenId}`,
+                {name: newName},
+                {headers: {Authorization: `Bearer ${token}`}}
+            )
+
+            // если всё ок — обновляем локальный стейт
+            set(state => {
+                const scr = state.allScreens.find(s => s.id === screenId)
+                if (scr) scr.name = newName
+            })
+            // пересчитаем фильтр
+            get().filterScreens(get().currentQuery, get().currentGroupFilter)
+        } catch (e: any) {
+            console.error('Ошибка обновления имени экрана:', e)
+            get().setError(e?.response?.data?.message || 'Не удалось обновить имя экрана')
+        }
     },
 
 
@@ -182,6 +201,8 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     state.allScreens = state.allScreens.filter(screen => screen.id !== screenId);
                     state.filteredScreens = state.filteredScreens.filter(screen => screen.id !== screenId);
                 });
+                await useScheduleStore.getState().getSchedule()
+
             }
         } catch (error: any) {
             console.error("Ошибка при удалении экрана:", error)

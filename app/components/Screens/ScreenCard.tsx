@@ -23,6 +23,7 @@ export default function ScreenCard({
     const delScreen = useScreensStore(state => state.delScreen)
     const groups = useScreensStore(state => state.groups)
     const assignGroupToScreen = useScreensStore(state => state.assignGroupToScreen)
+    const updateScreenName = useScreensStore(state => state.updateScreenName)
 
     const [showConfirm, setShowConfirm] = useState(false)
     const [showEditModal, setShowEditModal] = useState(false)
@@ -47,14 +48,16 @@ export default function ScreenCard({
         setShowEditModal(true);
     }
 
-    function saveEditModal() {
-        assignGroupToScreen(screen.id, editModalGroup)
+    async function saveEditModal() {
+        try {
+            await updateScreenName(screen.id, editModalName)
 
-        useScreensStore.setState(state => {
-            const s = state.allScreens.find(x => x.id === screen.id)
-            if (s) s.name = editModalName
-        })
-        setShowEditModal(false)
+            await assignGroupToScreen(screen.id, editModalGroup)
+
+            setShowEditModal(false)
+        } catch (e) {
+            console.error(e)
+        }
     }
 
     return (

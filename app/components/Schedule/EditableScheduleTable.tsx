@@ -186,22 +186,35 @@ export default function EditableScheduleTable() {
 
         // валидация приоритета для режимов once и cycle
         if (editShowMode !== 'repeatInterval') {
-            const store = useScheduleStore.getState();
-            const mapKey = store.isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap';
+            const store = useScheduleStore.getState()
+            const mapKey = store.isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
 
             for (const screenId of editScreens) {
-                const existing = (store as any)[mapKey][screenId] as ScheduledBlock[] | undefined;
-                if (!existing) continue;
+                const existing = (store as any)[mapKey][screenId] as ScheduledBlock[] | undefined
+                if (!existing) continue
 
-                // ищем дубль по началу/концу и приоритету
                 const dupe = existing.find(b =>
+                    // не сравниваем с тем блоком, который редактируем
+                    b !== editingMeta.block &&
+                    // для календарных слотов — сравниваем дату
+                    (store.isFixedSchedule
+                        ? b.dayOfWeek === editingMeta.block.dayOfWeek
+                        : b.startDate === editingMeta.block.startDate) &&
+                    // и время/приоритет
                     b.startTime.slice(0, 5) === editStart &&
                     b.endTime.slice(0, 5) === editEnd &&
                     b.priority === editPriority
-                );
+                )
+
                 if (dupe) {
-                    setError(`На экране уже есть слот в промежутке ${editStart}–${editEnd} с приоритетом ${editPriority}`);
-                    return false;
+                    setError(
+                        `На экране уже есть слот в ${
+                            store.isFixedSchedule
+                                ? `день ${dupe.dayOfWeek}`
+                                : `дату ${dupe.startDate}`
+                        } с ${editStart}–${editEnd} и приоритетом ${editPriority}`
+                    )
+                    return false
                 }
             }
         }
