@@ -1,6 +1,6 @@
 let ws: WebSocket | null = null;
 
-const RECONNECT_BASE_DELAY = 5000;
+const RECONNECT_BASE_DELAY = 2000;
 const HEARTBEAT_INTERVAL = 60000;
 
 let sockets: Record<'pairing' | 'schedule', WebSocket | null> = {
