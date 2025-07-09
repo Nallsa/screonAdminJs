@@ -1,5 +1,8 @@
 let ws: WebSocket | null = null;
 
+const RECONNECT_BASE_DELAY = 5000;
+const HEARTBEAT_INTERVAL = 60000;
+
 let sockets: Record<'pairing' | 'schedule', WebSocket | null> = {
     pairing: null,
     schedule: null,
@@ -7,7 +10,7 @@ let sockets: Record<'pairing' | 'schedule', WebSocket | null> = {
 
 const URLS = {
     pairing: 'wss://dev1.videotrade.ru/ws-pairing',
-    schedule: 'wss://dev1.videotrade.ru/ws/schedule',
+    schedule: 'wss://dev1.videotrade.ru/ws/schedule?role=admin',
 } as const
 
 export function connectWebSocket(channel: 'pairing' | 'schedule', onMessage: (action: string, payload: any) => void): WebSocket {
@@ -17,13 +20,25 @@ export function connectWebSocket(channel: 'pairing' | 'schedule', onMessage: (ac
         return ws
     }
 
+    let heartbeatHandle: number;
+
     console.log(`Открываем новое WebSocket ${channel} соединение...`);
     ws = new WebSocket(URLS[channel])
     sockets[channel] = ws
 
     ws.onopen = () => {
-        console.log(`WebSocket [${channel}] connected`)
-    }
+        console.log(`[WS ${channel}] connected`);
+        reconnectAttempts[channel] = 0;
+
+        heartbeatHandle = window.setInterval(() => {
+            if (!(ws) || ws.readyState === WebSocket.OPEN) {
+                if ("send" in ws) {
+                    ws.send(JSON.stringify({action: 'ping'}));
+                }
+            }
+        }, HEARTBEAT_INTERVAL);
+    };
+
 
     ws.onmessage = event => {
         console.log(`[WS ${channel}] raw →`, event.data);
@@ -44,12 +59,14 @@ export function connectWebSocket(channel: 'pairing' | 'schedule', onMessage: (ac
 
     ws.onerror = err => {
         alert(`WebSocket [${channel}] error: ${err?.toString()}`)
-        console.error(`WebSocket [${channel}] error`, err)
     }
-    ws.onclose = err => {
-        alert(`WebSocket [${channel}] closed (code=${err.code})`)
-        console.log(`WebSocket [${channel}] closed`)
-    }
+
+    ws.onclose = ev => {
+        console.warn(`[WS ${channel}] closed`, ev);
+        alert(`WebSocket [${channel}] closed (code=${ev.code})`);
+        clearInterval(heartbeatHandle);
+        scheduleReconnect(channel, onMessage);
+    };
 
     return ws;
 }
@@ -78,4 +95,16 @@ export function sendConfirmPairing(code: string, userId: string | null) {
     } else {
         console.warn('WebSocket not connected');
     }
+}
+
+let reconnectAttempts: Record<'pairing' | 'schedule', number> = {
+    pairing: 0,
+    schedule: 0,
+};
+
+function scheduleReconnect(channel: 'pairing' | 'schedule', onMessage: any) {
+    const attempt = ++reconnectAttempts[channel];
+    const delay = RECONNECT_BASE_DELAY * Math.min(attempt, 10);
+    console.log(`[WS ${channel}] reconnect in ${delay}ms`);
+    setTimeout(() => connectWebSocket(channel, onMessage), delay);
 }
