@@ -33,7 +33,7 @@ export function connectWebSocket(channel: 'pairing' | 'schedule', onMessage: (ac
         heartbeatHandle = window.setInterval(() => {
             if (!(ws) || ws.readyState === WebSocket.OPEN) {
                 if ("send" in ws) {
-                    ws.send(JSON.stringify({action: 'ping'}));
+                    ws.send(JSON.stringify({action: 'test'}));
                 }
             }
         }, HEARTBEAT_INTERVAL);

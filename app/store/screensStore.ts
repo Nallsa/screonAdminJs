@@ -346,13 +346,13 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                         });
                         break;
 
-                    case 'ERROR':
-                        console.error("Ошибка:", payload.message);
-                        get().setError(payload.message || "Неизвестная ошибка");
-                        break;
+                    // case 'ERROR':
+                    //     console.error("Ошибка:", payload.message);
+                    //     get().setError(payload.message || "Неизвестная ошибка");
+                    //     break;
 
-                    default:
-                        console.warn("Неизвестный action:", action);
+                    // default:
+                    //     console.warn("Неизвестный action:", action);
                 }
             });
 
