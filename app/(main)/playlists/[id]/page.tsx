@@ -168,14 +168,14 @@ export default function PlaylistContentPage() {
                     <div className="d-flex align-items-center gap-3">
                         <Button
 
-                            variant="primary"
+                            variant="success"
                             onClick={handleSavePlaylist}
                             disabled={items.length === 0 || name.trim() === ''}
                         >
                             Сохранить
                         </Button>
                         <Dropdown onSelect={k => setPriority(k as any)}>
-                            <Dropdown.Toggle variant="success">
+                            <Dropdown.Toggle variant="primary">
                                 {priority === 'normal'
                                     ? 'Обычный приоритет'
                                     : priority === 'high'

@@ -86,11 +86,12 @@ export default function ScreensPage() {
             <div className="d-flex justify-content-between align-items-center mb-3 rounded">
                 <h4 className="mb-0">Экраны</h4>
                 <div className="d-flex gap-4">
-                    <Button variant="primary" onClick={handleOpenAddModal}>
+                    <Button style={{paddingLeft: 40, paddingRight: 40}} variant="primary" onClick={handleOpenAddModal}>
                         Добавить экран
                     </Button>
                     <Button
-                        variant="success"
+                        style={{paddingLeft: 40, paddingRight: 40}}
+                        variant="primary"
                         onClick={startCreateGroup}
                         disabled={allScreens.length === 0}
                     >
@@ -104,8 +105,8 @@ export default function ScreensPage() {
 
 
                 <Dropdown onSelect={k => setGroupFilter(k!)}>
-                    <Dropdown.Toggle disabled={allScreens.length === 0} style={{paddingLeft: 20, paddingRight: 20}}
-                                     variant="success">
+                    <Dropdown.Toggle disabled={allScreens.length === 0} style={{paddingLeft: 40, paddingRight: 40}}
+                                     variant="outline-primary">
                         {groupFilter === 'all'
                             ? 'Все группы'
                             : groupFilter === 'nogroup'

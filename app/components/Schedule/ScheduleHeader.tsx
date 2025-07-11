@@ -17,8 +17,10 @@ export default function ScheduleHeader() {
             }}
         >
             <Button
+
+                style={{paddingLeft: 40, paddingRight: 40}}
                 onClick={sendSchedule}
-                variant="primary"
+                variant="success"
                 disabled={selectedScreens.length === 0
                     // || !selectedPlaylist
                 }
