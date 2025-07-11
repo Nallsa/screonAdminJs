@@ -21,6 +21,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const {getSchedule, scheduledFixedMap, scheduledCalendarMap} = useScheduleStore();
     const [showOrgModal, setShowOrgModal] = useState(false);
     const pathname = usePathname();
+    const [collapsed, setCollapsed] = useState(false)
 
     const router = useRouter()
 
@@ -76,8 +77,17 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
             <OrgCheckModal/>
 
             <div className="d-flex">
-                <Sidebar/>
-                <main style={{marginLeft: 220, width: '100%'}}>
+                <Sidebar
+                    collapsed={collapsed}
+                    onToggle={() => setCollapsed(v => !v)}
+                />
+                <main
+                    className="flex-fill"
+                    style={{
+                        marginLeft: collapsed ? 50 : 220,
+                        transition: 'margin-left .3s ease-in-out'
+                    }}
+                >
                     {children}
                 </main>
             </div>
