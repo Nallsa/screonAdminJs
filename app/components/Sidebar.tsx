@@ -105,6 +105,7 @@ export default function Sidebar({collapsed, onToggle}: Props) {
                         <i className={`${icon} fs-5`}></i>
                         <span
                             style={{
+                                textDecoration: 'none',
                                 display: 'inline-block',
                                 width: collapsed ? 0 : `calc(${width}px - 32px)`,
                                 paddingLeft: 8,
