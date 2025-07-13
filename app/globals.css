@@ -16,6 +16,10 @@ a {
     text-decoration: none;
 }
 
+nav a {
+    text-decoration: none !important;
+}
+
 /* если нужно — раскомментируйте ховер */
 /* a:hover { color: #00ff99; } */
 

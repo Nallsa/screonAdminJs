@@ -92,11 +92,13 @@ export default function Sidebar({collapsed, onToggle}: Props) {
                     <Link
                         key={href}
                         href={href}
+
                         className={
-                            'text-decoration-non d-flex align-items-center w-100 py-3 ' +
+                            'text-decoration-none d-flex align-items-center w-100 py-3 ' +
                             (active ? 'bg-light fw-bold text-dark' : 'text-secondary')
                         }
                         style={{
+                            textDecoration: 'none',
                             paddingLeft: collapsed ? '0.75rem' : '1.2rem',
                             paddingRight: collapsed ? '0.75rem' : '1.2rem',
                             transition: 'padding 0.3s ease-in-out'

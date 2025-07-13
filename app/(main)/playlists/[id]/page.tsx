@@ -221,7 +221,11 @@ export default function PlaylistContentPage() {
                                         <div style={{marginRight: 8}}>
                                             <PreviewImage id={li.fileId} name={li.name}/>
                                         </div>
-                                        <div className="flex-grow-1">{li.name}</div>
+                                        <div className="flex-grow-1 overflow-hidden">
+                                            <span className="text-truncate d-block">
+                                                {li.name}
+                                            </span>
+                                        </div>
                                         <div className="text-success fw-bold">+</div>
                                     </div>
                                 ))}
