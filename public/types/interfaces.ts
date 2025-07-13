@@ -1,4 +1,5 @@
 import type {UniqueIdentifier} from "@dnd-kit/core";
+import {TypeMode} from "@/app/store/scheduleStore";
 
 export interface PlaylistItem {
     id: string
@@ -6,7 +7,8 @@ export interface PlaylistItem {
     organizationId: string
     createdBy: string
     filePreviewId: string | null
-    childFiles: FileItem[]
+    childFiles: FileItem[],
+    totalDurationSeconds: number;
 }
 
 
@@ -52,6 +54,7 @@ export interface ScheduledBlock {
     endTime: string
     playlistId: string,
     priority: number,
+    type: TypeMode,
     repeatIntervalMinutes?: number
     durationMinutes?: number
     isRecurring: boolean,

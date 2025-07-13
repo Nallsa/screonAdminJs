@@ -45,6 +45,12 @@ interface usePlaylistState {
 }
 
 
+function calcTotalSeconds(childFiles: FileItem[]): number {
+    // duration уже в секундах (float), суммируем и округляем вверх
+    const total = childFiles.reduce((sum, f) => sum + f.duration, 0)
+    return Math.ceil(total)
+}
+
 export const usePlaylistStore = create<usePlaylistState>()(
     immer<usePlaylistState>((set, get) => ({
         playlistItems: [],
@@ -155,11 +161,12 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 const dto = response.data
 
                 set(state => {
-                    // если у нас открыта форма редактирования — поменяем там
-                    if (state.playlistToEdit) {
-                        state.playlistToEdit.childFiles = state.playlistToEdit.childFiles.map(f =>
+                    const pl = state.playlistToEdit
+                    if (pl) {
+                        // обновляем сам плейлист
+                        pl.childFiles = pl.childFiles.map(f =>
                             f.id === dto.id
-                                ? ({
+                                ? {
                                     ...f,
                                     orderIndex: dto.orderIndex,
                                     name: dto.name,
@@ -167,16 +174,22 @@ export const usePlaylistStore = create<usePlaylistState>()(
                                     size: dto.size,
                                     duration: dto.duration,
                                     previewUrl: dto.previewUrl,
-                                } as FileItem)
+                                }
                                 : f
                         )
+                        // пересчитываем totalDurationSeconds
+                        pl.totalDurationSeconds = calcTotalSeconds(pl.childFiles)
                     }
 
-                    // и подтянем те же изменения в список всех плейлистов
-                    state.playlistItems = state.playlistItems.map(pl =>
-                        state.playlistToEdit && pl.id === state.playlistToEdit.id
-                            ? {...pl, childFiles: state.playlistToEdit.childFiles}
-                            : pl
+                    state.playlistItems = state.playlistItems.map(p =>
+                        // если это тот же плейлист — подтягиваем новые childFiles и новую длительность
+                        pl && p.id === pl.id
+                            ? {
+                                ...p,
+                                childFiles: pl.childFiles,
+                                totalDurationSeconds: calcTotalSeconds(pl.childFiles)
+                            }
+                            : p
                     )
                 })
 
@@ -209,6 +222,8 @@ export const usePlaylistStore = create<usePlaylistState>()(
                     ,
                     {headers: {Authorization: `Bearer ${accessToken}`}})
                 const result: PlaylistItem = response.data
+
+
                 updatePlaylistItem(result)
 
                 return !!result
@@ -258,14 +273,20 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
         addPlaylist: (playlist) => {
             set(state => {
-                state.playlistItems.push(playlist)
+                state.playlistItems.push({
+                    ...playlist,
+                    totalDurationSeconds: calcTotalSeconds(playlist.childFiles)
+                })
             })
         },
 
         addPlaylists: (playlists) => {
             set(state => {
-                state.playlistItems = playlists;
-            });
+                state.playlistItems = playlists.map(pl => ({
+                    ...pl,
+                    totalDurationSeconds: calcTotalSeconds(pl.childFiles)
+                }))
+            })
         },
 
 
@@ -289,21 +310,16 @@ export const usePlaylistStore = create<usePlaylistState>()(
             }));
         },
 
-        updatePlaylistItem: (updatedPlaylist) => {
-            console.log('[updatePlaylistItem] Обновление плейлиста:', updatedPlaylist);
-
+        updatePlaylistItem: (updated) => {
             set(state => {
-                const exists = state.playlistItems.some(item => item.id === updatedPlaylist.id);
-                if (!exists) {
-                    console.warn(`Плейлист не найден`);
-                }
-
-                const updatedItems = state.playlistItems.map(item =>
-                    item.id === updatedPlaylist.id ? updatedPlaylist : item
+                state.playlistItems = state.playlistItems.map(pl =>
+                    pl.id === updated.id
+                        ? {
+                            ...updated,
+                            totalDurationSeconds: calcTotalSeconds(updated.childFiles)
+                        }
+                        : pl
                 );
-                return {
-                    playlistItems: updatedItems
-                };
             });
         },
 

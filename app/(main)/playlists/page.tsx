@@ -14,12 +14,6 @@ import ErrorModal from "@/app/components/Common/ErrorModal";
 import PreviewImage from "@/app/components/Common/PreviewImage";
 
 
-const formatDuration = (sec: number) => {
-    const m = Math.floor(sec / 60)
-    const s = Math.floor(sec % 60)
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-}
-
 export default function PlaylistsPage() {
     const {
         playlistItems, getPlaylists, addPlaylist, setPlaylistToEdit, setPlaylistToCreate, errorMessage,
@@ -48,6 +42,8 @@ export default function PlaylistsPage() {
                 createdBy: userId,
                 filePreviewId: null,
                 childFiles: [] as FileItem[],
+                totalDurationSeconds: 0,
+
             });
             router.push(`/playlists/0`);
         } else {
@@ -57,6 +53,17 @@ export default function PlaylistsPage() {
 
     const handleEditPlaylist = (playlist: PlaylistItem) => {
         setPlaylistToEdit(playlist)
+    }
+
+    const formatHMS = (sec: number) => {
+        const h = Math.floor(sec / 3600)
+        const m = Math.floor((sec % 3600) / 60)
+        const s = sec % 60
+        return [
+            h.toString().padStart(2, '0'),
+            m.toString().padStart(2, '0'),
+            s.toString().padStart(2, '0'),
+        ].join(':')
     }
 
 
@@ -93,13 +100,7 @@ export default function PlaylistsPage() {
 
                                 <div className="p-2">
                                     <div style={{fontWeight: 500}}>{p.name}</div>
-                                    <div className="d-flex justify-content-between align-items-center mt-2">
-                                        {/*<div*/}
-                                        {/*    className="border rounded-pill px-2 py-1 text-muted small d-flex align-items-center gap-1">*/}
-                                        {/*    <i className="bi bi-clock"/>*/}
-                                        {/*    {formatDuration(p.duration)}*/}
-                                        {/*</div>*/}
-                                    </div>
+                                    <div className="mt-1">🕒 {formatHMS(p.totalDurationSeconds)}</div>
                                 </div>
                             </div>
                         </Link>

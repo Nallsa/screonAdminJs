@@ -1,6 +1,6 @@
 'use client'
 import React, {useEffect, useState} from 'react'
-import {Form, Button, Dropdown, InputGroup, Card, Col, Row} from 'react-bootstrap'
+import {Form, Button, Dropdown, InputGroup, Card, Col, Row, ListGroup} from 'react-bootstrap'
 import {getCurrentWeekByDate, parseDayToDate, RU_DAYS, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import {motion, LayoutGroup, AnimatePresence} from 'framer-motion'
@@ -36,16 +36,25 @@ export default function ScheduleSettingsPanel() {
         setPriority,
         showMode,
         setShowMode,
-        setIntervalMinutes,
-        intervalMinutes,
-        pauseMinutes,
-        setPauseMinutes,
+        typeMode,
+        setTypeMode,
+        // рекламные:
+        advertisementShowMode,
+        setAdvertisementShowMode,
+        advertisementIntervalMinutes,
+        setAdvertisementIntervalMinutes,
+        advertisementIntervalHours,
+        setAdvertisementIntervalHours,
+        advertisementSpecificTimes,
+        addAdvertisementSpecificTime,
+        removeAdvertisementSpecificTime,
     } = useScheduleStore()
 
     const {allScreens} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
     const [noScreensModal, setNoScreensModal] = useState(false)
     const [noPlaylistsModal, setNoPlaylistsModal] = useState(false)
+    const [pendingTime, setPendingTime] = useState<string>('08:00')
     const [open, setOpen] = useState(true)
     const router = useRouter();
 
@@ -73,25 +82,43 @@ export default function ScheduleSettingsPanel() {
 
 
     const handleAdd = () => {
+        // Базовые проверки
         if (!selectedPlaylist) {
-            window.alert('Выберите, пожалуйста, плейлист')
-            return
+            window.alert('Выберите, пожалуйста, плейлист');
+            return;
         }
         if (selectedScreens.length === 0) {
-            window.alert('Выберите хотя бы один экран')
-            return
+            window.alert('Выберите хотя бы один экран');
+            return;
         }
         if (selectedDays.length === 0) {
-            window.alert('Выберите хотя бы один день')
-            return
+            window.alert('Выберите хотя бы один день');
+            return;
         }
 
-        const newStart = timeToMinutes(startTime)
-        const newEnd = timeToMinutes(endTime)
+        if (typeMode === 'ADVERTISEMENT') {
+            const playlist = playlistItems.find(p => p.id === selectedPlaylist)!
+            const durationMin = Math.ceil(playlist.totalDurationSeconds / 60)
 
-        // для каждого экрана проверяем конфликты
-        // Если режим не интервальный — проверяем конфликты
-        if (showMode !== 'repeatInterval') {
+            if (advertisementShowMode === 'minutes' && advertisementIntervalMinutes < durationMin) {
+                window.alert(
+                    `Интервал между показами ( ${advertisementIntervalMinutes} мин ) меньше общей длительности плейлиста ( ${durationMin} мин ).`
+                )
+                return
+            }
+            if (advertisementShowMode === 'hours' && advertisementIntervalHours * 60 < durationMin) {
+                window.alert(
+                    `Интервал между показами ( ${advertisementIntervalHours} ч = ${advertisementIntervalHours * 60} мин ) меньше общей длительности плейлиста ( ${durationMin} мин ).`
+                )
+                return
+            }
+        }
+
+        const newStart = timeToMinutes(startTime);
+        const newEnd = timeToMinutes(endTime);
+
+        // Проверяем конфликты для обычных (PLAYLIST) слотов
+        if (typeMode === 'PLAYLIST') {
             for (const screenId of selectedScreens) {
                 const existing = (isFixedSchedule
                         ? scheduledFixedMap[screenId] ?? []
@@ -102,23 +129,20 @@ export default function ScheduleSettingsPanel() {
                     const week = getCurrentWeekByDate(selectedDate);
                     const dateObj = parseDayToDate(dayShort, week);
                     const isoDate = dateObj.toISOString().slice(0, 10);
-                    const dowIndex = RU_DAYS.indexOf(dayShort);
-                    if (dowIndex < 0) continue;
-                    const dowKey = WEEK_DAYS[dowIndex];
+                    const dowKey = WEEK_DAYS[RU_DAYS.indexOf(dayShort)];
 
-                    // ищем конфликт: совпадение по дню (или дате), по времени и по приоритету
                     const conflict = existing.find(b => {
-                        // день/дата
+                        // Совпадение дня/даты
                         if (isFixedSchedule) {
                             if (b.dayOfWeek !== dowKey) return false;
                         } else {
                             if (b.startDate !== isoDate) return false;
                         }
-                        // время
+                        // Пересечение по времени
                         const existStart = timeToMinutes(b.startTime);
                         const existEnd = timeToMinutes(b.endTime);
                         if (!(newStart < existEnd && existStart < newEnd)) return false;
-                        // приоритет
+                        // Совпадение приоритета
                         if (b.priority !== priority) return false;
 
                         return true;
@@ -136,9 +160,77 @@ export default function ScheduleSettingsPanel() {
             }
         }
 
-        // если для всех экранов конфликтов нет — добавляем
-        addBlock()
-    }
+        // Проверяем конфликты для рекламных (ADVERTISEMENT) слотов
+        if (typeMode === 'ADVERTISEMENT') {
+            const playlist = playlistItems.find(p => p.id === selectedPlaylist)!
+
+            type Candidate = { screenId: string; date: string; start: number; end: number };
+            const durationMin = Math.ceil(playlist.totalDurationSeconds / 60)
+            const candidates: Candidate[] = [];
+
+            // Сбор «кандидатов» по выбранным экранам, дням и режиму рекламы
+            for (const screenId of selectedScreens) {
+                for (const dayShort of selectedDays) {
+                    const week = getCurrentWeekByDate(selectedDate);
+                    const dateObj = parseDayToDate(dayShort, week);
+                    const isoDate = dateObj.toISOString().slice(0, 10);
+
+                    if (advertisementShowMode === 'minutes') {
+                        let cursor = newStart;
+                        while (cursor + durationMin <= newEnd) {
+                            candidates.push({screenId, date: isoDate, start: cursor, end: cursor + durationMin});
+                            cursor += advertisementIntervalMinutes;
+                        }
+                    } else if (advertisementShowMode === 'hours') {
+                        let cursor = newStart;
+                        const step = advertisementIntervalHours * 60;
+                        while (cursor + durationMin <= newEnd) {
+                            candidates.push({screenId, date: isoDate, start: cursor, end: cursor + durationMin});
+                            cursor += step;
+                        }
+                    } else {
+                        // specific times
+                        advertisementSpecificTimes.forEach(hhmm => {
+                            const m = timeToMinutes(hhmm);
+                            if (m >= newStart && m + durationMin <= newEnd) {
+                                candidates.push({screenId, date: isoDate, start: m, end: m + durationMin});
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Проверка каждого кандидата на пересечение с уже существующими рекламными слотами
+            for (const {screenId, date, start, end} of candidates) {
+                const existing = (isFixedSchedule
+                        ? scheduledFixedMap[screenId] ?? []
+                        : scheduledCalendarMap[screenId] ?? []
+                ).filter(b => b.priority === 100);
+
+                const conflict = existing.find(b => {
+                    const sameDay = isFixedSchedule
+                        ? b.dayOfWeek === WEEK_DAYS[RU_DAYS.indexOf(date.slice(8, 10))]
+                        : b.startDate === date;
+                    if (!sameDay) return false;
+                    const existStart = timeToMinutes(b.startTime);
+                    const existEnd = timeToMinutes(b.endTime);
+                    return (start < existEnd && existStart < end);
+                });
+
+                if (conflict) {
+                    const name = allScreens.find(s => s.id === screenId)?.name ?? screenId;
+                    window.alert(
+                        `На экране «${name}» рекламный слот пересекается с ` +
+                        `${conflict.startTime}–${conflict.endTime} в ${date}.`
+                    );
+                    return;
+                }
+            }
+        }
+
+        // Всё чисто — добавляем
+        addBlock();
+    };
 
     return (
         <>
@@ -224,73 +316,142 @@ export default function ScheduleSettingsPanel() {
                     {/* Как показывать */}
                     <motion.div layout>
                         <Card>
-                            <Card.Header>Как показывать</Card.Header>
+                            <Card.Header>Тип слотов</Card.Header>
                             <Card.Body>
+
                                 <Form.Group>
-                                    <div className="d-flex gap-3 flex-column">
+                                    <div className="d-flex gap-3 flex-row">
                                         <Form.Check
                                             inline
                                             type="checkbox"
-                                            id="mode-once"
-                                            name="showMode"
-                                            label="Один раз"
-                                            checked={showMode === 'once'}
+                                            id="mode-playlist"
+                                            name="typeMode"
+                                            label="Обычный слот"
+                                            checked={typeMode === 'PLAYLIST'}
                                             onChange={() => {
-                                                setShowMode('once')
-                                                setPauseMinutes(0)
-                                                setIntervalMinutes(0)
+                                                setTypeMode('PLAYLIST')
                                             }}
                                         />
                                         <Form.Check
                                             inline
                                             type="checkbox"
-                                            id="mode-recurring"
-                                            name="showMode"
-                                            label="Зациклено"
-                                            checked={showMode === 'cycle'}
+                                            id="mode-advertisement"
+                                            name="typeMode"
+                                            label="Реклама"
+                                            checked={typeMode === 'ADVERTISEMENT'}
                                             onChange={() => {
-                                                setShowMode('cycle')
-                                                setPauseMinutes(0)
-                                                setIntervalMinutes(0)
+                                                setTypeMode('ADVERTISEMENT')
                                             }}
-                                        />
-                                        <Form.Check
-                                            inline
-                                            type="checkbox"
-                                            id="mode-repeat-interval"
-                                            name="showMode"
-                                            label="Играть X минут, потом пауза Y минут"
-                                            checked={showMode === 'repeatInterval'}
-                                            onChange={() => setShowMode('repeatInterval')}
                                         />
                                     </div>
                                 </Form.Group>
+                            </Card.Body>
 
-                                {showMode === 'repeatInterval' && (
-                                    <div className="d-flex align-items-center gap-3 1 mt-2">
-                                        <InputGroup style={{width: 200}}>
-                                            <InputGroup.Text>Играть</InputGroup.Text>
-                                            <Form.Control
-                                                type="number"
-                                                min={0}
-                                                value={intervalMinutes != null ? intervalMinutes : ''}
-                                                onChange={e => setIntervalMinutes(+e.target.value)}
-                                            />
-                                            <InputGroup.Text>мин</InputGroup.Text>
-                                        </InputGroup>
+                            <Card.Header className="border-top">Как показывать</Card.Header>
+                            <Card.Body>
+                                {typeMode === 'PLAYLIST' ? (
+                                    <>
+                                        <Form.Check inline type="checkbox" label="Один раз"
+                                                    checked={showMode === 'once'}
+                                                    onChange={() => setShowMode('once')}/>
+                                        <Form.Check inline type="checkbox" label="Зациклено"
+                                                    checked={showMode === 'cycle'}
+                                                    onChange={() => setShowMode('cycle')}/>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Form.Check inline type="checkbox" label="Раз в N минут"
+                                                    checked={advertisementShowMode === 'minutes'}
+                                                    onChange={() => setAdvertisementShowMode('minutes')}/>
 
-                                        <InputGroup style={{width: 200}}>
-                                            <InputGroup.Text>Пауза</InputGroup.Text>
-                                            <Form.Control
-                                                type="number"
-                                                min={0}
-                                                value={pauseMinutes != null ? pauseMinutes : ''}
-                                                onChange={e => setPauseMinutes(+e.target.value)}
-                                            />
-                                            <InputGroup.Text>мин</InputGroup.Text>
-                                        </InputGroup>
-                                    </div>
+                                        <Form.Check inline type="checkbox" label="Раз в N часов"
+                                                    checked={advertisementShowMode === 'hours'}
+                                                    onChange={() => setAdvertisementShowMode('hours')}/>
+
+                                        <Form.Check inline type="checkbox" label="Раз в определённые часы"
+                                                    checked={advertisementShowMode === 'specific'}
+                                                    onChange={() => setAdvertisementShowMode('specific')}/>
+
+                                    </>
                                 )}
+
+
+                                <div className="d-flex justify-content-center align-content-center">
+                                    {/* инпуты под каждой опцией */}
+                                    {typeMode === 'ADVERTISEMENT' && (
+                                        <div className="mt-3">
+                                            {advertisementShowMode === 'minutes' && (
+                                                <InputGroup style={{maxWidth: 300}} className="mb-2">
+                                                    <InputGroup.Text>Интервал, мин</InputGroup.Text>
+                                                    <Form.Control
+                                                        type="number"
+                                                        value={advertisementIntervalMinutes}
+                                                        onChange={e => setAdvertisementIntervalMinutes(+e.target.value)}
+                                                    />
+                                                </InputGroup>
+                                            )}
+
+                                            {advertisementShowMode === 'hours' && (
+                                                <InputGroup style={{maxWidth: 300}} className="mb-2">
+                                                    <InputGroup.Text>Интервал, ч</InputGroup.Text>
+                                                    <Form.Control
+                                                        type="number"
+                                                        value={advertisementIntervalHours}
+                                                        onChange={e => setAdvertisementIntervalHours(+e.target.value)}
+                                                    />
+                                                </InputGroup>
+                                            )}
+
+                                            {advertisementShowMode === 'specific' && (
+                                                <>
+
+                                                    <div className="d-flex justify-content-center align-content-center">
+                                                        <Form.Select
+                                                            style={{marginRight: 12, maxWidth: 150}}
+                                                            value={pendingTime}
+                                                            onChange={e => setPendingTime(e.target.value)}
+                                                        >
+                                                            {Array.from({length: 24}, (_, i) => {
+                                                                const hh = String(i).padStart(2, '0') + ':00';
+                                                                return (
+                                                                    // опция будет отключена, если час меньше startTime или больше endTime
+                                                                    <option key={hh} value={hh}
+                                                                            disabled={hh < startTime || hh >= endTime}>
+                                                                        {hh}
+                                                                    </option>
+                                                                )
+                                                            })}
+                                                        </Form.Select>
+                                                        <Button
+                                                            style={{width: 220}}
+                                                            disabled={pendingTime < startTime || pendingTime > endTime}
+                                                            onClick={() => addAdvertisementSpecificTime(pendingTime)}
+                                                        >
+                                                            Добавить
+                                                        </Button>
+                                                    </div>
+
+                                                    <ListGroup style={{maxWidth: 200}} className="mb-2">
+                                                        {advertisementSpecificTimes.map(t => (
+                                                            <ListGroup.Item key={t}
+                                                                            className="d-flex justify-content-between">
+                                                                {t}
+                                                                <Button
+
+                                                                    variant="outline-danger"
+                                                                    size="sm"
+                                                                    onClick={() => removeAdvertisementSpecificTime(t)}
+                                                                >
+                                                                    &times;
+                                                                </Button>
+                                                            </ListGroup.Item>
+                                                        ))}
+                                                    </ListGroup>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </Card.Body>
                         </Card>
                     </motion.div>
@@ -324,7 +485,7 @@ export default function ScheduleSettingsPanel() {
                                     <Col
                                         className="d-flex flex-column justify-content-center align-content-center text-center"
                                         xs="auto">
-                                        {showMode !== "repeatInterval" ? (
+                                        {typeMode !== "ADVERTISEMENT" ? (
                                                 <Dropdown onSelect={k => setPriority(Number(k))}>
                                                     <Dropdown.Toggle variant="primary">
                                                         Приоритет: {priority}
@@ -413,6 +574,7 @@ export default function ScheduleSettingsPanel() {
 
                                     <Col xs="auto">
                                         <Button
+                                            variant="success"
                                             onClick={handleAdd}
                                             style={{paddingLeft: 40, paddingRight: 40}}
                                             disabled={selectedScreens.length === 0 || !selectedPlaylist}
@@ -454,137 +616,3 @@ export default function ScheduleSettingsPanel() {
     )
 }
 
-
-{/*<motion.div layout>*/
-}
-{/*    <Form.Check*/
-}
-{/*        inline*/
-}
-{/*        label="Фон. видео"*/
-}
-{/*        type="checkbox"*/
-}
-{/*        checked={isShowBackground}*/
-}
-{/*        onChange={toggleShowBackground}*/
-}
-{/*    />*/
-}
-{/*</motion.div>*/
-}
-
-{/*/!* Ограничения *!/*/
-}
-{/*<motion.div layout>*/
-}
-{/*    <Card>*/
-}
-{/*        <Card.Header>Ограничения</Card.Header>*/
-}
-{/*        <Card.Body>*/
-}
-{/*            <div className="d-flex flex-column gap-3">*/
-}
-{/*                <motion.div*/
-}
-{/*                    layout*/
-}
-{/*                    className="d-flex align-items-center"*/
-}
-{/*                    style={{maxWidth: 400}}*/
-}
-{/*                >*/
-}
-{/*                    <InputGroup>*/
-}
-{/*                        <InputGroup.Text>Макс. показов/день</InputGroup.Text>*/
-}
-{/*                        <Form.Control*/
-}
-{/*                            type="number"*/
-}
-{/*                            min={0}*/
-}
-{/*                            value={maxPerDay}*/
-}
-{/*                            onChange={e => setMaxPerDay(+e.target.value)}*/
-}
-{/*                        />*/
-}
-{/*                    </InputGroup>*/
-}
-{/*                </motion.div>*/
-}
-
-{/*                <motion.div*/
-}
-{/*                    layout*/
-}
-{/*                    className="d-flex align-items-center"*/
-}
-{/*                    style={{maxWidth: 400}}*/
-}
-{/*                >*/
-}
-{/*                    <InputGroup>*/
-}
-{/*                        <InputGroup.Text>Макс. показов/час</InputGroup.Text>*/
-}
-{/*                        <Form.Control*/
-}
-{/*                            type="number"*/
-}
-{/*                            min={0}*/
-}
-{/*                            value={maxPerHour}*/
-}
-{/*                            onChange={e => setMaxPerHour(+e.target.value)}*/
-}
-{/*                        />*/
-}
-{/*                    </InputGroup>*/
-}
-{/*                </motion.div>*/
-}
-
-{/*                <motion.div*/
-}
-{/*                    layout*/
-}
-{/*                    className="d-flex align-items-center"*/
-}
-{/*                    style={{maxWidth: 400}}*/
-}
-{/*                >*/
-}
-{/*                    <InputGroup>*/
-}
-{/*                        <InputGroup.Text>Макс. длит. в день</InputGroup.Text>*/
-}
-{/*                        <Form.Control*/
-}
-{/*                            type="number"*/
-}
-{/*                            min={0}*/
-}
-{/*                            value={maxTotalDuration}*/
-}
-{/*                            onChange={e => setMaxTotalDuration(+e.target.value)}*/
-}
-{/*                        />*/
-}
-{/*                        <InputGroup.Text>мин</InputGroup.Text>*/
-}
-{/*                    </InputGroup>*/
-}
-{/*                </motion.div>*/
-}
-{/*            </div>*/
-}
-{/*        </Card.Body>*/
-}
-{/*    </Card>*/
-}
-{/*</motion.div>*/
-}

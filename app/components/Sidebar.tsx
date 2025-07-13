@@ -93,7 +93,7 @@ export default function Sidebar({collapsed, onToggle}: Props) {
                         key={href}
                         href={href}
                         className={
-                            'd-flex align-items-center w-100 py-3 ' +
+                            'text-decoration-non d-flex align-items-center w-100 py-3 ' +
                             (active ? 'bg-light fw-bold text-dark' : 'text-secondary')
                         }
                         style={{

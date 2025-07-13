@@ -167,28 +167,16 @@ export default function PlaylistContentPage() {
                     </div>
                     <div className="d-flex align-items-center gap-3">
                         <Button
-
+                            style={{paddingLeft: 36, paddingRight: 36}}
                             variant="success"
                             onClick={handleSavePlaylist}
                             disabled={items.length === 0 || name.trim() === ''}
                         >
                             Сохранить
                         </Button>
-                        <Dropdown onSelect={k => setPriority(k as any)}>
-                            <Dropdown.Toggle variant="primary">
-                                {priority === 'normal'
-                                    ? 'Обычный приоритет'
-                                    : priority === 'high'
-                                        ? 'Высокий приоритет'
-                                        : 'Перекрывать всё'}
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                                <Dropdown.Item eventKey="normal">Обычный приоритет</Dropdown.Item>
-                                <Dropdown.Item eventKey="high">Высокий приоритет</Dropdown.Item>
-                                <Dropdown.Item eventKey="override">Перекрывать всё</Dropdown.Item>
-                            </Dropdown.Menu>
-                        </Dropdown>
+
                         <Button
+                            style={{paddingLeft: 36, paddingRight: 36}}
                             variant="danger"
                             onClick={() => setShowDeleteModal(true)}
                         >

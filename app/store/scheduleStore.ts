@@ -12,10 +12,14 @@ import axios from "axios";
 import {SERVER_URL} from "@/app/API/api";
 import {getValueInStorage} from "@/app/API/localStorage";
 import {connectWebSocket} from "@/app/API/ws";
+import {usePlaylistStore} from "@/app/store/playlistStore";
 
 
 // типы
 export type ShowMode = 'once' | 'cycle' | 'repeatInterval'
+export type TypeMode = 'PLAYLIST' | 'ADVERTISEMENT'
+export type AdShowMode = 'minutes' | 'hours' | 'specific'
+
 type ByScreen<T> = Record<string, T[]>
 
 interface ScheduleState {
@@ -51,19 +55,24 @@ interface ScheduleState {
     setHoveredBlock: (b: ScheduledBlock | null) => void
 
     isShowBackground: boolean
-    showMode: ShowMode
-    pauseMinutes: number
-    intervalMinutes: number
+    showMode: ShowMode,
+    typeMode: TypeMode,
+    advertisementShowMode: AdShowMode
     setShowMode: (m: ShowMode) => void
-    setPauseMinutes: (m: number) => void
-    setIntervalMinutes: (m: number) => void
+    setTypeMode: (m: TypeMode) => void
+    setAdvertisementShowMode: (m: AdShowMode) => void
 
-    maxPerDay: number
-    maxPerHour: number
-    maxTotalDuration: number
-    setMaxPerDay: (n: number) => void
-    setMaxPerHour: (n: number) => void
-    setMaxTotalDuration: (n: number) => void
+
+    advertisementIntervalMinutes: number
+    setAdvertisementIntervalMinutes: (m: number) => void
+
+    advertisementIntervalHours: number
+    setAdvertisementIntervalHours: (h: number) => void
+
+    advertisementSpecificTimes: string[]
+    addAdvertisementSpecificTime: (t: string) => void
+    removeAdvertisementSpecificTime: (t: string) => void
+
 
     onDateSelected: (d: Date) => void
     toggleFixedSchedule: () => void
@@ -147,6 +156,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 priority: slot.priority,
                                 repeatIntervalMinutes: slot.repeatIntervalMinutes,
                                 durationMinutes: slot.durationMinutes,
+                                type: slot.type,
+
                             });
                         }
                         s.selectedScreens = Array.from(screens);
@@ -200,57 +211,141 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             }),
 
             addBlock: () => {
+                const playlistItems = usePlaylistStore.getState().playlistItems
+
                 const {
                     selectedScreens,
                     currentWeek,
-                    startTime,
-                    endTime,
+                    selectedDays,
                     selectedPlaylist,
                     isFixedSchedule,
-                    selectedDays,
-                    priority,
-                    isRecurring,
+                    startTime: playlistStart,
+                    endTime: playlistEnd,
                     showMode,
-                    pauseMinutes,
-                    intervalMinutes
+                    typeMode,
+                    advertisementIntervalMinutes,
+                    advertisementIntervalHours,
+                    advertisementSpecificTimes,
+                    setError,
+                    setSuccess,
+                    advertisementShowMode
                 } = get()
-                if (!selectedScreens.length) return
-                const mapKey = isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
+
+                if (!selectedScreens.length || !selectedDays.length) return;
+
+                const playlist = playlistItems.find(p => p.id === selectedPlaylist);
+                if (!playlist) {
+                    setError('Плейлист не выбран или не найден');
+                    return;
+                }
+
+                // берём уже посчитанное
+                const durationMin = Math.ceil(playlist.totalDurationSeconds / 60)
+
+                console.log(durationMin, 'мин totalDurationMinutes');
+
+
+                const newBlocks: ScheduledBlock[] = []
+                const hhmmToMinutes = (hhmm: string) => {
+                    const [h, m] = hhmm.split(':').map(Number);
+                    return h * 60 + m;
+                };
+                const minutesToHhmmss = (min: number) => {
+                    const h = Math.floor(min / 60);
+                    const m = min % 60;
+                    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
+                };
+
+                function pushSlot(
+                    dow: ScheduledBlock['dayOfWeek'],
+                    isoDate: string,
+                    startMin: number,
+                    endMin: number
+                ) {
+                    newBlocks.push({
+                        dayOfWeek: dow,
+                        startDate: isFixedSchedule ? null : isoDate,
+                        endDate: isFixedSchedule ? null : isoDate,
+                        startTime: minutesToHhmmss(startMin),
+                        endTime: minutesToHhmmss(endMin),
+                        playlistId: selectedPlaylist,
+                        type: typeMode,
+                        isRecurring: false,
+                        priority: typeMode === 'ADVERTISEMENT' ? 100 : get().priority,
+                    });
+                }
+
+                const startMin = hhmmToMinutes(playlistStart)
+                const endMin = hhmmToMinutes(playlistEnd)
+
+                for (const dayShort of selectedDays) {
+                    const dateObj = parseDayToDate(dayShort, currentWeek)
+                    const isoDate = dateObj.toISOString().slice(0, 10)
+                    const dow = WEEK_DAYS[RU_DAYS.indexOf(dayShort)] as ScheduledBlock['dayOfWeek']
+
+                    if (typeMode === 'PLAYLIST') {
+                        if (showMode === 'cycle') {
+                            // один блок на весь период от playlistStart до playlistEnd
+                            pushSlot(dow, isoDate, startMin, endMin);
+                        } else {
+                            // один блок ровно длины плейлиста
+                            pushSlot(dow, isoDate, startMin, startMin + durationMin);
+                        }
+                        continue;
+                    }
+
+                    switch (advertisementShowMode) {
+                        case 'minutes': {
+                            // «один раз»: начинаем с playlistStart и каждые N минут
+                            // вставляем блокы длиной durationMin, пока не дойдём до playlistEnd
+                            let cursor = startMin
+                            while (cursor + durationMin <= endMin) {
+                                pushSlot(dow, isoDate, cursor, cursor + durationMin)
+                                cursor += advertisementIntervalMinutes
+                            }
+                            break
+                        }
+
+                        case 'hours': {
+                            // «по часам»: то же самое, но шаг = N часов
+                            let cursor = startMin
+                            const step = advertisementIntervalHours * 60
+                            while (cursor + durationMin <= endMin) {
+                                pushSlot(dow, isoDate, cursor, cursor + durationMin)
+                                cursor += step
+                            }
+                            break
+                        }
+
+                        case 'specific':
+                            // «в конкретные часы»: берём каждый из заранее выбранных
+                            advertisementSpecificTimes.forEach(hhmm => {
+                                const m = hhmmToMinutes(hhmm)
+                                if (m >= startMin && m + durationMin <= endMin) {
+                                    pushSlot(dow, isoDate, m, m + durationMin)
+                                }
+                            })
+                            break
+
+
+                        default:
+                            console.warn('Unknown advertisement showMode', showMode)
+                    }
+                }
 
                 selectedScreens.forEach(screenId => {
+                    const mapKey = isFixedSchedule
+                        ? 'scheduledFixedMap'
+                        : 'scheduledCalendarMap'
                     set(s => {
-                        if (!(s as any)[mapKey][screenId]) (s as any)[mapKey][screenId] = []
-                    })
-                    selectedDays.forEach(dayShort => {
-                        const dateObj = parseDayToDate(dayShort, currentWeek)
-                        const isoDate = dateObj.toISOString().slice(0, 10)
-                        const ruIndex = RU_DAYS.indexOf(dayShort)
-                        const dow = WEEK_DAYS[ruIndex]
-                        const b: ScheduledBlock = {
-                            dayOfWeek: dow,
-                            startDate: isFixedSchedule ? null : isoDate,
-                            endDate: isFixedSchedule ? null : isoDate,
-                            startTime: normalizeTime(startTime) + ':00',
-                            endTime: normalizeTime(endTime) + ':00',
-                            playlistId: selectedPlaylist,
-                            isRecurring: showMode === 'cycle',
-                            ...(showMode === 'repeatInterval'
-                                    ? {
-                                        repeatIntervalMinutes: pauseMinutes,
-                                        durationMinutes: intervalMinutes,
-                                        priority: 100
-                                    }
-                                    : {
-                                        priority
-                                    }
-                            )
-                        }
-                        set(s => {
-                            (s as any)[mapKey][screenId].push(b)
-                        })
+                        if (!s[mapKey][screenId]) s[mapKey][screenId] = []
+                        s[mapKey][screenId].push(...newBlocks)
                     })
                 })
+
+                setSuccess(`Добавлено ${newBlocks.length} ${typeMode === 'ADVERTISEMENT' ? 'рекламных слотов' : 'слотов'}`)
             },
+
 
             removeBlock: (screenId, block) => {
                 const mapKey = get().isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
@@ -263,6 +358,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         b.playlistId === block.playlistId)
                     if (idx >= 0) arr.splice(idx, 1)
                 })
+
+
             },
 
             addEditedBlock: (screenId, block) => {
@@ -292,9 +389,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     isFixedSchedule,
                     isRecurring,
                     scheduleId,
-                    pauseMinutes,
-                    intervalMinutes,
-                    showMode
                 } = get()
 
                 const slots = selectedScreens.flatMap(screenId => {
@@ -312,7 +406,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         repeatIntervalMinutes: b.repeatIntervalMinutes,
                         durationMinutes: b.durationMinutes,
                         priority: b.priority,
-                        screenId
+                        screenId,
+                        type: b.type
                     }))
                 })
 
@@ -328,6 +423,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     userId: userId,
 
                 }
+
+                console.log("id расписания", scheduleId)
 
                 if (scheduleId) {
                     ws.send(JSON.stringify({action: 'update', data: payload}))
@@ -530,33 +627,43 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             }),
 
             showMode: 'cycle',
-            pauseMinutes: 50,
-            intervalMinutes: 10,
+            typeMode: 'PLAYLIST',
 
             setShowMode: (m: ShowMode) => set(s => {
                 s.showMode = m;
                 s.isRecurring = (m === 'cycle');
             }),
 
-            setPauseMinutes: m => set(s => {
-                s.pauseMinutes = m
-            }),
-            setIntervalMinutes: m => set(s => {
-                s.intervalMinutes = m
+            setTypeMode: (m: TypeMode) => set(s => {
+                s.typeMode = m;
+                s.isRecurring = (m === 'PLAYLIST');
             }),
 
-            maxPerDay: 0,
-            maxPerHour: 0,
-            maxTotalDuration: 0,
-            setMaxPerDay: n => set(s => {
-                s.maxPerDay = n
+            // по-умолчанию реклама выключена, но режим выбираем минуты
+            advertisementShowMode: 'minutes',
+            setAdvertisementShowMode: m => set(s => {
+                s.advertisementShowMode = m
             }),
-            setMaxPerHour: n => set(s => {
-                s.maxPerHour = n
+
+            advertisementIntervalMinutes: 15,
+            setAdvertisementIntervalMinutes: m => set(s => {
+                s.advertisementIntervalMinutes = m
             }),
-            setMaxTotalDuration: n => set(s => {
-                s.maxTotalDuration = n
+
+            advertisementIntervalHours: 1,
+            setAdvertisementIntervalHours: h => set(s => {
+                s.advertisementIntervalHours = h
             }),
+
+            advertisementSpecificTimes: [],
+            addAdvertisementSpecificTime: t => set(s => {
+                if (!s.advertisementSpecificTimes.includes(t))
+                    s.advertisementSpecificTimes.push(t)
+            }),
+            removeAdvertisementSpecificTime: t => set(s => {
+                s.advertisementSpecificTimes = s.advertisementSpecificTimes.filter(x => x !== t)
+            }),
+
         }
     })
 )
