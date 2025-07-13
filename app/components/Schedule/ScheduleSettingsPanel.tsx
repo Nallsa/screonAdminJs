@@ -350,14 +350,17 @@ export default function ScheduleSettingsPanel() {
                             <Card.Header className="border-top">Как показывать</Card.Header>
                             <Card.Body>
                                 {typeMode === 'PLAYLIST' ? (
-                                    <>
-                                        <Form.Check inline type="checkbox" label="Один раз"
-                                                    checked={showMode === 'once'}
-                                                    onChange={() => setShowMode('once')}/>
-                                        <Form.Check inline type="checkbox" label="Зациклено"
-                                                    checked={showMode === 'cycle'}
-                                                    onChange={() => setShowMode('cycle')}/>
-                                    </>
+                                    <Form.Group>
+                                        <div className="d-flex gap-3 flex-row justify-content-around">
+                                            <Form.Check inline type="checkbox" label="Один раз"
+                                                        checked={showMode === 'once'}
+                                                        onChange={() => setShowMode('once')}/>
+                                            <Form.Check inline type="checkbox" label="Зациклено"
+                                                        checked={showMode === 'cycle'}
+                                                        onChange={() => setShowMode('cycle')}/>
+                                        </div>
+                                    </Form.Group>
+
                                 ) : (
                                     <>
                                         <Form.Check inline type="checkbox" label="Раз в N минут"
