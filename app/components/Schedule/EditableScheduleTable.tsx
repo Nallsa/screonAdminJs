@@ -1,12 +1,12 @@
 'use client'
 import React, {useEffect, useLayoutEffect, useRef, useState} from 'react'
-import {AdShowMode, TypeMode, useScheduleStore} from '@/app/store/scheduleStore'
+import type {ShowMode} from '@/app/store/scheduleStore'
+import {TypeMode, useScheduleStore} from '@/app/store/scheduleStore'
 import {generateTimeSlots, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {ScheduledBlock} from "@/public/types/interfaces";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScreensStore} from "@/app/store/screensStore";
-import {Button, Dropdown, Form, InputGroup, Modal} from "react-bootstrap";
-import type {ShowMode} from '@/app/store/scheduleStore'
+import {Button, Form, Modal} from "react-bootstrap";
 // подготавливаем метаданные для позиционирования
 type Meta = {
     screenId: string
@@ -334,6 +334,7 @@ export default function EditableScheduleTable() {
                 const top = headerH + m.startRow * slotH
                 const height = (m.endRow - m.startRow) * slotH
 
+
                 const playlistName = playlistItems.find(p => p.id === m.block.playlistId)?.name
                     ?? m.block.playlistId
 
@@ -352,6 +353,7 @@ export default function EditableScheduleTable() {
                 })
 
                 const backgroundColor = screenColorsMap.get(m.screenId) ?? '#cccccc'
+                const isHovered = hoveredBlock === m.block;
 
                 return (
                     <div
@@ -362,12 +364,13 @@ export default function EditableScheduleTable() {
                             left: `${left}%`,
                             width: `${width}%`,
                             height,
+                            minHeight: 24,
                             backgroundColor: backgroundColor,
                             borderRadius: 4,
                             padding: '4px 2px',
                             border: '1px solid #fff',
                             boxSizing: 'border-box',
-                            fontSize: 10,
+                            fontSize: 9,
                             display: 'flex',
                             flexDirection: 'column',
                             justifyContent: 'center',
@@ -376,6 +379,15 @@ export default function EditableScheduleTable() {
                             overflow: 'hidden',
                             whiteSpace: 'nowrap',
                             textOverflow: 'ellipsis',
+
+                            zIndex: isHovered ? 10 : 1,
+                            boxShadow: isHovered
+                                ? '0 4px 8px rgba(0,0,0,0.15)'
+                                : undefined,
+                            transform: isHovered
+                                ? 'translateY(-4px)'
+                                : undefined,
+                            transition: 'all .1s ease-in-out',
                         }}
                         onMouseEnter={() => setHoveredBlock(m.block)}
                         onMouseLeave={() => setHoveredBlock(null)}
