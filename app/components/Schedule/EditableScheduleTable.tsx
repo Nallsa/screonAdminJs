@@ -276,7 +276,7 @@ export default function EditableScheduleTable() {
                 endTime: editEnd + ':00',
                 playlistId: editPlaylist,
                 priority: editPriority,
-                isRecurring: editShowMode === 'cycle',
+                isRecurring: editTypeMode === 'PLAYLIST' && editShowMode === 'cycle'
             })
         )
         setEditingMeta(null)

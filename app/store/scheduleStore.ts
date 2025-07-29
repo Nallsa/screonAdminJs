@@ -16,7 +16,7 @@ import {usePlaylistStore} from "@/app/store/playlistStore";
 
 
 // типы
-export type ShowMode = 'once' | 'cycle' | 'repeatInterval'
+export type ShowMode = 'once' | 'cycle'
 export type TypeMode = 'PLAYLIST' | 'ADVERTISEMENT'
 export type AdShowMode = 'minutes' | 'hours' | 'specific'
 
@@ -138,12 +138,10 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         const slots = Array.isArray(payload.timeSlots) ? payload.timeSlots : [];
                         for (const slot of slots) {
                             screens.add(slot.screenId)
-                            const mapKey =
-                                slot.repeatIntervalMinutes != null || slot.durationMinutes != null
-                                    ? 'scheduledCalendarMap'
-                                    : slot.startDate === null
-                                        ? 'scheduledFixedMap'
-                                        : 'scheduledCalendarMap';
+                            const mapKey = slot.startDate === null
+                                ? 'scheduledFixedMap'
+                                : 'scheduledCalendarMap';
+
                             if (!s[mapKey][slot.screenId]) s[mapKey][slot.screenId] = [];
                             s[mapKey][slot.screenId].push({
                                 dayOfWeek: slot.dayOfWeek,
@@ -154,8 +152,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 playlistId: slot.playlistId,
                                 isRecurring: slot.isRecurring,
                                 priority: slot.priority,
-                                repeatIntervalMinutes: slot.repeatIntervalMinutes,
-                                durationMinutes: slot.durationMinutes,
                                 type: slot.type,
 
                             });
@@ -270,7 +266,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         endTime: minutesToHhmmss(endMin),
                         playlistId: selectedPlaylist,
                         type: typeMode,
-                        isRecurring: false,
+                        isRecurring: typeMode === 'PLAYLIST' && showMode === 'cycle',
                         priority: typeMode === 'ADVERTISEMENT' ? 100 : get().priority,
                     });
                 }
@@ -403,8 +399,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         endTime: b.endTime.slice(0, 5),
                         playlistId: b.playlistId,
                         isRecurring: b.isRecurring,
-                        repeatIntervalMinutes: b.repeatIntervalMinutes,
-                        durationMinutes: b.durationMinutes,
                         priority: b.priority,
                         screenId,
                         type: b.type
