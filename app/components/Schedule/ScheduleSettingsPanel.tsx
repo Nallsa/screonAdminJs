@@ -48,15 +48,18 @@ export default function ScheduleSettingsPanel() {
         advertisementSpecificTimes,
         addAdvertisementSpecificTime,
         removeAdvertisementSpecificTime,
+        selectedGroup,
+        setSelectedGroup
     } = useScheduleStore()
 
-    const {allScreens} = useScreensStore()
+    const {allScreens, groups} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
     const [noScreensModal, setNoScreensModal] = useState(false)
     const [noPlaylistsModal, setNoPlaylistsModal] = useState(false)
     const [pendingTime, setPendingTime] = useState<string>('08:00')
     const [open, setOpen] = useState(true)
     const router = useRouter();
+
 
     useEffect(() => {
         onDateSelected(new Date())
@@ -87,7 +90,7 @@ export default function ScheduleSettingsPanel() {
             window.alert('Выберите, пожалуйста, плейлист');
             return;
         }
-        if (selectedScreens.length === 0) {
+        if (selectedScreens.length === 0 && !selectedGroup) {
             window.alert('Выберите хотя бы один экран');
             return;
         }
@@ -117,9 +120,20 @@ export default function ScheduleSettingsPanel() {
         const newStart = timeToMinutes(startTime);
         const newEnd = timeToMinutes(endTime);
 
+        const screensToAdd = selectedGroup
+            ? allScreens
+                .filter(s => s.groupId === selectedGroup)
+                .map(s => s.id)
+            : selectedScreens;
+
+        if (screensToAdd.length === 0) {
+            window.alert('В группе нет экранов');
+            return;
+        }
+
         // Проверяем конфликты для обычных (PLAYLIST) слотов
         if (typeMode === 'PLAYLIST') {
-            for (const screenId of selectedScreens) {
+            for (const screenId of screensToAdd) {
                 const existing = (isFixedSchedule
                         ? scheduledFixedMap[screenId] ?? []
                         : scheduledCalendarMap[screenId] ?? []
@@ -169,7 +183,7 @@ export default function ScheduleSettingsPanel() {
             const candidates: Candidate[] = [];
 
             // Сбор «кандидатов» по выбранным экранам, дням и режиму рекламы
-            for (const screenId of selectedScreens) {
+            for (const screenId of screensToAdd) {
                 for (const dayShort of selectedDays) {
                     const week = getCurrentWeekByDate(selectedDate);
                     const dateObj = parseDayToDate(dayShort, week);
@@ -228,8 +242,9 @@ export default function ScheduleSettingsPanel() {
             }
         }
 
+
         // Всё чисто — добавляем
-        addBlock();
+        addBlock(screensToAdd);
     };
 
     return (
@@ -517,7 +532,8 @@ export default function ScheduleSettingsPanel() {
 
                             <Card.Header className="border-top">Где показывать</Card.Header>
                             <Card.Body>
-                                <div className="d-flex flex-row justify-content-lg-evenly align-content-center gap-3">
+                                <div
+                                    className="d-flex flex-column justify-content-lg-evenly align-content-center gap-3">
                                     <Col xs="auto">
                                         {allScreens.length === 0 ? (
                                             // если экранов нет — обычная кнопка, которая открывает модалку
@@ -526,65 +542,96 @@ export default function ScheduleSettingsPanel() {
                                             </Button>
                                         ) : (
                                             // если экраны есть — полноценный дропдаун
-                                            <Dropdown autoClose="outside">
-                                                <Dropdown.Toggle
-                                                    style={{paddingLeft: 40, paddingRight: 40}}>Экраны</Dropdown.Toggle>
-                                                <Dropdown.Menu style={{padding: 0}}>
-                                                    <Dropdown.Item
-                                                        as="label"
-                                                        htmlFor="screen-all"
-                                                        className="d-flex align-items-center px-3 py-2"
-                                                    >
-                                                        <Form.Check
-                                                            type="checkbox"
-                                                            id="screen-all"
-                                                            checked={selectedScreens.length === allScreens.length}
-                                                            onChange={() => {
-                                                                if (selectedScreens.length === allScreens.length) {
-                                                                    selectedScreens.forEach(id => toggleScreen(id))
-                                                                } else {
-                                                                    allScreens.forEach(s => {
-                                                                        if (!selectedScreens.includes(s.id)) toggleScreen(s.id)
-                                                                    })
-                                                                }
-                                                            }}
-                                                            className="me-2 mb-0"
-                                                        />
-                                                        <span>Выбрать всё</span>
-                                                    </Dropdown.Item>
-                                                    {allScreens.map(s => (
+                                            <div
+                                                className="d-flex flex-row justify-content-lg-evenly align-content-center gap-3">
+
+                                                <Dropdown autoClose="outside">
+                                                    <Dropdown.Toggle
+                                                        disabled={!!selectedGroup}
+                                                        style={{
+                                                            paddingLeft: 40,
+                                                            paddingRight: 40
+                                                        }}>Экраны</Dropdown.Toggle>
+                                                    <Dropdown.Menu style={{padding: 0}}>
                                                         <Dropdown.Item
                                                             as="label"
-                                                            htmlFor={`screen-${s.id}`}
-                                                            key={s.id}
+                                                            htmlFor="screen-all"
                                                             className="d-flex align-items-center px-3 py-2"
                                                         >
                                                             <Form.Check
                                                                 type="checkbox"
-                                                                id={`screen-${s.id}`}
-                                                                checked={selectedScreens.includes(s.id)}
-                                                                onChange={() => toggleScreen(s.id)}
+                                                                id="screen-all"
+                                                                checked={selectedScreens.length === allScreens.length}
+                                                                onChange={() => {
+                                                                    if (selectedScreens.length === allScreens.length) {
+                                                                        selectedScreens.forEach(id => toggleScreen(id))
+                                                                    } else {
+                                                                        allScreens.forEach(s => {
+                                                                            if (!selectedScreens.includes(s.id)) toggleScreen(s.id)
+                                                                        })
+                                                                    }
+                                                                }}
                                                                 className="me-2 mb-0"
                                                             />
-                                                            <span>{s.name}</span>
+                                                            <span>Выбрать всё</span>
                                                         </Dropdown.Item>
-                                                    ))}
-                                                </Dropdown.Menu>
-                                            </Dropdown>
+                                                        {allScreens.map(s => (
+                                                            <Dropdown.Item
+                                                                as="label"
+                                                                htmlFor={`screen-${s.id}`}
+                                                                key={s.id}
+                                                                className="d-flex align-items-center px-3 py-2"
+                                                            >
+                                                                <Form.Check
+                                                                    type="checkbox"
+                                                                    id={`screen-${s.id}`}
+                                                                    checked={selectedScreens.includes(s.id)}
+                                                                    onChange={() => toggleScreen(s.id)}
+                                                                    className="me-2 mb-0"
+                                                                />
+                                                                <span>{s.name}</span>
+                                                            </Dropdown.Item>
+                                                        ))}
+                                                    </Dropdown.Menu>
+                                                </Dropdown>
+
+
+                                                <Dropdown>
+                                                    <Dropdown.Toggle style={{paddingLeft: 40, paddingRight: 40}}>
+                                                        {selectedGroup
+                                                            ? groups.find(g => g.id === selectedGroup)?.name
+                                                            : 'Группа экранов'}
+                                                    </Dropdown.Toggle>
+                                                    <Dropdown.Menu style={{minWidth: 200}}>
+                                                        <Dropdown.Item onClick={() => setSelectedGroup(null)}>
+                                                            — не использовать группу —
+                                                        </Dropdown.Item>
+                                                        <Dropdown.Divider/>
+                                                        {groups.map(g => (
+                                                            <Dropdown.Item
+                                                                key={g.id}
+                                                                onClick={() => setSelectedGroup(g.id)}
+                                                            >
+                                                                {g.name}
+                                                            </Dropdown.Item>
+                                                        ))}
+                                                    </Dropdown.Menu>
+                                                </Dropdown>
+                                            </div>
                                         )}
                                     </Col>
 
 
-                                    <Col xs="auto">
+                                    <div className="d-grid">
                                         <Button
                                             variant="success"
                                             onClick={handleAdd}
-                                            style={{paddingLeft: 40, paddingRight: 40}}
-                                            disabled={selectedScreens.length === 0 || !selectedPlaylist}
+                                            disabled={(selectedScreens.length === 0 && !selectedGroup) || !selectedPlaylist}
+                                            className="w-100"
                                         >
                                             Добавить
                                         </Button>
-                                    </Col>
+                                    </div>
                                 </div>
                             </Card.Body>
                         </Card>

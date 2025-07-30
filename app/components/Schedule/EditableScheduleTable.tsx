@@ -27,6 +27,7 @@ export default function EditableScheduleTable() {
         removeBlock,
         selectedScreens,
         addEditedBlock,
+        selectedGroup,
         showMode
     } = useScheduleStore()
 
@@ -34,37 +35,42 @@ export default function EditableScheduleTable() {
     const {allScreens} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
 
+    const screensToShow = selectedGroup
+        ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
+        : selectedScreens
+
     const times = generateTimeSlots('00:00', '23:30', 30)
     const step = 30
 
     const allMeta: Meta[] = []
 
-    for (const screenId of selectedScreens) {
-        const blocks = isFixedSchedule
-            ? scheduledFixedMap[screenId] ?? []
-            : (scheduledCalendarMap[screenId] ?? []).filter(b =>
-                currentWeek.map(d => d.toISOString().slice(0, 10)).includes(b.startDate!)
-            )
+    screensToShow.forEach(screenId => {
+            const blocks = isFixedSchedule
+                ? scheduledFixedMap[screenId] ?? []
+                : (scheduledCalendarMap[screenId] ?? []).filter(b =>
+                    currentWeek.map(d => d.toISOString().slice(0, 10)).includes(b.startDate!)
+                )
 
-        for (const b of blocks) {
-            const dayIndex = isFixedSchedule
-                ? WEEK_DAYS.indexOf(b.dayOfWeek)
-                : currentWeek.findIndex(d => d.toISOString().slice(0, 10) === b.startDate)
+            for (const b of blocks) {
+                const dayIndex = isFixedSchedule
+                    ? WEEK_DAYS.indexOf(b.dayOfWeek)
+                    : currentWeek.findIndex(d => d.toISOString().slice(0, 10) === b.startDate)
 
-            const [h0, m0] = b.startTime.split(':').map(Number)
-            const [h1, m1] = b.endTime.split(':').map(Number)
-            const startMin = h0 * 60 + m0
-            const endMin = h1 * 60 + m1
+                const [h0, m0] = b.startTime.split(':').map(Number)
+                const [h1, m1] = b.endTime.split(':').map(Number)
+                const startMin = h0 * 60 + m0
+                const endMin = h1 * 60 + m1
 
-            allMeta.push({
-                screenId,
-                block: b,
-                dayIndex,
-                startRow: startMin / step,
-                endRow: endMin / step,
-            })
+                allMeta.push({
+                    screenId,
+                    block: b,
+                    dayIndex,
+                    startRow: startMin / step,
+                    endRow: endMin / step,
+                })
+            }
         }
-    }
+    )
     // для позиционирования
     const tableRef = useRef<HTMLTableElement>(null)
     const [headerH, setHeaderH] = useState(0)

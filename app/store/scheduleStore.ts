@@ -31,7 +31,7 @@ interface ScheduleState {
 
     scheduledFixedMap: ByScreen<ScheduledBlock>
     scheduledCalendarMap: ByScreen<ScheduledBlock>
-    addBlock: () => void
+    addBlock: (overrideScreens?: string[]) => void
     removeBlock: (screenId: string, b: ScheduledBlock) => void
 
     startDate: string | null
@@ -41,6 +41,8 @@ interface ScheduleState {
     setPriority: (p: number) => void
 
     selectedScreens: string[]
+    selectedGroup: string | null
+    setSelectedGroup: (groupId: string | null) => void
     toggleScreen: (screenId: string) => void
 
     selectedPlaylist: string
@@ -186,10 +188,16 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             }),
 
             selectedScreens: [],
-            toggleScreen: id => set(s => {
+            selectedGroup: null,
+
+            toggleScreen: (id) => set(s => {
                 const idx = s.selectedScreens.indexOf(id)
                 if (idx >= 0) s.selectedScreens.splice(idx, 1)
                 else s.selectedScreens.push(id)
+            }),
+
+            setSelectedGroup: (groupId) => set(s => {
+                s.selectedGroup = groupId
             }),
 
             selectedPlaylist: '',
@@ -206,7 +214,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 else s.selectedDays.push(day)
             }),
 
-            addBlock: () => {
+            addBlock: (overrideScreens) => {
                 const playlistItems = usePlaylistStore.getState().playlistItems
 
                 const {
@@ -227,7 +235,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     advertisementShowMode
                 } = get()
 
-                if (!selectedScreens.length || !selectedDays.length) return;
+                const screens = overrideScreens ?? get().selectedScreens;
+
 
                 const playlist = playlistItems.find(p => p.id === selectedPlaylist);
                 if (!playlist) {
@@ -329,17 +338,29 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     }
                 }
 
-                selectedScreens.forEach(screenId => {
-                    const mapKey = isFixedSchedule
-                        ? 'scheduledFixedMap'
-                        : 'scheduledCalendarMap'
+                for (const screenId of screens) {
+                    const mapKey = get().isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
                     set(s => {
                         if (!s[mapKey][screenId]) s[mapKey][screenId] = []
                         s[mapKey][screenId].push(...newBlocks)
                     })
-                })
+                }
 
-                setSuccess(`Добавлено ${newBlocks.length} ${typeMode === 'ADVERTISEMENT' ? 'рекламных слотов' : 'слотов'}`)
+                setSuccess(`Добавлено ${newBlocks.length} ${typeMode === 'ADVERTISEMENT' ? 'рекламных' : 'обычных'} слотов`);
+
+                // setSuccess(`Добавлено ${newBlocks.length} …`);
+
+                // selectedScreens.forEach(screenId => {
+                //     const mapKey = isFixedSchedule
+                //         ? 'scheduledFixedMap'
+                //         : 'scheduledCalendarMap'
+                //     set(s => {
+                //         if (!s[mapKey][screenId]) s[mapKey][screenId] = []
+                //         s[mapKey][screenId].push(...newBlocks)
+                //     })
+                // })
+                //
+
             },
 
 
