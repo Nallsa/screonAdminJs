@@ -56,4 +56,5 @@ export interface ScheduledBlock {
     priority: number,
     type: TypeMode,
     isRecurring: boolean,
+    screenId: string,
 }

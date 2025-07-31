@@ -393,7 +393,9 @@ export default function EditableScheduleTable() {
                             transform: isHovered
                                 ? 'translateY(-4px)'
                                 : undefined,
-                            transition: 'all .1s ease-in-out',
+                            // transitionProperty: 'width',
+                            // transitionDuration: '.1s',
+                            // transitionTimingFunction: 'ease-in-out',
                         }}
                         onMouseEnter={() => setHoveredBlock(m.block)}
                         onMouseLeave={() => setHoveredBlock(null)}
@@ -417,27 +419,6 @@ export default function EditableScheduleTable() {
                             }
                         </div>
 
-                        {/*            <div*/}
-                        {/*                style={{*/}
-                        {/*                    flexGrow: 1,*/}
-                        {/*                    width: '100%',*/}
-                        {/*                    display: 'flex',*/}
-                        {/*                    alignItems: 'center',*/}
-                        {/*                    justifyContent: 'center',*/}
-                        {/*                    overflow: 'hidden',*/}
-                        {/*                }}*/}
-                        {/*            >*/}
-                        {/*<span*/}
-                        {/*    style={{*/}
-                        {/*        overflow: 'hidden',*/}
-                        {/*        whiteSpace: 'nowrap',*/}
-                        {/*        textOverflow: 'ellipsis',*/}
-                        {/*        maxWidth: '100%',*/}
-                        {/*    }}*/}
-                        {/*>*/}
-                        {/*    {playlistName}*/}
-                        {/*</span>*/}
-                        {/*            </div>*/}
 
                         {hoveredBlock === m.block && (
                             <span
