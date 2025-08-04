@@ -9,42 +9,37 @@ import axios from "axios";
 import {PlaylistItem} from "@/public/types/interfaces";
 import {addValueInStorage, getValueInStorage} from "@/app/API/localStorage";
 import {Col, Row} from "react-bootstrap";
+import {useSettingsStore} from "@/app/store/settingsStore";
+import {WarningModal} from "@/app/components/Common/WarningModal";
 
 export default function CreateOrgPage() {
     const [orgName, setOrgName] = useState('');
     const router = useRouter()
+    const {
+        setOrganizationId,
+        createOrganization,
+        errorMessage,
+        successMessage,
+        setError,
+        setSuccess
+    } = useSettingsStore()
 
     const handleSave = async () => {
-        console.log('Сохраняем организацию:', orgName);
-        // здесь можешь добавить вызов API или редирект
-        const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
-        const accessToken = getValueInStorage("accessToken");
-        const userId = getValueInStorage("userId");
-        console.log('accessToken', accessToken);
-
-
-        const response = await axios.post(
-            `${SERVER_URL}organizations`,
-            {name: orgName, creatorUserId: userId},
-            {headers: {Authorization: `Bearer ${accessToken}`}}
-        );
-
-        const result: any = response.data
-
-
-        if (response.status === 200) {
-
-            console.log("result", result);
-
-            addValueInStorage('organizationId', result.id)
-
-
-            router.push("/screens")
+        if (!orgName.trim()) {
+            setError('Название не может быть пустым')
+            return
         }
 
+        const orgId = await createOrganization(orgName.trim())
 
-        console.log(result)
-    };
+        if (orgId) {
+            router.push('/screens')
+        }
+    }
+    const handleModalClose = () => {
+        setSuccess(null)
+        router.push('/screens')
+    }
 
     return (
         <Container fluid className="d-flex justify-content-center" style={{marginTop: '10vh'}}>
@@ -71,6 +66,16 @@ export default function CreateOrgPage() {
                     </Form>
                 </Col>
             </Row>
+
+            {/*{successMessage && (*/}
+            {/*    <WarningModal*/}
+            {/*        show={!!successMessage}*/}
+            {/*        title="Готово"*/}
+            {/*        message={successMessage || ''}*/}
+            {/*        buttonText="Ок"*/}
+            {/*        onClose={handleModalClose}*/}
+            {/*    />*/}
+            {/*)}*/}
         </Container>
     );
 
