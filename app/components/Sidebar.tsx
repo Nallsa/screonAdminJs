@@ -3,6 +3,7 @@ import Link from "next/link";
 import {usePathname} from 'next/navigation';
 import {getValueInStorage} from "@/app/API/localStorage";
 import {FaBars} from "react-icons/fa";
+import {useSettingsStore} from "@/app/store/settingsStore";
 
 interface Props {
     collapsed: boolean
@@ -21,7 +22,7 @@ const navItems = [
 ];
 export default function Sidebar({collapsed, onToggle}: Props) {
     const pathname = usePathname();
-    const organizationId = getValueInStorage('organizationId')
+    const organizationId = useSettingsStore(state => state.organizationId)
 
     if (pathname.startsWith('/auth')) {
         return null
@@ -80,11 +81,10 @@ export default function Sidebar({collapsed, onToggle}: Props) {
             </div>
 
             {navItems.map(({href, label, icon}) => {
-                if (label === "Создание Организации") {
-                    if (organizationId) {
-                        return
-                    }
+                if (label === "Создание Организации" && organizationId) {
+                    return null
                 }
+
                 const active = pathname === href;
 
                 return (

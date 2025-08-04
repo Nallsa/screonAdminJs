@@ -12,69 +12,42 @@ export default function OrgCheckModal() {
     const router = useRouter()
 
     const {
+        hasOrg,
         errorMessage,
+        successMessage,
+        checkOrg,
         joinOrganizationByCode,
+        createOrganization,
         setError,
+        setSuccess,
     } = useSettingsStore()
 
 
     const [mode, setMode] = useState<'initial' | 'enterCode'>('initial')
-    const [show, setShow] = useState(false)
     const [referralCode, setReferralCode] = useState('')
+    const [orgName, setOrgName] = useState('')
 
     useEffect(() => {
-        async function checkOrg() {
-            if (pathname === '/createOrg') {
-                setShow(false)
-                return
-            }
-
-            const storedOrgId = localStorage.getItem('organizationId')?.trim()
-            if (storedOrgId) {
-                setShow(false)
-                return
-            }
-
-            const userId = localStorage.getItem('userId')?.trim()
-            if (!userId) {
-                setShow(true)
-                return
-            }
-
-            const accessToken = localStorage.getItem('accessToken')
-
-            try {
-                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-                const res = await axios.get(
-                    `${SERVER}organizations/organization`,
-                    {headers: {Authorization: `Bearer ${accessToken}`}}
-                )
-
-                console.log("Полученная организация", res.data)
-
-                if (res.status === 200 && res.data?.id) {
-                    localStorage.setItem('organizationId', res.data.id)
-                    setShow(false)
-                    return
-                }
-            } catch (e) {
-                console.error('Ошибка при получении организации:', e)
-            }
-
-            setShow(true)
-        }
-
+        if (pathname === '/createOrg') return
         checkOrg()
-    }, [pathname])
+    }, [pathname, checkOrg])
 
 
-    const handleCreateOrg = () => {
-        setShow(false)
-        router.push('/createOrg')
-    }
+    useEffect(() => {
+        if (hasOrg) {
+            router.replace('/playlists')
+            setSuccess(null)
+        }
+    }, [hasOrg, router, setSuccess])
 
-    const handleEnterCodeClick = () => {
-        setMode('enterCode')
+    const show = !hasOrg && pathname !== '/createOrg'
+
+    const handleCreateOrg = async () => {
+        if (!orgName.trim()) {
+            setError('Название организации не может быть пустым')
+            return
+        }
+        await createOrganization(orgName.trim())
     }
 
     const handleJoin = async () => {
@@ -95,7 +68,7 @@ export default function OrgCheckModal() {
                 className="modal show d-block"
                 tabIndex={-1}
                 style={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: 'rgba(0,0,0,0.5)',
                     position: 'fixed',
                     top: 0,
                     left: 0,
@@ -111,26 +84,29 @@ export default function OrgCheckModal() {
                     <div className="modal-content text-center border-0 p-4">
                         {mode === 'initial' && (
                             <>
-                                <h5 className="modal-title mb-3">Создание организации</h5>
-                                <p className="mb-4">Для начала создадим организацию</p>
-                                <div className="d-flex gap-2 flex-column justify-content-center">
-                                    <button type="button" className="btn btn-primary" onClick={handleCreateOrg}>
+                                <h5 className="modal-title mb-1">Создание организации</h5>
+                                <p className="">Создайте организацию или вступите по коду</p>
+                                <div className="mb-3">
+                                    <input
+                                        type="text"
+                                        className="form-control my-3"
+                                        placeholder="Название организации"
+                                        value={orgName}
+                                        onChange={(e) => setOrgName(e.target.value)}
+                                    />
+                                    <button className="btn btn-primary w-100 mb-2" onClick={handleCreateOrg}>
                                         Создать организацию
                                     </button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-secondary"
-                                        onClick={handleEnterCodeClick}
-                                    >
+                                    <button className="btn btn-outline-secondary w-100"
+                                            onClick={() => setMode('enterCode')}>
                                         Ввести код организации
                                     </button>
                                 </div>
                             </>
                         )}
-
                         {mode === 'enterCode' && (
                             <>
-                                <h5 className="modal-title mb-3">Введите код для присоединения к организации</h5>
+                                <h5 className="modal-title mb-3">Введите код приглашения</h5>
                                 <div className="d-flex flex-column align-items-center gap-3">
                                     <input
                                         type="text"
@@ -138,22 +114,20 @@ export default function OrgCheckModal() {
                                         placeholder="Код приглашения"
                                         style={{maxWidth: 200}}
                                         value={referralCode}
-                                        onChange={(e) =>
-                                            setReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
-                                        }
+                                        onChange={(e) => setReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                                     />
-                                    <div className="d-flex gap-2 ">
-                                        <button
-                                            type="button"
-                                            className="btn btn-primary px-4"
-                                            onClick={handleJoin}
-                                            disabled={!referralCode.trim()}
-                                        >
+                                    <div className="d-flex gap-2">
+                                        <button className="btn btn-primary px-4" onClick={handleJoin}
+                                                disabled={!referralCode.trim()}>
                                             Вступить
                                         </button>
                                         <button
-                                            type="button" className="btn btn-secondary px-4"
-                                            onClick={() => setMode('initial')}>
+                                            className="btn btn-secondary px-4"
+                                            onClick={() => {
+                                                setMode('initial')
+                                                setReferralCode('')
+                                            }}
+                                        >
                                             Назад
                                         </button>
                                     </div>
@@ -165,15 +139,7 @@ export default function OrgCheckModal() {
             </div>
 
             <ErrorModal show={!!errorMessage} message={errorMessage || ''} onClose={() => setError(null)}/>
-            {/*{successMessage && (*/}
-            {/*    <WarningModal*/}
-            {/*        show={!!successMessage}*/}
-            {/*        title="Готово"*/}
-            {/*        message={successMessage || ''}*/}
-            {/*        buttonText="Ок"*/}
-            {/*        onClose={() => setSuccess(null)}*/}
-            {/*    />*/}
-            {/*)}*/}
+
         </>
     )
 }
