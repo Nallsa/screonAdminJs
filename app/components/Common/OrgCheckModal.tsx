@@ -6,6 +6,7 @@ import ErrorModal from '@/app/components/Common/ErrorModal'
 import {useSettingsStore} from '@/app/store/settingsStore'
 import {WarningModal} from "@/app/components/Common/WarningModal";
 import axios from "axios";
+import {useAuthStore} from "@/app/store/authStore";
 
 export default function OrgCheckModal() {
     const pathname = usePathname()
@@ -21,6 +22,7 @@ export default function OrgCheckModal() {
         setError,
         setSuccess,
     } = useSettingsStore()
+    const {checkToken} = useAuthStore()
 
 
     const [mode, setMode] = useState<'initial' | 'enterCode'>('initial')
@@ -40,20 +42,31 @@ export default function OrgCheckModal() {
             setError('Название организации не может быть пустым')
             return
         }
-        await createOrganization(orgName.trim())
+        const orgId = await createOrganization(orgName.trim())
+        if (orgId) {
+            // после создания — обновляем токен
+            const refreshed = await checkToken()
+            console.log('после создания вернул:', refreshed)
+            console.log('новый accessToken:', localStorage.getItem('accessToken'))
+            router.push('/screens')
+        }
     }
 
     const handleJoin = async () => {
         if (!referralCode.trim()) {
-            setError('Введите код организации');
-            return;
+            setError('Введите код организации')
+            return
         }
         const ok = await joinOrganizationByCode(referralCode.trim())
         if (ok) {
+            // после вступления — обновляем токен
+            const refreshed = await checkToken()
+            console.log('после присоединения вернул:', refreshed)
+            console.log('новый accessToken:', localStorage.getItem('accessToken'))
             router.replace('/playlists')
             setSuccess(null)
         }
-    };
+    }
 
 
     if (!show) return null
