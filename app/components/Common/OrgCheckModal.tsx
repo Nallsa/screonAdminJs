@@ -44,7 +44,6 @@ export default function OrgCheckModal() {
         }
         const orgId = await createOrganization(orgName.trim())
         if (orgId) {
-            // после создания — обновляем токен
             const refreshed = await checkToken()
             console.log('после создания вернул:', refreshed)
             console.log('новый accessToken:', localStorage.getItem('accessToken'))
@@ -59,7 +58,6 @@ export default function OrgCheckModal() {
         }
         const ok = await joinOrganizationByCode(referralCode.trim())
         if (ok) {
-            // после вступления — обновляем токен
             const refreshed = await checkToken()
             console.log('после присоединения вернул:', refreshed)
             console.log('новый accessToken:', localStorage.getItem('accessToken'))
