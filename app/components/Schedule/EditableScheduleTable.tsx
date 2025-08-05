@@ -274,15 +274,19 @@ export default function EditableScheduleTable() {
     // сохранить изменения таймслота
     const onSave = () => {
         if (!validateAndSetError()) return
+
         removeBlock(editingMeta!.screenId, editingMeta!.block)
         editScreens.forEach(screenId =>
             addEditedBlock(screenId, {
                 ...editingMeta!.block,
+                // ПЕРЕОПРЕДЕЛЯЕМ type И isRecurring
+                type: editTypeMode,
+                isRecurring: editTypeMode === 'PLAYLIST' && editShowMode === 'cycle',
+
                 startTime: editStart + ':00',
                 endTime: editEnd + ':00',
                 playlistId: editPlaylist,
                 priority: editPriority,
-                isRecurring: editTypeMode === 'PLAYLIST' && editShowMode === 'cycle'
             })
         )
         setEditingMeta(null)

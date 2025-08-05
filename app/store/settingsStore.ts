@@ -203,46 +203,45 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         }
     },
 
-    joinOrganizationByCode: async (referralCode: string) => {
-        const {userId, accessToken} = get()
+    joinOrganizationByCode: async (referralCode: string): Promise<boolean> => {
+        const {userId, accessToken} = get();
         if (!userId || !accessToken) {
-            set({errorMessage: 'Нет userId или accessToken.'})
-            return
+            set({errorMessage: 'Нет userId или accessToken.'});
+            return false;
         }
 
-        set({errorMessage: null, successMessage: null})
+        // Сбрасываем предыдущие сообщения
+        set({errorMessage: null, successMessage: null});
 
         try {
-            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL!;
             const res = await axios.post(
                 `${SERVER}organizations/join`,
-                {
-                    referralCode,
-                    userId,
-                },
-                {
-                    headers: {Authorization: `Bearer ${accessToken}`},
-                }
-            )
+                {referralCode, userId},
+                {headers: {Authorization: `Bearer ${accessToken}`}}
+            );
 
             if (res.status === 200) {
-                if (typeof window !== 'undefined') localStorage.setItem('organizationId', res.data.id)
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('organizationId', res.data.id);
+                }
                 set({
                     organizationId: res.data.id,
                     hasOrg: true,
                     successMessage: 'Успешно вступили в организацию.',
-                })
+                });
+                return true;
             } else {
-                set({errorMessage: 'Неожиданный ответ от сервера при вступлении в организацию.'})
+                set({errorMessage: 'Неожиданный ответ от сервера при вступлении в организацию.'});
+                return false;
             }
         } catch (e: any) {
-            console.error('Ошибка вступления по коду:', e)
-            if (e.response?.data?.message) {
-                set({errorMessage: e.response.data.message})
-            } else {
-                set({errorMessage: e.message || 'Ошибка при вступлении.'})
-            }
+            console.error('Ошибка вступления по коду:', e);
+            const msg = e.response?.data?.message ?? e.message ?? 'Ошибка при вступлении.';
+            set({errorMessage: msg});
+            return false;
         }
     },
+
 
 }))

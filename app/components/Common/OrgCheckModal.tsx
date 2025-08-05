@@ -33,13 +33,6 @@ export default function OrgCheckModal() {
     }, [pathname, checkOrg])
 
 
-    useEffect(() => {
-        if (hasOrg) {
-            router.replace('/playlists')
-            setSuccess(null)
-        }
-    }, [hasOrg, router, setSuccess])
-
     const show = !hasOrg && pathname !== '/createOrg'
 
     const handleCreateOrg = async () => {
@@ -52,11 +45,16 @@ export default function OrgCheckModal() {
 
     const handleJoin = async () => {
         if (!referralCode.trim()) {
-            setError('Введите код организации')
-            return
+            setError('Введите код организации');
+            return;
         }
-        await joinOrganizationByCode(referralCode.trim())
-    }
+        const ok = await joinOrganizationByCode(referralCode.trim());
+        if (ok) {
+            router.replace('/playlists');
+            setSuccess(null);
+        }
+    };
+
 
     if (!show) return null
 
