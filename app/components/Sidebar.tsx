@@ -2,8 +2,9 @@
 import Link from "next/link";
 import {usePathname} from 'next/navigation';
 import {getValueInStorage} from "@/app/API/localStorage";
-import {FaBars} from "react-icons/fa";
+// import {FaBars} from "react-icons/fa";
 import {useSettingsStore} from "@/app/store/settingsStore";
+import {FaBars} from "react-icons/fa";
 
 interface Props {
     collapsed: boolean
