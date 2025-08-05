@@ -25,7 +25,7 @@ interface SettingsState {
     clearInviteCode: () => void
 
     checkOrg: () => Promise<void>
-    joinOrganizationByCode: (referralCode: string) => Promise<void>
+    joinOrganizationByCode: (referralCode: string) => Promise<boolean>
 
     setError: (msg: string | null) => void
     setSuccess: (msg: string | null) => void
@@ -204,42 +204,38 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     },
 
     joinOrganizationByCode: async (referralCode: string): Promise<boolean> => {
-        const {userId, accessToken} = get();
+        const {userId, accessToken} = get()
         if (!userId || !accessToken) {
-            set({errorMessage: 'Нет userId или accessToken.'});
-            return false;
+            set({errorMessage: 'Нет userId или accessToken.'})
+            return false
         }
 
-        // Сбрасываем предыдущие сообщения
-        set({errorMessage: null, successMessage: null});
+        set({errorMessage: null, successMessage: null})
 
         try {
-            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL!;
+            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL!
             const res = await axios.post(
                 `${SERVER}organizations/join`,
                 {referralCode, userId},
                 {headers: {Authorization: `Bearer ${accessToken}`}}
-            );
+            )
 
             if (res.status === 200) {
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem('organizationId', res.data.id);
-                }
+                localStorage.setItem('organizationId', res.data.id)
                 set({
                     organizationId: res.data.id,
                     hasOrg: true,
                     successMessage: 'Успешно вступили в организацию.',
-                });
-                return true;
+                })
+                return true
             } else {
-                set({errorMessage: 'Неожиданный ответ от сервера при вступлении в организацию.'});
-                return false;
+                set({errorMessage: 'Неожиданный ответ от сервера при вступлении в организацию.'})
+                return false
             }
         } catch (e: any) {
-            console.error('Ошибка вступления по коду:', e);
-            const msg = e.response?.data?.message ?? e.message ?? 'Ошибка при вступлении.';
-            set({errorMessage: msg});
-            return false;
+            const msg = e.response?.data?.message ?? e.message ?? 'Ошибка при вступлении.'
+            set({errorMessage: msg})
+            return false
         }
     },
 

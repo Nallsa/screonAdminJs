@@ -48,10 +48,10 @@ export default function OrgCheckModal() {
             setError('Введите код организации');
             return;
         }
-        const ok = await joinOrganizationByCode(referralCode.trim());
+        const ok = await joinOrganizationByCode(referralCode.trim())
         if (ok) {
-            router.replace('/playlists');
-            setSuccess(null);
+            router.replace('/playlists')
+            setSuccess(null)
         }
     };
 
