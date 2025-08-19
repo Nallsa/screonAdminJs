@@ -58,12 +58,12 @@ export function connectWebSocket(channel: 'pairing' | 'schedule', onMessage: (ac
     };
 
     ws.onerror = err => {
-        alert(`WebSocket [${channel}] error: ${err?.toString()}`)
+        // alert(`WebSocket [${channel}] error: ${err?.toString()}`)
     }
 
     ws.onclose = ev => {
         console.warn(`[WS ${channel}] closed`, ev);
-        alert(`WebSocket [${channel}] closed (code=${ev.code})`);
+        // alert(`WebSocket [${channel}] closed (code=${ev.code})`);
         clearInterval(heartbeatHandle);
         scheduleReconnect(channel, onMessage);
     };

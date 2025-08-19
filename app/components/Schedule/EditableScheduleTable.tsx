@@ -331,16 +331,27 @@ export default function EditableScheduleTable() {
             {/* Блоки поверх таблицы */}
             {allMeta.map((m, i) => {
                 // находим все пересекающиеся с этим блоки
-                const group = allMeta.filter(x =>
+                const prioOf = (b: ScheduledBlock) =>
+                    b.type === 'ADVERTISEMENT' ? 100 : (b.priority ?? 1)
+
+// все слоты того же экрана и дня, которые реально пересекаются по времени с m
+                const overlapped = allMeta.filter(x =>
+                    x.screenId === m.screenId &&
                     x.dayIndex === m.dayIndex &&
                     x.startRow < m.endRow &&
                     m.startRow < x.endRow
                 )
-                const idx = group.findIndex(x => x.screenId === m.screenId && x.block === m.block)
-                const size = group.length
 
-                const left = (1 + m.dayIndex + idx / size) * colWidth
-                const width = colWidth / size
+// уникальные приоритеты среди пересекающихся
+                const uniqPriorities = Array.from(
+                    new Set(overlapped.map(x => prioOf(x.block)))
+                ).sort((a, b) => a - b) // чтобы порядок был стабильным
+
+                const idx = uniqPriorities.indexOf(prioOf(m.block))
+                const cols = Math.max(uniqPriorities.length, 1)
+
+                const left = (1 + m.dayIndex + idx / cols) * colWidth
+                const width = colWidth / cols
                 const top = headerH + m.startRow * slotH
                 const height = (m.endRow - m.startRow) * slotH
 
