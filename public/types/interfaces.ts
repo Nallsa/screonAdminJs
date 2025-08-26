@@ -1,5 +1,4 @@
 import type {UniqueIdentifier} from "@dnd-kit/core";
-import {TypeMode} from "@/app/store/scheduleStore";
 
 export interface PlaylistItem {
     id: string
@@ -45,6 +44,9 @@ export interface GroupData {
     id: string
     name: string
 }
+
+export type TypeMode = 'PLAYLIST' | 'ADVERTISEMENT' | 'EMERGENCY';
+
 
 export interface ScheduledBlock {
     dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'

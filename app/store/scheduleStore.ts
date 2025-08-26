@@ -7,7 +7,7 @@ import {
     parseDayToDate,
     normalizeTime, RU_DAYS, WEEK_DAYS
 } from '@/app/lib/scheduleUtils'
-import {PlaylistItem, ScheduledBlock, ScreenData} from "@/public/types/interfaces";
+import {PlaylistItem, ScheduledBlock, ScreenData, TypeMode} from "@/public/types/interfaces";
 import axios from "axios";
 import {SERVER_URL} from "@/app/API/api";
 import {getValueInStorage} from "@/app/API/localStorage";
@@ -17,7 +17,6 @@ import {usePlaylistStore} from "@/app/store/playlistStore";
 
 // типы
 export type ShowMode = 'once' | 'cycle'
-export type TypeMode = 'PLAYLIST' | 'ADVERTISEMENT'
 export type AdShowMode = 'minutes' | 'hours' | 'specific'
 
 type ByScreen<T> = Record<string, T[]>

@@ -1,9 +1,9 @@
 'use client'
 import React, {useEffect, useLayoutEffect, useRef, useState} from 'react'
 import type {ShowMode} from '@/app/store/scheduleStore'
-import {TypeMode, useScheduleStore} from '@/app/store/scheduleStore'
+import {useScheduleStore} from '@/app/store/scheduleStore'
 import {generateTimeSlots, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
-import {ScheduledBlock} from "@/public/types/interfaces";
+import {ScheduledBlock, TypeMode} from "@/public/types/interfaces";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScreensStore} from "@/app/store/screensStore";
 import {Button, Form, Modal} from "react-bootstrap";

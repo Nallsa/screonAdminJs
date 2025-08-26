@@ -1,7 +1,7 @@
 'use client'
 import React, {useEffect} from 'react'
 import ScheduleHeader from '@/app/components/Schedule/ScheduleHeader'
-import ScheduleSettingsPanel from '@/app/components/Schedule/ScheduleSettingsPanel'
+import ScheduleSettingsPanel from '@/app/components/Schedule/Settings/ScheduleSettingsPanel'
 import EditableScheduleTable from '@/app/components/Schedule/EditableScheduleTable'
 import {useAuthStore} from "@/app/store/authStore";
 import {connectWebSocket} from "@/app/API/ws";
