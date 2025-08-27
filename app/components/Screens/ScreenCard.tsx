@@ -337,7 +337,6 @@ export default function ScreenCard({
                     )}
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowStatusModal(false)}>Закрыть</Button>
                     <Button
                         variant="primary"
                         onClick={() => {
