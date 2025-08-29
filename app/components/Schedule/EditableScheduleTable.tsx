@@ -1,5 +1,5 @@
 'use client'
-import React, {useEffect, useLayoutEffect, useRef, useState} from 'react'
+import React, {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import type {ShowMode} from '@/app/store/scheduleStore'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import {generateTimeSlots, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
@@ -35,42 +35,91 @@ export default function EditableScheduleTable() {
     const {allScreens} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
 
-    const screensToShow = selectedGroup
-        ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
-        : selectedScreens
-
     const times = generateTimeSlots('00:00', '23:30', 30)
-    const step = 30
 
-    const allMeta: Meta[] = []
+    const allMeta: Meta[] = useMemo(() => {
+        const stepLocal = 30; // локальная константа, не конфликтует
+        const list: Meta[] = [];
 
-    screensToShow.forEach(screenId => {
+        const weekDates = currentWeek.map(d => d.toISOString().slice(0, 10));
+        const screens = selectedGroup
+            ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
+            : selectedScreens;
+
+        for (const screenId of screens) {
             const blocks = isFixedSchedule
-                ? scheduledFixedMap[screenId] ?? []
-                : (scheduledCalendarMap[screenId] ?? []).filter(b =>
-                    currentWeek.map(d => d.toISOString().slice(0, 10)).includes(b.startDate!)
-                )
+                ? (scheduledFixedMap[screenId] ?? [])
+                : (scheduledCalendarMap[screenId] ?? []).filter(b => weekDates.includes(b.startDate!));
 
             for (const b of blocks) {
                 const dayIndex = isFixedSchedule
                     ? WEEK_DAYS.indexOf(b.dayOfWeek)
-                    : currentWeek.findIndex(d => d.toISOString().slice(0, 10) === b.startDate)
+                    : currentWeek.findIndex(d => d.toISOString().slice(0, 10) === b.startDate);
 
-                const [h0, m0] = b.startTime.split(':').map(Number)
-                const [h1, m1] = b.endTime.split(':').map(Number)
-                const startMin = h0 * 60 + m0
-                const endMin = h1 * 60 + m1
+                if (dayIndex < 0) continue;
 
-                allMeta.push({
+                const [h0, m0] = b.startTime.split(':').map(Number);
+                const [h1, m1] = b.endTime.split(':').map(Number);
+                const startMin = h0 * 60 + m0;
+                const endMin = h1 * 60 + m1;
+
+                list.push({
                     screenId,
                     block: b,
                     dayIndex,
-                    startRow: startMin / step,
-                    endRow: endMin / step,
-                })
+                    startRow: startMin / stepLocal,
+                    endRow: endMin / stepLocal,
+                });
             }
         }
-    )
+        return list;
+    }, [
+        currentWeek,
+        isFixedSchedule,
+        scheduledFixedMap,
+        scheduledCalendarMap,
+        selectedScreens,
+        selectedGroup,
+        allScreens,
+    ]);
+
+// 3) metasWithIdx и всё ниже оставь:
+    const metasWithIdx = useMemo(
+        () => allMeta.map((m, i) => ({...m, _i: i})),
+        [allMeta]
+    );
+
+    const metasByDay = useMemo(() => {
+        const map = new Map<number, Array<Meta & { _i: number }>>();
+        for (const m of metasWithIdx) {
+            if (m.dayIndex < 0) continue;
+            if (!map.has(m.dayIndex)) map.set(m.dayIndex, []);
+            map.get(m.dayIndex)!.push(m);
+        }
+        return map;
+    }, [metasWithIdx]);
+
+// считаем колонки и делители ширины для каждого дня
+    const layout = useMemo(() => {
+        const colByIndex = new Map<number, number>();
+        const colsByIndex = new Map<number, number>();
+
+        metasByDay.forEach((arr /*, day */) => {
+            const colsMap = assignColumnsForDay(arr);
+            const widthsMap = computeColsForDay(arr, colsMap);
+
+            colsMap.forEach((v, k) => {
+                colByIndex.set(k, v);
+            });
+            widthsMap.forEach((v, k) => {
+                colsByIndex.set(k, v);
+            });
+        });
+
+        return {colByIndex, colsByIndex};
+    }, [metasByDay]);
+
+
     // для позиционирования
     const tableRef = useRef<HTMLTableElement>(null)
     const [headerH, setHeaderH] = useState(0)
@@ -329,56 +378,32 @@ export default function EditableScheduleTable() {
             </table>
 
             {/* Блоки поверх таблицы */}
-            {allMeta.map((m, i) => {
-                // находим все пересекающиеся с этим блоки
-                const prioOf = (b: ScheduledBlock) =>
-                    b.type === 'ADVERTISEMENT' ? 100 : (b.priority ?? 1)
+            {metasWithIdx.map((m) => {
+                // индекс колонки и число колонок для этого блока
+                const idx = layout.colByIndex.get(m._i) ?? 0;
+                const cols = layout.colsByIndex.get(m._i) ?? 1;
 
-// все слоты того же экрана и дня, которые реально пересекаются по времени с m
-                const overlapped = allMeta.filter(x =>
-                    x.screenId === m.screenId &&
-                    x.dayIndex === m.dayIndex &&
-                    x.startRow < m.endRow &&
-                    m.startRow < x.endRow
-                )
+                const left = (1 + m.dayIndex + idx / cols) * colWidth;
+                const width = colWidth / cols;
 
-// уникальные приоритеты среди пересекающихся
-                const uniqPriorities = Array.from(
-                    new Set(overlapped.map(x => prioOf(x.block)))
-                ).sort((a, b) => a - b) // чтобы порядок был стабильным
+                const top = headerH + m.startRow * slotH;
+                const height = (m.endRow - m.startRow) * slotH;
 
-                const idx = uniqPriorities.indexOf(prioOf(m.block))
-                const cols = Math.max(uniqPriorities.length, 1)
+                const playlistName = playlistItems.find(p => p.id === m.block.playlistId)?.name ?? m.block.playlistId;
+                const screenName = allScreens.find(s => s.id === m.screenId)?.name ?? m.screenId;
+                const isAd = m.block.type === 'ADVERTISEMENT';
 
-                const left = (1 + m.dayIndex + idx / cols) * colWidth
-                const width = colWidth / cols
-                const top = headerH + m.startRow * slotH
-                const height = (m.endRow - m.startRow) * slotH
-
-
-                const playlistName = playlistItems.find(p => p.id === m.block.playlistId)?.name
-                    ?? m.block.playlistId
-
-                const screenName = allScreens.find(s => s.id === m.screenId)?.name
-                    ?? m.screenId
-
-                const isAd = m.block.type === 'ADVERTISEMENT'
-
-
-                // Определяем цвет по screenId
-                const screenColorsMap = new Map<string, string>()
-
+                const screenColorsMap = new Map<string, string>();
                 allScreens.forEach((screen, index) => {
-                    const color = screenColors[index % screenColors.length]
-                    screenColorsMap.set(screen.id, color)
-                })
-
-                const backgroundColor = screenColorsMap.get(m.screenId) ?? '#cccccc'
+                    const color = screenColors[index % screenColors.length];
+                    screenColorsMap.set(screen.id, color);
+                });
+                const backgroundColor = screenColorsMap.get(m.screenId) ?? '#cccccc';
                 const isHovered = hoveredBlock === m.block;
 
                 return (
                     <div
-                        key={`${m.screenId}-${i}`}
+                        key={`${m.screenId}-${m._i}`}
                         style={{
                             position: 'absolute',
                             top,
@@ -609,4 +634,63 @@ function slotCell(): React.CSSProperties {
         padding: 0,
         fontSize: 10,
     }
+}
+
+function rowsOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number) {
+    return aStart < bEnd && bStart < aEnd;
+}
+
+// назначение колонок (жадный алгоритм) для слотов одного дня
+function assignColumnsForDay(dayMetas: Array<Meta & { _i: number }>) {
+    // сортируем по началу, затем по длительности (длинные раньше — чуть устойчивее)
+    const sorted = [...dayMetas].sort((a, b) =>
+        a.startRow - b.startRow || (b.endRow - b.startRow) - (a.endRow - a.startRow)
+    );
+
+    // активные интервалы: { endRow, col, ref }
+    const active: Array<{ endRow: number; col: number; ref: Meta & { _i: number } }> = [];
+
+    // сюда положим назначенные колонки
+    const colByIndex = new Map<number, number>();
+
+    for (const m of sorted) {
+        // снимаем завершившиеся
+        for (let i = active.length - 1; i >= 0; i--) {
+            if (active[i].endRow <= m.startRow) active.splice(i, 1);
+        }
+
+        // какие колонки сейчас заняты
+        const used = new Set(active.map(a => a.col));
+        // находим минимальный свободный индекс
+        let col = 0;
+        while (used.has(col)) col++;
+        colByIndex.set(m._i, col);
+
+        // кладём в активные
+        active.push({endRow: m.endRow, col, ref: m});
+    }
+
+    return colByIndex;
+}
+
+// для каждого блока считаем, сколько одновременно с ним колонок используется (это и будет делитель ширины)
+function computeColsForDay(
+    dayMetas: Array<Meta & { _i: number }>,
+    colByIndex: Map<number, number>
+) {
+    const colsByIndex = new Map<number, number>();
+
+    for (const m of dayMetas) {
+        // все, кто реально пересекается с m
+        const overl = dayMetas.filter(o => rowsOverlap(m.startRow, m.endRow, o.startRow, o.endRow));
+        // максимальный индекс колонки среди пересекающихся
+        let maxCol = 0;
+        for (const o of overl) {
+            const c = colByIndex.get(o._i) ?? 0;
+            if (c > maxCol) maxCol = c;
+        }
+        colsByIndex.set(m._i, maxCol + 1); // +1, потому что индексы с нуля
+    }
+
+    return colsByIndex;
 }

@@ -83,7 +83,7 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
-                const activeBranches = useOrganizationStore.getState().activeBranches; // Access active branches from the other store
+                const activeBranches = useOrganizationStore.getState?.().activeBranches; // Access active branches from the other store
                 const data = {
                     branchIds: activeBranches.map(b => b.id), // Send IDs of active branches
                 };

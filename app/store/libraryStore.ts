@@ -99,7 +99,6 @@ export const useLibraryStore = create<LibraryStore>()(
                     )
 
                     console.log('uploadMediaData response:', response.data)
-                    alert('Upload successful'); // Added notification for success
 
                 } else {
                     alert('Upload failed');
@@ -109,7 +108,7 @@ export const useLibraryStore = create<LibraryStore>()(
             } catch (err: any) {
                 console.error('uploadFileMetaData error:', err)
                 const errorMessage = err?.response?.data?.message || err.message || 'Ошибка при загрузке метаданных';
-                get().setError(errorMessage);
+                get().setError(`Upload failed: ${errorMessage}`);
                 alert(`Upload failed: ${errorMessage}`); // Added notification for failure
                 throw err; // Rethrow to reject the promise
             } finally {

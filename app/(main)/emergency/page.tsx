@@ -12,6 +12,8 @@ import {useEmergencyStore} from '@/app/store/emergencyStore'
 import {useSettingsStore} from '@/app/store/settingsStore'
 import WhereToShowCard from '@/app/components/Schedule/Settings/WhereToShowCard'
 import PlaylistSelect from '@/app/components/Schedule/Settings/Playlist/PlaylistSelect'
+import {WarningModal} from "@/app/components/Common/WarningModal";
+import ErrorModal from "@/app/components/Common/ErrorModal";
 
 export default function EmergencyPage() {
     const router = useRouter()
@@ -21,7 +23,16 @@ export default function EmergencyPage() {
     const {allScreens, groups} = useScreensStore()
     const {selectedScreens, selectedGroup, selectedPlaylist} = useScheduleStore()
 
-    const {active, start, cancel, getByOrganization} = useEmergencyStore()
+    const {
+        active,
+        start,
+        cancel,
+        getByOrganization,
+        successMessage,
+        errorMessage,
+        setSuccess,
+        setError,
+    } = useEmergencyStore()
     const [isLoop, setIsLoop] = useState(true)
 
     const selectedPlaylistObj = playlistItems.find(p => p.id === selectedPlaylist) || null
@@ -41,22 +52,20 @@ export default function EmergencyPage() {
 
     const handleSend = () => {
         if (!selectedPlaylistObj) {
-            alert('Выберите плейлист')
+            setError('Выберите плейлист');
             return
         }
         if (screensToUse.length === 0 && !selectedGroup) {
-            alert('Выберите экраны или группу')
+            setError('Выберите экраны или группу');
             return
         }
-        // если выбрана группа — отправляем именно список экранов
-        const screensId = screensToUse
+
         start({
             playlistId: selectedPlaylistObj.id,
-            screensId,
+            screensId: screensToUse,
             isRecursing: isLoop,
         })
     }
-
 
     return (
         <div className="p-4">
@@ -153,6 +162,7 @@ export default function EmergencyPage() {
                                             </div>
                                         </div>
                                         {!!item.screens.length && (
+
                                             <div className="text-muted">
                                                 <strong>Экраны:</strong> {screenNames}
                                             </div>
@@ -164,6 +174,20 @@ export default function EmergencyPage() {
                     </Card.Body>
                 </Card>
             )}
+
+
+            <WarningModal
+                show={!!successMessage}
+                title="Готово"
+                message={successMessage || ''}
+                buttonText="Ок"
+                onClose={() => setSuccess(null)}
+            />
+            <ErrorModal
+                show={!!errorMessage}
+                message={errorMessage || ''}
+                onClose={() => setError(null)}
+            />
         </div>
     )
 }

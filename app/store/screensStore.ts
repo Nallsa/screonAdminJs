@@ -3,7 +3,7 @@ import {create} from 'zustand'
 import {immer} from 'zustand/middleware/immer'
 import {FileItem, GroupData, ScreenData} from "@/public/types/interfaces"
 import {getValueInStorage} from "@/app/API/localStorage"
-import {connectWebSocket, sendConfirmPairing, sendGetScreenStatus} from '../API/ws'
+import {connectWebSocket, sendConfirmPairing} from '../API/ws'
 import {StateCreator} from 'zustand'
 import axios from "axios";
 import {useScheduleStore} from "@/app/store/scheduleStore";

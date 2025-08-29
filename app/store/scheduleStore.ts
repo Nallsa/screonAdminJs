@@ -11,8 +11,9 @@ import {PlaylistItem, ScheduledBlock, ScreenData, TypeMode} from "@/public/types
 import axios from "axios";
 import {SERVER_URL} from "@/app/API/api";
 import {getValueInStorage} from "@/app/API/localStorage";
-import {connectWebSocket} from "@/app/API/ws";
+import {connectWebSocket, sendWS} from "@/app/API/ws";
 import {usePlaylistStore} from "@/app/store/playlistStore";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 
 // типы
@@ -108,34 +109,67 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
         const zero = new Date(today.getFullYear(), today.getMonth(), today.getDate())
 
 
-        const ws = connectWebSocket('schedule', (action, payload) => {
+        const unpack = (incoming: any) => {
+            const isRoot =
+                incoming && typeof incoming === 'object' &&
+                ('status' in incoming || 'payload' in incoming || 'isChunked' in incoming)
+
+            const status = isRoot ? incoming.status : undefined
+            const payload = isRoot ? incoming.payload : incoming
+            // иногда метаданные (chunkIndex/totalChunks) приходят в корне:
+            const meta = {
+                chunkIndex: incoming?.chunkIndex ?? payload?.chunkIndex ?? 0,
+                totalChunks: incoming?.totalChunks ?? payload?.totalChunks ?? 1,
+                isChunked: incoming?.isChunked ?? payload?.isChunked ?? false,
+                message: incoming?.message
+            }
+            return {status, payload, meta}
+        }
+
+        const ws = connectWebSocket('schedule', (action, incoming, raw) => {
+            const {status, payload: pld, meta} = unpack(raw)
+
             switch (action) {
                 case 'create':
-                case 'update':
-                    if ('error' in payload) {
+                case 'update': {
+                    // ошибки могут прийти как status==='error' или payload.error
+                    if (status === 'error' || (pld && 'error' in pld)) {
                         set(s => {
-                            s.errorMessage = payload.error
-                        });
-                    } else {
-                        set(s => {
-                            s.scheduleId = payload.id;
-                            s.successMessage = action === 'create'
-                                ? 'Расписание создано'
-                                : 'Расписание обновлено';
-                        });
-                    }
-                    break;
-
-                case 'getByUserId': {
-                    if (payload.__status === 'error') {
-                        set(s => {
-                            s.errorMessage = payload.message
+                            s.errorMessage = incoming?.message || pld?.error || 'Ошибка сохранения расписания'
                         })
-                        break
+                        return
                     }
 
-                    const chunkIndex = typeof (payload as any).chunkIndex === 'number' ? (payload as any).chunkIndex : 0
-                    const inner = (payload as any).payload ?? payload
+                    // попытка достать id из ответа
+                    const id = pld?.id ?? pld?.payload?.id ?? null
+
+                    set(s => {
+                        s.scheduleId = id
+                        s.successMessage = action === 'create' ? 'Расписание создано' : 'Расписание обновлено'
+                    })
+
+                    // если id не прислали — сразу запрашиваем объект по филиалу, чтобы получить id
+                    if (!id) {
+                        const branch = useOrganizationStore.getState?.().activeBranches?.[0]
+                        const branchId = branch?.id
+                        if (branchId) {
+                            ws.send(JSON.stringify({action: 'getByBranchId', branchId}))
+                        }
+                    }
+                    return
+                }
+
+                case 'getByBranchId': {
+                    if (status === 'error') {
+                        set(s => {
+                            s.errorMessage = incoming?.message || 'Ошибка загрузки расписания'
+                        })
+                        return
+                    }
+
+                    // pld — это объект расписания (или чанк)
+                    const chunkIndex = Number.isFinite(meta.chunkIndex) ? Number(meta.chunkIndex) : 0
+                    const inner = pld?.payload ?? pld  // на всякий случай
 
                     const normalizeSlot = (slot: any): ScheduledBlock => ({
                         dayOfWeek: slot.dayOfWeek,
@@ -150,27 +184,29 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         screenId: slot.screenId,
                     })
 
-                    const chunkSlotsRaw = Array.isArray(inner.timeSlots) ? inner.timeSlots : []
+                    const chunkSlotsRaw = Array.isArray(inner?.timeSlots) ? inner.timeSlots : []
                     const normalizedChunk: ScheduledBlock[] = chunkSlotsRaw.map(normalizeSlot)
 
-                    // Мёржим чанк в стор. Метаданные (startDate/endDate/etc.) ставим только на первом чанке.
                     set(s => {
-
                         if (!s.scheduledFixedMap) s.scheduledFixedMap = {}
                         if (!s.scheduledCalendarMap) s.scheduledCalendarMap = {}
 
+                        // на первом чанке сбрасываем метаданные и ставим новые
                         if (chunkIndex === 0) {
-                            s.isRecurring = Boolean(inner.isRecurring)
-                            s.startDate = inner.startDate
-                            s.endDate = inner.endDate
-                            s.scheduleId = inner.id
+                            s.isRecurring = Boolean(inner?.isRecurring)
+                            s.startDate = inner?.startDate ?? null
+                            s.endDate = inner?.endDate ?? null
+                            s.scheduleId = inner?.id ?? s.scheduleId // вот тут появится id
+                            // по желанию можно чистить старые блоки:
+                            s.scheduledFixedMap = {}
+                            s.scheduledCalendarMap = {}
+                            s.selectedScreens = []
                         }
 
                         for (const slot of normalizedChunk) {
                             const mapKey = slot.startDate === null ? 'scheduledFixedMap' : 'scheduledCalendarMap'
                             if (!s[mapKey][slot.screenId]) s[mapKey][slot.screenId] = []
 
-                            // предотвращаем дубликаты по содержательным полям
                             const exists = s[mapKey][slot.screenId].some((b: ScheduledBlock) =>
                                 b.dayOfWeek === slot.dayOfWeek &&
                                 b.startTime === slot.startTime &&
@@ -180,22 +216,17 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 b.type === slot.type &&
                                 b.isRecurring === slot.isRecurring
                             )
-                            if (!exists) {
-                                s[mapKey][slot.screenId].push(slot)
-                            }
+                            if (!exists) s[mapKey][slot.screenId].push(slot)
                         }
 
-                        // обновляем selectedScreens
                         const screens = new Set<string>(s.selectedScreens)
                         normalizedChunk.forEach(slot => screens.add(slot.screenId))
                         s.selectedScreens = Array.from(screens)
                     })
-                    break
+                    return
                 }
-
-
             }
-        });
+        })
 
         return {
             scheduledFixedMap: {},
@@ -245,6 +276,15 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 const idx = s.selectedDays.indexOf(day)
                 if (idx >= 0) s.selectedDays.splice(idx, 1)
                 else s.selectedDays.push(day)
+            }),
+
+            successMessage: null,
+            errorMessage: null,
+            setSuccess: msg => set(s => {
+                s.successMessage = msg
+            }),
+            setError: msg => set(s => {
+                s.errorMessage = msg
             }),
 
             addBlock: (overrideScreens) => {
@@ -440,14 +480,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 })
             },
 
-            successMessage: null,
-            errorMessage: null,
-            setSuccess: msg => set(s => {
-                s.successMessage = msg
-            }),
-            setError: msg => set(s => {
-                s.errorMessage = msg
-            }),
 
             sendSchedule: async () => {
                 const {
@@ -479,28 +511,13 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     ? localStorage.getItem('userId')
                     : null
 
-                // const payload = {
-                //     startTime: null,
-                //     endTime: null,
-                //     isRecurring,
-                //     timeSlots: slots,
-                //     userId: userId,
-                // }
-                //
-                // console.log("id расписания", scheduleId)
-                //
-                // if (scheduleId) {
-                //     ws.send(JSON.stringify({action: 'update', data: payload}))
-                // } else {
-                //     ws.send(JSON.stringify({action: 'create', data: payload}))
-                // }
 
+                const branchId = useOrganizationStore.getState?.().activeBranches?.[0]?.id
                 const payload = {
-                    startTime: null,
-                    endTime: null,
+                    startDate: null,
+                    endDate: null,
                     isRecurring,
-                    userId,
-                    scheduleId
+                    branchId,
                 }
 
                 console.log("id расписания", scheduleId)
@@ -514,28 +531,38 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
 
                 for (let i = 0; i < totalChunks; i++) {
-                    ws.send(JSON.stringify({
+                    sendWS('schedule', {
                         action: actionName,
                         data: {
                             ...payload,
+                            ...(scheduleId ? {scheduleId} : {}),
                             timeSlots: chunks[i],
                             chunkIndex: i,
-                            totalChunks
+                            totalChunks,
                         }
-                    }))
+                    })
                 }
             },
 
             getSchedule: async () => {
-                const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
-                if (!userId) {
+                const branch = useOrganizationStore.getState?.().activeBranches?.[0]
+                const branchId = branch?.id
+                if (!branchId) {
                     set(s => {
-                        s.errorMessage = 'UserId отсутствует';
-                    });
-                    return;
+                        s.errorMessage = 'Не выбран филиал (branchId)'
+                    })
+                    return
                 }
-                // сброс старого состояния чанков перед новым запросом
-                ws.send(JSON.stringify({action: 'getByUserId', userId}));
+
+                // (опц.) очистка локального состояния перед загрузкой
+                set(s => {
+                    s.scheduledFixedMap = {}
+                    s.scheduledCalendarMap = {}
+                    s.selectedScreens = []
+                })
+
+
+                sendWS('schedule', {action: 'getByBranchId', branchId});
             },
 
 

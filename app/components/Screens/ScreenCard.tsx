@@ -35,7 +35,7 @@ export default function ScreenCard({
     // Собираем имена групп, в которые входит этот экран
     const groupName = screen.groupId
         ? groups.find(g => g.id === screen.groupId)?.name || '— без группы —'
-        : '— без группы —'
+        : ' без группы '
 
 
     const sendGetStatus = useScreensStore(s => s.sendGetStatus);

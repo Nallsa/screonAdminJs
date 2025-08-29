@@ -18,7 +18,13 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const {playlistItems, getPlaylists} = usePlaylistStore()
     const {checkToken, isAuthenticated, loading} = useAuthStore()
     const {libraryItems, getFilesInLibrary} = useLibraryStore(state => state)
-    const {allScreens, getScreens, getGroups} = useScreensStore(state => state)
+    const {
+        allScreens,
+        getScreens,
+        getGroups,
+        requestStatusesForAll,
+        startAutoStatusPolling
+    } = useScreensStore(state => state)
     const {getSchedule, scheduledFixedMap, scheduledCalendarMap} = useScheduleStore();
     const {getInfoOrg} = useOrganizationStore();
     const [showOrgModal, setShowOrgModal] = useState(false);
@@ -47,28 +53,30 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
                 }
             }
 
-            // if (allScreens.length == 0) {
-            //     await getScreens()
-            //     await getGroups()
-            // }
-            //
-            // if (libraryItems.length == 0) {
-            //     await getFilesInLibrary()
-            // }
-            //
-            //
-            // if (playlistItems.length === 0) {
-            //     await getPlaylists()
-            // }
-            //
-            //
-            // const isScheduleEmpty =
-            //     Object.keys(scheduledFixedMap).length === 0 &&
-            //     Object.keys(scheduledCalendarMap).length === 0;
-            //
-            // if (isScheduleEmpty) {
-            //     await getSchedule();
-            // }
+            if (allScreens.length == 0) {
+                await getScreens()
+                await getGroups()
+                await requestStatusesForAll();
+                startAutoStatusPolling()
+            }
+
+            if (libraryItems.length == 0) {
+                await getFilesInLibrary()
+            }
+
+
+            if (playlistItems.length === 0) {
+                await getPlaylists()
+            }
+
+
+            const isScheduleEmpty =
+                Object.keys(scheduledFixedMap).length === 0 &&
+                Object.keys(scheduledCalendarMap).length === 0;
+
+            if (isScheduleEmpty) {
+                await getSchedule();
+            }
         }
 
 
