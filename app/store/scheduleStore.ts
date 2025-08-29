@@ -126,107 +126,110 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             return {status, payload, meta}
         }
 
-        const ws = connectWebSocket('schedule', (action, incoming, raw) => {
-            const {status, payload: pld, meta} = unpack(raw)
+        const ws =
+            typeof window !== 'undefined'
+                ?
+                connectWebSocket('schedule', (action, incoming, raw) => {
+                    const {status, payload: pld, meta} = unpack(raw)
 
-            switch (action) {
-                case 'create':
-                case 'update': {
-                    // ошибки могут прийти как status==='error' или payload.error
-                    if (status === 'error' || (pld && 'error' in pld)) {
-                        set(s => {
-                            s.errorMessage = incoming?.message || pld?.error || 'Ошибка сохранения расписания'
-                        })
-                        return
-                    }
+                    switch (action) {
+                        case 'create':
+                        case 'update': {
+                            // ошибки могут прийти как status==='error' или payload.error
+                            if (status === 'error' || (pld && 'error' in pld)) {
+                                set(s => {
+                                    s.errorMessage = incoming?.message || pld?.error || 'Ошибка сохранения расписания'
+                                })
+                                return
+                            }
 
-                    // попытка достать id из ответа
-                    const id = pld?.id ?? pld?.payload?.id ?? null
+                            // попытка достать id из ответа
+                            const id = pld?.id ?? pld?.payload?.id ?? null
 
-                    set(s => {
-                        s.scheduleId = id
-                        s.successMessage = action === 'create' ? 'Расписание создано' : 'Расписание обновлено'
-                    })
+                            set(s => {
+                                s.scheduleId = id
+                                s.successMessage = action === 'create' ? 'Расписание создано' : 'Расписание обновлено'
+                            })
 
-                    // если id не прислали — сразу запрашиваем объект по филиалу, чтобы получить id
-                    if (!id) {
-                        const branch = useOrganizationStore.getState?.().activeBranches?.[0]
-                        const branchId = branch?.id
-                        if (branchId) {
-                            ws.send(JSON.stringify({action: 'getByBranchId', branchId}))
-                        }
-                    }
-                    return
-                }
-
-                case 'getByBranchId': {
-                    if (status === 'error') {
-                        set(s => {
-                            s.errorMessage = incoming?.message || 'Ошибка загрузки расписания'
-                        })
-                        return
-                    }
-
-                    // pld — это объект расписания (или чанк)
-                    const chunkIndex = Number.isFinite(meta.chunkIndex) ? Number(meta.chunkIndex) : 0
-                    const inner = pld?.payload ?? pld  // на всякий случай
-
-                    const normalizeSlot = (slot: any): ScheduledBlock => ({
-                        dayOfWeek: slot.dayOfWeek,
-                        startDate: slot.startDate,
-                        endDate: slot.endDate,
-                        startTime: slot.startTime + ':00',
-                        endTime: slot.endTime + ':00',
-                        playlistId: slot.playlistId,
-                        isRecurring: slot.isRecurring,
-                        priority: slot.priority,
-                        type: slot.type,
-                        screenId: slot.screenId,
-                    })
-
-                    const chunkSlotsRaw = Array.isArray(inner?.timeSlots) ? inner.timeSlots : []
-                    const normalizedChunk: ScheduledBlock[] = chunkSlotsRaw.map(normalizeSlot)
-
-                    set(s => {
-                        if (!s.scheduledFixedMap) s.scheduledFixedMap = {}
-                        if (!s.scheduledCalendarMap) s.scheduledCalendarMap = {}
-
-                        // на первом чанке сбрасываем метаданные и ставим новые
-                        if (chunkIndex === 0) {
-                            s.isRecurring = Boolean(inner?.isRecurring)
-                            s.startDate = inner?.startDate ?? null
-                            s.endDate = inner?.endDate ?? null
-                            s.scheduleId = inner?.id ?? s.scheduleId // вот тут появится id
-                            // по желанию можно чистить старые блоки:
-                            s.scheduledFixedMap = {}
-                            s.scheduledCalendarMap = {}
-                            s.selectedScreens = []
+                            // если id не прислали — сразу запрашиваем объект по филиалу, чтобы получить id
+                            if (!id) {
+                                const branch = useOrganizationStore.getState?.().activeBranches?.[0]
+                                const branchId = branch?.id
+                                if (branchId) {
+                                    sendWS('schedule', {action: 'getByBranchId', branchId});
+                                }
+                            }
+                            return
                         }
 
-                        for (const slot of normalizedChunk) {
-                            const mapKey = slot.startDate === null ? 'scheduledFixedMap' : 'scheduledCalendarMap'
-                            if (!s[mapKey][slot.screenId]) s[mapKey][slot.screenId] = []
+                        case 'getByBranchId': {
+                            if (status === 'error') {
+                                set(s => {
+                                    s.errorMessage = incoming?.message || 'Ошибка загрузки расписания'
+                                })
+                                return
+                            }
 
-                            const exists = s[mapKey][slot.screenId].some((b: ScheduledBlock) =>
-                                b.dayOfWeek === slot.dayOfWeek &&
-                                b.startTime === slot.startTime &&
-                                b.endTime === slot.endTime &&
-                                b.playlistId === slot.playlistId &&
-                                b.priority === slot.priority &&
-                                b.type === slot.type &&
-                                b.isRecurring === slot.isRecurring
-                            )
-                            if (!exists) s[mapKey][slot.screenId].push(slot)
+                            // pld — это объект расписания (или чанк)
+                            const chunkIndex = Number.isFinite(meta.chunkIndex) ? Number(meta.chunkIndex) : 0
+                            const inner = pld?.payload ?? pld  // на всякий случай
+
+                            const normalizeSlot = (slot: any): ScheduledBlock => ({
+                                dayOfWeek: slot.dayOfWeek,
+                                startDate: slot.startDate,
+                                endDate: slot.endDate,
+                                startTime: slot.startTime + ':00',
+                                endTime: slot.endTime + ':00',
+                                playlistId: slot.playlistId,
+                                isRecurring: slot.isRecurring,
+                                priority: slot.priority,
+                                type: slot.type,
+                                screenId: slot.screenId,
+                            })
+
+                            const chunkSlotsRaw = Array.isArray(inner?.timeSlots) ? inner.timeSlots : []
+                            const normalizedChunk: ScheduledBlock[] = chunkSlotsRaw.map(normalizeSlot)
+
+                            set(s => {
+                                if (!s.scheduledFixedMap) s.scheduledFixedMap = {}
+                                if (!s.scheduledCalendarMap) s.scheduledCalendarMap = {}
+
+                                // на первом чанке сбрасываем метаданные и ставим новые
+                                if (chunkIndex === 0) {
+                                    s.isRecurring = Boolean(inner?.isRecurring)
+                                    s.startDate = inner?.startDate ?? null
+                                    s.endDate = inner?.endDate ?? null
+                                    s.scheduleId = inner?.id ?? s.scheduleId // вот тут появится id
+                                    // по желанию можно чистить старые блоки:
+                                    s.scheduledFixedMap = {}
+                                    s.scheduledCalendarMap = {}
+                                    s.selectedScreens = []
+                                }
+
+                                for (const slot of normalizedChunk) {
+                                    const mapKey = slot.startDate === null ? 'scheduledFixedMap' : 'scheduledCalendarMap'
+                                    if (!s[mapKey][slot.screenId]) s[mapKey][slot.screenId] = []
+
+                                    const exists = s[mapKey][slot.screenId].some((b: ScheduledBlock) =>
+                                        b.dayOfWeek === slot.dayOfWeek &&
+                                        b.startTime === slot.startTime &&
+                                        b.endTime === slot.endTime &&
+                                        b.playlistId === slot.playlistId &&
+                                        b.priority === slot.priority &&
+                                        b.type === slot.type &&
+                                        b.isRecurring === slot.isRecurring
+                                    )
+                                    if (!exists) s[mapKey][slot.screenId].push(slot)
+                                }
+
+                                const screens = new Set<string>(s.selectedScreens)
+                                normalizedChunk.forEach(slot => screens.add(slot.screenId))
+                                s.selectedScreens = Array.from(screens)
+                            })
+                            return
                         }
-
-                        const screens = new Set<string>(s.selectedScreens)
-                        normalizedChunk.forEach(slot => screens.add(slot.screenId))
-                        s.selectedScreens = Array.from(screens)
-                    })
-                    return
-                }
-            }
-        })
+                    }
+                }) : null
 
         return {
             scheduledFixedMap: {},
