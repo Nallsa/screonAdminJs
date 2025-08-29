@@ -12,6 +12,7 @@ import {useAuthStore} from "@/app/store/authStore";
 import {connectWebSocket} from "@/app/API/ws";
 import ErrorModal from "@/app/components/Common/ErrorModal";
 import PreviewImage from "@/app/components/Common/PreviewImage";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 
 export default function PlaylistsPage() {
@@ -20,13 +21,13 @@ export default function PlaylistsPage() {
         setError
     } = usePlaylistStore()
     const router = useRouter()
+    const activeBranches = useOrganizationStore(state => state.activeBranches)
+
 
 
     useEffect(() => {
-        if (playlistItems.length === 0) {
             getPlaylists()
-        }
-    }, [getPlaylists, playlistItems.length])
+    }, [activeBranches.length])
 
 
     const handleNewPlaylist = () => {

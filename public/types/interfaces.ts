@@ -58,3 +58,19 @@ export interface ScheduledBlock {
     isRecurring: boolean,
     screenId: string,
 }
+
+
+export interface OrganizationDto {
+    id: string;
+    name: string;
+    branches: BranchDto[];
+    photoUrl?: string | null;
+    role?: string | null;
+}
+
+export interface BranchDto {
+    id: string;
+    name: string;
+    logoUrl?: string | null;
+    description?: string | null;
+}

@@ -1,0 +1,201 @@
+'use client'
+
+import {useRouter, useParams, useSearchParams} from 'next/navigation';
+import Image from 'next/image';
+import {InitialsAvatar} from "@/app/components/Organization/Organization";
+import {useOrganizationStore} from '@/app/store/organizationStore';
+import {useEffect, useState} from "react";
+import {BranchDto} from "@/public/types/interfaces";
+
+
+export default function OrgBranchPage() {
+    const params = useParams();
+    const router = useRouter();
+    const {organizationInfo, getInfoOrg} = useOrganizationStore();
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+    const searchParams = useSearchParams();
+
+    const branch: BranchDto = {
+        id: searchParams.get('id') || '',
+        name: searchParams.get('name') || '',
+        logoUrl: searchParams.get('logoUrl') || null,
+        description: searchParams.get('description') || null,
+    };
+
+    useEffect(() => {
+        getInfoOrg(); // Fetch org info if needed
+    }, [getInfoOrg]);
+
+    const handleDelete = () => {
+        // TODO: organizationViewModel.deleteBranch(branch.id)
+        router.push('/organization');
+        setShowDeleteDialog(false);
+    };
+
+    console.log(branch)
+
+    return (
+        <div className="container py-4">
+            <div className="row justify-content-center">
+                <div className="col-md-8 col-lg-6">
+                    {/* Top Bar */}
+                    <div className="d-flex align-items-center mb-4">
+                        <button className="btn btn-outline-secondary me-2" onClick={() => router.push('/organization')}>
+                            Назад
+                        </button>
+                        <h4 className="mb-0">{branch.name}</h4>
+                    </div>
+
+                    {/* Logo */}
+                    <div className="bg-light rounded-3 d-flex align-items-center justify-content-center mb-4"
+                         style={{height: '180px'}}>
+                        {branch.logoUrl ? (
+                            <Image src={branch.logoUrl} alt="Логотип филиала" width={96} height={96}
+                                   className="rounded-circle"/>
+                        ) : (
+                            <InitialsAvatar text={branch.name} size={96}/>
+                        )}
+                    </div>
+
+                    {/* General Info Card */}
+                    <div className="card shadow-sm mb-3">
+                        <div className="card-body">
+                            <h5 className="card-title fw-semibold">Общая информация</h5>
+                            <p>Организация: {organizationInfo?.name || 'Примерная Организация'}</p>
+                            <p>Филиал: {branch.name}</p>
+                        </div>
+                    </div>
+
+                    {/* Description Card */}
+                    {branch.description && (
+                        <div className="card shadow-sm mb-3">
+                            <div className="card-body">
+                                <h5 className="card-title fw-semibold">Описание</h5>
+                                <p>{branch.description}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Delete Button */}
+                    <button className="btn btn-danger w-100 mb-3" onClick={() => setShowDeleteDialog(true)}>
+                        <i className="bi bi-trash me-2"></i> Удалить филиал
+                    </button>
+
+                    {/* Invite Code Generator */}
+                    <InviteCodeGenerator branchId={branch.id}/>
+
+                    {/* Participants */}
+                    {/*<ParticipantsSection participants={fakeParticipants()} />*/}
+
+                    {/* Delete Dialog (Modal) */}
+                    {showDeleteDialog && (
+                        <div className="modal fade show d-block" tabIndex={-1}
+                             style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+                            <div className="modal-dialog">
+                                <div className="modal-content">
+                                    <div className="modal-header">
+                                        <h5 className="modal-title">Удалить филиал?</h5>
+                                        <button type="button" className="btn-close"
+                                                onClick={() => setShowDeleteDialog(false)}></button>
+                                    </div>
+                                    <div className="modal-body">
+                                        <p>Вы уверены, что хотите удалить филиал {branch.name}? Это действие нельзя
+                                            отменить.</p>
+                                    </div>
+                                    <div className="modal-footer">
+                                        <button type="button" className="btn btn-secondary"
+                                                onClick={() => setShowDeleteDialog(false)}>Отмена
+                                        </button>
+                                        <button type="button" className="btn btn-danger"
+                                                onClick={handleDelete}>Удалить
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+// Mock participants
+const fakeParticipants = () => [
+    {id: '1', name: 'Андрей Смирнов', role: 'Администратор'},
+    {id: '2', name: 'Ирина Коваль', role: 'Модератор'},
+    {id: '3', name: 'Павел Орлов', role: 'Сотрудник'},
+    {id: '4', name: 'Елена Руднева', role: 'Сотрудник'},
+];
+
+
+function ParticipantsSection({participants}: { participants: any[] }) {
+    return (
+        <div className="card shadow-sm">
+            <div className="card-body">
+                <h5 className="card-title fw-semibold mb-3">Участники</h5>
+                {participants.map((p) => (
+                    <div key={p.id} className="d-flex align-items-center bg-light rounded p-2 mb-2">
+                        <InitialsAvatar text={p.name} size={40}/>
+                        <div className="ms-3">
+                            <p className="mb-0 fw-medium">{p.name}</p>
+                            <small className="text-muted">{p.role}</small>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+interface InviteCodeGeneratorProps {
+    branchId?: string
+}
+
+function InviteCodeGenerator({branchId}: InviteCodeGeneratorProps) {
+    const {
+        inviteCode,
+        isGenerating,
+        successMessage,
+        errorMessage,
+        generateInviteCode,
+        clearInviteCode,
+        setSuccess
+    } = useOrganizationStore();
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        if (inviteCode) {
+            navigator.clipboard.writeText(inviteCode);
+            setSuccess('Скопировано в буфер обмена');
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    return (
+        <div className="border border-secondary rounded p-3">
+            <h5 className="mb-3">Пригласить участников</h5>
+            <p className="text-muted small mb-3">Сгенерируйте уникальный код, чтобы пригласить других пользователей в
+                организацию.</p>
+            <button className="btn btn-primary w-100 mb-3" onClick={() => {
+                branchId && generateInviteCode(branchId)
+            }} disabled={isGenerating}>
+                {isGenerating ? 'Генерируем...' : 'Сгенерировать код'}
+            </button>
+            {inviteCode && (
+                <div>
+                    <div className="bg-light p-3 rounded mb-3 text-center">{inviteCode}</div>
+                    <div className="d-flex gap-2">
+                        <button className="btn btn-success w-100" onClick={handleCopy}>Скопировать</button>
+                        <button className="btn btn-outline-secondary w-100" onClick={clearInviteCode}>Очистить</button>
+                    </div>
+                </div>
+            )}
+            {successMessage && <p className="text-success mt-2">{successMessage}</p>}
+            {errorMessage && <p className="text-danger mt-2">{errorMessage}</p>}
+        </div>
+    );
+}

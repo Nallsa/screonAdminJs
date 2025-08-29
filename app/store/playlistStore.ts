@@ -3,6 +3,7 @@ import {immer} from 'zustand/middleware/immer'
 import axios from 'axios'
 import {getValueInStorage} from "@/app/API/localStorage";
 import {FileItem, PlaylistItem} from "@/public/types/interfaces";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 
 interface usePlaylistState {
@@ -73,9 +74,23 @@ export const usePlaylistStore = create<usePlaylistState>()(
                     return
                 }
 
+                // Здесь получаем состояние из другого стора
+                const orgState = useOrganizationStore.getState();
+                const organizationId = orgState.organizationInfo?.id; // Пример: доступ к полю из useOrganizationStore
+                // Или любой другой нужный вам данные, например, activeBranches: orgState.activeBranches
+
+                console.log('Organization ID из другого стора:', organizationId); // Для примера
+
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
-                const response = await axios.get(`${SERVER_URL}playlists/users`,
+                const activeBranches = useOrganizationStore.getState().activeBranches; // Access active branches from the other store
+                const data = {
+                    branchIds: activeBranches.map(b => b.id), // Send IDs of active branches
+                };
+
+                console.log('datadata:', data); // Для примера
+
+                const response = await axios.post(`${SERVER_URL}playlists/branches`, data,
                     {headers: {Authorization: `Bearer ${accessToken}`}}
                 );
 
@@ -95,10 +110,10 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 const accessToken = getValueInStorage('accessToken')
 
                 const {addPlaylist} = get()
+                const activeBranches = useOrganizationStore.getState().activeBranches; // Access active branches from the other store
                 const data = {
                     playListName: name,
-                    userId: getValueInStorage('userId'),
-                    organizationId: getValueInStorage('organizationId'),
+                    branchIds: activeBranches.map(b => b.id), // Send IDs of active branches
                     isPublic: true,
                     childFiles: playlistChildren.map(f => ({
                         fileId: f.fileId,
@@ -130,7 +145,6 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 return false
             }
         },
-
 
         updatePlaylistFileItem: async (update: {
             id: string

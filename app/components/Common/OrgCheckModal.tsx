@@ -7,63 +7,78 @@ import {useSettingsStore} from '@/app/store/settingsStore'
 import {WarningModal} from "@/app/components/Common/WarningModal";
 import axios from "axios";
 import {useAuthStore} from "@/app/store/authStore";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 export default function OrgCheckModal() {
     const pathname = usePathname()
     const router = useRouter()
 
-    const {
-        hasOrg,
-        errorMessage,
-        successMessage,
-        checkOrg,
-        joinOrganizationByCode,
-        createOrganization,
-        setError,
-        setSuccess,
-    } = useSettingsStore()
-    const {checkToken} = useAuthStore()
+    // const {
+    //     hasOrg,
+    //     errorMessage,
+    //     successMessage,
+    //     checkOrg,
+    //     joinOrganizationByCode,
+    //     createOrganization,
+    //     setError,
+    //     setSuccess,
+    // } = useSettingsStore()
+    // const {checkToken} = useAuthStore()
 
+    const {
+        getInfoOrg,
+        hasOrg
+    } = useOrganizationStore()
+    const {checkToken} = useAuthStore()
 
     const [mode, setMode] = useState<'initial' | 'enterCode'>('initial')
     const [referralCode, setReferralCode] = useState('')
     const [orgName, setOrgName] = useState('')
 
     useEffect(() => {
-        if (pathname === '/createOrg') return
-        checkOrg()
-    }, [pathname, checkOrg])
+        if (pathname === '/organization') return
 
 
-    const show = !hasOrg && pathname !== '/createOrg'
+        (async () => {
+            const op = await getInfoOrg()
+
+            if (op) {
+                console.log(op, "asdadasasddasdas")
+            }
+        })()
+
+    }, [pathname, getInfoOrg])
+
+
+    const show = !hasOrg && pathname !== '/organization'
 
     const handleCreateOrg = async () => {
-        if (!orgName.trim()) {
-            setError('Название организации не может быть пустым')
-            return
-        }
-        const orgId = await createOrganization(orgName.trim())
-        if (orgId) {
-            const refreshed = await checkToken()
-            console.log('после создания вернул:', refreshed)
-            console.log('новый accessToken:', localStorage.getItem('accessToken'))
-            router.push('/screens')
-        }
+        // if (!orgName.trim()) {
+        //     setError('Название организации не может быть пустым')
+        //     return
+        // }
+        // const orgId = await createOrganization(orgName.trim())
+        // if (orgId) {
+        //     const refreshed = await checkToken()
+        //     console.log('после создания вернул:', refreshed)
+        //     console.log('новый accessToken:', localStorage.getItem('accessToken'))
+        //     router.push('/screens')
+        // }
     }
 
     const handleJoin = async () => {
-        if (!referralCode.trim()) {
-            setError('Введите код организации')
-            return
-        }
-        const ok = await joinOrganizationByCode(referralCode.trim())
-        if (ok) {
-            const refreshed = await checkToken()
-            console.log('после присоединения вернул:', refreshed)
-            console.log('новый accessToken:', localStorage.getItem('accessToken'))
-            router.replace('/playlists')
-            setSuccess(null)
-        }
+        // if (!referralCode.trim()) {
+        //     setError('Введите код организации')
+        //     return
+        // }
+        // const ok = await joinOrganizationByCode(referralCode.trim())
+        // if (ok) {
+        //     const refreshed = await checkToken()
+        //     console.log('после присоединения вернул:', refreshed)
+        //     console.log('новый accessToken:', localStorage.getItem('accessToken'))
+        //     router.replace('/playlists')
+        //     setSuccess(null)
+        // }
     }
 
 
@@ -147,7 +162,7 @@ export default function OrgCheckModal() {
                 </div>
             </div>
 
-            <ErrorModal show={!!errorMessage} message={errorMessage || ''} onClose={() => setError(null)}/>
+            {/*<ErrorModal show={!!errorMessage} message={errorMessage || ''} onClose={() => setError(null)}/>*/}
 
         </>
     )

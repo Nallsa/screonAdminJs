@@ -3,6 +3,7 @@ import {immer} from 'zustand/middleware/immer';
 import axios from 'axios';
 import {FileItem} from '@/public/types/interfaces';
 import {getValueInStorage} from "@/app/API/localStorage";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 
 interface LibraryStore {
@@ -72,7 +73,7 @@ export const useLibraryStore = create<LibraryStore>()(
             });
         },
 
-        uploadFileMetaData: async (item) => {
+        uploadFileMetaData: async (item: FileItem): Promise<void> => {
             set(state => {
                 state.isUploadingMetadata = true
                 state.uploadError = null
@@ -84,36 +85,39 @@ export const useLibraryStore = create<LibraryStore>()(
                 const organizationId = getValueInStorage('organizationId')
                 const accessToken = getValueInStorage("accessToken")
 
+                const activeBranches = useOrganizationStore.getState().activeBranches; // Access active branches from the other store
+
                 if (userId?.trim() && organizationId?.trim()) {
                     const response = await axios.post(`${SERVER_URL}files/assign-metadata`, {
                             fileId: item.fileId,
                             uploadedBy: getValueInStorage('userId'),
                             organizationId: getValueInStorage('organizationId'),
+                            branchIds: activeBranches.map(b => b.id), // Send IDs of active branches
                             isPublic: true,
                         },
                         {headers: {Authorization: `Bearer ${accessToken}`}}
                     )
 
                     console.log('uploadMediaData response:', response.data)
+                    alert('Upload successful'); // Added notification for success
 
                 } else {
                     alert('Upload failed');
+                    throw new Error('Upload failed due to missing user or organization ID');
                 }
 
             } catch (err: any) {
                 console.error('uploadFileMetaData error:', err)
-                get().setError(
-                    err?.response?.data?.message
-                    || err.message
-                    || 'Ошибка при загрузке метаданных'
-                )
+                const errorMessage = err?.response?.data?.message || err.message || 'Ошибка при загрузке метаданных';
+                get().setError(errorMessage);
+                alert(`Upload failed: ${errorMessage}`); // Added notification for failure
+                throw err; // Rethrow to reject the promise
             } finally {
                 set(state => {
                     state.isUploadingMetadata = false
                 })
             }
         },
-
         getFilesInLibrary: async () => {
             set(state => {
                 state.errorMessage = null
@@ -122,9 +126,13 @@ export const useLibraryStore = create<LibraryStore>()(
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
                 const accessToken = getValueInStorage("accessToken")
 
+
+                const activeBranches = useOrganizationStore.getState().activeBranches; // Access active branches from the other store
+
                 const response = await axios.post(`${SERVER_URL}files/user-files`, {
                         userId: getValueInStorage('userId'),
                         organizationId: getValueInStorage('organizationId'),
+                        branchIds: activeBranches.map(b => b.id), // Send IDs of active branches
                     },
                     {headers: {Authorization: `Bearer ${accessToken}`}}
                 );

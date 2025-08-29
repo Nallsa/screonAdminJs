@@ -12,6 +12,7 @@ import {useAuthStore} from "@/app/store/authStore";
 import {usePathname, useRouter} from "next/navigation";
 import {useScreensStore} from "@/app/store/screensStore";
 import OrgCheckModal from "@/app/components/Common/OrgCheckModal";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 export default function MainLayout({children}: { children: React.ReactNode }) {
     const {playlistItems, getPlaylists} = usePlaylistStore()
@@ -19,6 +20,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const {libraryItems, getFilesInLibrary} = useLibraryStore(state => state)
     const {allScreens, getScreens, getGroups} = useScreensStore(state => state)
     const {getSchedule, scheduledFixedMap, scheduledCalendarMap} = useScheduleStore();
+    const {getInfoOrg} = useOrganizationStore();
     const [showOrgModal, setShowOrgModal] = useState(false);
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false)
@@ -37,28 +39,36 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
             }
 
 
-            if (allScreens.length == 0) {
-                await getScreens()
-                await getGroups()
+            const orgInfo = await getInfoOrg()
+
+            if (orgInfo) {
+                if (playlistItems.length === 0) {
+                    await getFilesInLibrary()
+                }
             }
 
-            if (libraryItems.length == 0) {
-                await getFilesInLibrary()
-            }
-
-
-            if (playlistItems.length === 0) {
-                await getPlaylists()
-            }
-
-
-            const isScheduleEmpty =
-                Object.keys(scheduledFixedMap).length === 0 &&
-                Object.keys(scheduledCalendarMap).length === 0;
-
-            if (isScheduleEmpty) {
-                await getSchedule();
-            }
+            // if (allScreens.length == 0) {
+            //     await getScreens()
+            //     await getGroups()
+            // }
+            //
+            // if (libraryItems.length == 0) {
+            //     await getFilesInLibrary()
+            // }
+            //
+            //
+            // if (playlistItems.length === 0) {
+            //     await getPlaylists()
+            // }
+            //
+            //
+            // const isScheduleEmpty =
+            //     Object.keys(scheduledFixedMap).length === 0 &&
+            //     Object.keys(scheduledCalendarMap).length === 0;
+            //
+            // if (isScheduleEmpty) {
+            //     await getSchedule();
+            // }
         }
 
 
@@ -74,7 +84,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     return (
         <>
             <BootstrapClient/>
-            <OrgCheckModal/>
+            {/*<OrgCheckModal/>*/}
 
             <div className="d-flex">
                 <Sidebar
