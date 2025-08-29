@@ -3,58 +3,65 @@
 import {create} from 'zustand'
 import {immer} from 'zustand/middleware/immer'
 import {connectWebSocket} from '@/app/API/ws'
-import type {EmergencyAdmin, EmergencyStartArgs, EmergencyCancelArgs} from '@/app/types/emergency'
-
-interface EmergencyState {
-    active: EmergencyAdmin[]
-    error: string | null
-    start: (args: EmergencyStartArgs) => void
-    cancel: (args: EmergencyCancelArgs) => void
-    getByUser: (userId: string) => void
-}
 
 export type EmergencyAdmin = {
     emergencyId: string
     playlistId: string
     isRecurring: boolean
     screens: string[]
-    groupId?: string | null
-    startedAt?: number
 }
 
-export type EmergencyStartArgs = {
-    userId: string
-    playlistId: string
-    isRecurring: boolean
-    targets: { screenIds?: string[]; groupId?: string | null }
-}
-
-export type EmergencyCancelArgs = {
-    userId: string
-    emergencyId?: string
+interface EmergencyState {
+    active: EmergencyAdmin[]
+    error: string | null
+    start: (args: { playlistId: string; screensId: string[]; isRecursing: boolean }) => void
+    cancel: (emergencyId: string) => void
+    getByOrganization: (orgId: string) => void
 }
 
 export const useEmergencyStore = create<EmergencyState, [["zustand/immer", never]]>(
     immer((set, get) => {
-        const ws = connectWebSocket('schedule', (action, payload) => {
+        let lastOrgId: string | null = null
+
+        const ws = connectWebSocket('schedule', (action, payload, root?: any) => {
+            // сервер шлёт { action, status, payload, isChunked }
             switch (action) {
-                case 'getEmergencyByUser': {
-                    const list = (payload?.emergencies ?? []) as EmergencyAdmin[]
+                case 'getEmergencyByOrganization': {
+                    // payload — это массив элементов
+                    const listRaw = Array.isArray(payload) ? payload : []
+                    const list = listRaw.map((it: any): EmergencyAdmin => ({
+                        emergencyId: it.emergencyId || it.emrgencyId, // сервер может прислать с опечаткой
+                        playlistId: it.playlistId,
+                        isRecurring: Boolean(it.isRecursing),
+                        screens: Array.isArray(it.screens) ? it.screens : [],
+                    }))
                     set(s => {
                         s.active = list
                     })
                     break
                 }
+
                 case 'emergencyStart': {
-                    // сервер оповестил — просто запросим актуальный список
-                    // (если хочется — можно из payload собрать частично)
+                    // после старта просто подтягиваем свежий список по orgId
+                    if (lastOrgId) get().getByOrganization(lastOrgId)
                     break
                 }
+
                 case 'emergencyCancel': {
-                    // тоже обновим список запросом
+                    // если пришёл success — обновим список
+                    const emgId = payload?.emergencyId
+                    if (emgId) {
+                        set(s => {
+                            s.active = s.active.filter(e => e.emergencyId !== emgId)
+                        })
+                    } else if (lastOrgId) {
+                        get().getByOrganization(lastOrgId)
+                    }
                     break
                 }
-                // на ошибки сервера можно добавить action: 'error'
+
+                default:
+                    break
             }
         })
 
@@ -62,18 +69,26 @@ export const useEmergencyStore = create<EmergencyState, [["zustand/immer", never
             active: [],
             error: null,
 
-            start: (args) => {
-                ws.send(JSON.stringify({action: 'emergencyStart', payload: args}))
-                // опционально сразу: get().getByUser(args.userId)
+            start: ({playlistId, screensId, isRecursing}) => {
+                ws.send(JSON.stringify({
+                    action: 'emergencyStart',
+                    data: {playlistId, screensId, isRecursing}
+                }))
             },
 
-            cancel: (args) => {
-                ws.send(JSON.stringify({action: 'emergencyCancel', payload: args}))
-                // опционально сразу: get().getByUser(args.userId)
+            cancel: (emergencyId: string) => {
+                ws.send(JSON.stringify({
+                    action: 'emergencyCancel',
+                    data: {emergencyId}
+                }))
             },
 
-            getByUser: (userId: string) => {
-                ws.send(JSON.stringify({action: 'getEmergencyByUser', payload: {userId}}))
+            getByOrganization: (orgId: string) => {
+                lastOrgId = orgId
+                ws.send(JSON.stringify({
+                    action: 'getEmergencyByOrganization',
+                    data: {orgId}
+                }))
             },
         }
     })

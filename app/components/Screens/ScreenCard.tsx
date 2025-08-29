@@ -226,38 +226,29 @@ export default function ScreenCard({
 
                     {/* Действия */}
                     <div className="d-flex flex-wrap gap-2">
-                        {screen.status ? (
-                            ['Статус', 'Редактировать', 'Удалить'].map(label => (
-                                <Button
-                                    key={label}
-                                    size="sm"
-                                    variant="outline-primary"
-                                    className="flex-grow-1"
 
-                                    onClick={() => {
-                                        if (label == 'Удалить') {
-                                            setShowConfirm(true)
-                                        }
-                                        if (label === 'Редактировать') openEdit()
-                                        if (label === 'Статус') openStatus();
+                        {['Статус', 'Редактировать', 'Удалить'].map(label => (
+                            <Button
+                                key={label}
+                                size="sm"
+                                variant="outline-primary"
+                                className="flex-grow-1"
 
-                                    }}
-                                >
-                                    {label}
-                                </Button>
-                            ))
-                        ) : (
-                            ['Перезапуск', 'Диагностика'].map(label => (
-                                <Button
-                                    key={label}
-                                    size="sm"
-                                    variant="outline-primary"
-                                    className="flex-grow-1"
-                                >
-                                    {label}
-                                </Button>
-                            ))
-                        )}
+                                onClick={() => {
+                                    if (label == 'Удалить') {
+                                        setShowConfirm(true)
+                                    }
+                                    if (label === 'Редактировать') openEdit()
+                                    if (label === 'Статус') openStatus();
+
+                                }}
+                            >
+                                {label}
+                            </Button>
+                        ))
+                        }
+
+
                     </div>
                 </Card.Body>
             </Card>
@@ -327,7 +318,7 @@ export default function ScreenCard({
                     {statusLoading && <div>Запрашиваем статус…</div>}
                     {!statusLoading && live && (
                         <div>
-                            <Row label="Статус:" value={live.status ?? '—'}/>
+                            <Row label="Статус:" value={isOnline ? 'Онлайн' : 'Оффлайн'}/>
                             <Row label="Загрузка процессора:" value={fmtPct(live.cpuLoad)}/>
                             <Row label="Температура процессора:" value={fmtC(live.temperature)}/>
                             <Row label="Загрузка ОЗУ:" value={fmtPct(live.ramUsage)}/>
