@@ -124,10 +124,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const token = localStorage.getItem('refreshToken')
 
             if (!token) throw new Error('no token')
-            const res = await axios.post(`${SERVER}auth/validate-refresh-token`, {
+            const res = await axios.post(`${SERVER}auth/refresh`, {
                 refreshToken: token,
             })
-            const ok = res.data.valid
+            const ok = res.status
 
             const accessToken = res.data.accessToken
 
@@ -139,8 +139,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             addValueInStorage('userId', userId)
 
             console.log("ok", ok)
-            set({isAuthenticated: ok})
-            return ok
+            if(ok == 200) set({isAuthenticated: true})
+            return ok == 200
         } catch {
             set({isAuthenticated: false})
             return false

@@ -20,6 +20,7 @@ import {v4 as uuid} from 'uuid';
 import {useLibraryStore} from "@/app/store/libraryStore";
 import UploadZone from "@/app/components/Library/UploadZone";
 import ErrorModal from "@/app/components/Common/ErrorModal";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 
 export default function LibraryPage() {
@@ -34,14 +35,11 @@ export default function LibraryPage() {
         setError
     } = useLibraryStore(state => state)
 
+    const activeBranches = useOrganizationStore(state => state.activeBranches)
 
     useEffect(() => {
-        console.log(libraryItems)
-
-        if (libraryItems.length == 0) {
-            getFilesInLibrary()
-        }
-    }, []);
+        getFilesInLibrary()
+    }, [activeBranches]);
 
 
     const handleDragEnd = (event: DragEndEvent) => {
@@ -68,7 +66,7 @@ export default function LibraryPage() {
                 </div>
 
 
-                <div className="d-flex justify-content-start mb-3">
+                <div className="d-flex justify-content-start  mb-3">
 
                     <Form.Control
 
@@ -102,11 +100,11 @@ export default function LibraryPage() {
                     </SortableContext>
                 </DndContext>
             </div>
-            <ErrorModal
-                show={!!errorMessage}
-                message={errorMessage || ''}
-                onClose={() => setError(null)}
-            />
+            {/*<ErrorModal*/}
+            {/*    show={!!errorMessage}*/}
+            {/*    message={errorMessage || ''}*/}
+            {/*    onClose={() => setError(null)}*/}
+            {/*/>*/}
         </>
     )
 }

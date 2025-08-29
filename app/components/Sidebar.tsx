@@ -19,7 +19,7 @@ const navItems = [
     {href: "/schedule", label: "Расписание", icon: "bi bi-calendar-week"},
     {href: "/emergency", label: "Экстренное", icon: "bi bi-lightning-charge"},
     {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
-    {href: "/createOrg", label: "Создание Организации", icon: "bi bi-gear"},
+    {href: "/organization", label: "Организация", icon: "bi bi-user"},
 
 ];
 export default function Sidebar({collapsed, onToggle}: Props) {
@@ -83,9 +83,6 @@ export default function Sidebar({collapsed, onToggle}: Props) {
             </div>
 
             {navItems.map(({href, label, icon}) => {
-                if (label === "Создание Организации" && organizationId) {
-                    return null
-                }
 
                 const active = pathname === href;
 

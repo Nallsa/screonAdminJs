@@ -1,13 +1,13 @@
 'use client'
 
-import React, {useState, useCallback} from 'react'
+import React, {useState, useCallback, useEffect} from 'react'
 import {useDropzone} from 'react-dropzone'
 import {Modal, ProgressBar} from 'react-bootstrap'
 import {useLibraryStore} from '@/app/store/libraryStore'
 import {FileItem} from '@/public/types/interfaces'
 
 export default function UploadZone() {
-    const {uploadFile, uploadFileMetaData, addLibraryItem} = useLibraryStore()
+    const {uploadFile, uploadFileMetaData, addLibraryItem, errorMessage} = useLibraryStore()
     const [showUploadModal, setShowUploadModal] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(0)
 
@@ -87,6 +87,14 @@ export default function UploadZone() {
         noClick: true,
         accept: {'image/*': [], 'video/*': []},
     })
+
+    useEffect(() => {
+        if (errorMessage
+        ) {
+            setShowUploadModal(false)
+        }
+
+    }, [errorMessage])
 
     return (
         <>
