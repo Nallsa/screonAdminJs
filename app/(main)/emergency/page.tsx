@@ -8,7 +8,6 @@ import {useRouter} from 'next/navigation'
 import {usePlaylistStore} from '@/app/store/playlistStore'
 import {useScreensStore} from '@/app/store/screensStore'
 import {useScheduleStore} from '@/app/store/scheduleStore'
-import {useEmergencyStore} from '@/app/store/emergencyStore'
 import {useSettingsStore} from '@/app/store/settingsStore'
 import WhereToShowCard from '@/app/components/Schedule/Settings/WhereToShowCard'
 import PlaylistSelect from '@/app/components/Schedule/Settings/Playlist/PlaylistSelect'
@@ -32,7 +31,8 @@ export default function EmergencyPage() {
         errorMessage,
         setSuccess,
         setError,
-    } = useEmergencyStore()
+
+    } = useScheduleStore()
     const [isLoop, setIsLoop] = useState(true)
 
     const selectedPlaylistObj = playlistItems.find(p => p.id === selectedPlaylist) || null
@@ -79,6 +79,14 @@ export default function EmergencyPage() {
                     disabled={!canSubmit}
                 >
                     Запустить
+                </Button>
+
+                <Button
+                    style={{paddingLeft: 40, paddingRight: 40}}
+                    variant="success"
+                    onClick={() => getByOrganization(orgId)}
+                >
+                    Получить
                 </Button>
             </div>
 
@@ -146,8 +154,8 @@ export default function EmergencyPage() {
                                         <div className="d-flex justify-content-between align-items-center">
                                             <div>
                                                 <strong>{plName}</strong>{' '}
-                                                <Badge bg={item.isRecurring ? 'success' : 'secondary'}>
-                                                    {item.isRecurring ? 'Зациклено' : 'Один раз'}
+                                                <Badge bg={item.isRecursing ? 'success' : 'secondary'}>
+                                                    {item.isRecursing ? 'Зациклено' : 'Один раз'}
                                                 </Badge>
                                             </div>
                                             <div className="d-flex align-items-center gap-3">

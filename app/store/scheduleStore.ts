@@ -11,7 +11,7 @@ import {PlaylistItem, ScheduledBlock, ScreenData, TypeMode} from "@/public/types
 import axios from "axios";
 import {SERVER_URL} from "@/app/API/api";
 import {getValueInStorage} from "@/app/API/localStorage";
-import {connectWebSocket, sendWS} from "@/app/API/ws";
+import {connectWebSocket} from "@/app/API/ws";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useOrganizationStore} from "@/app/store/organizationStore";
 
@@ -21,6 +21,13 @@ export type ShowMode = 'once' | 'cycle'
 export type AdShowMode = 'minutes' | 'hours' | 'specific'
 
 type ByScreen<T> = Record<string, T[]>
+
+export type EmergencyAdmin = {
+    emergencyId: string
+    playlistId: string
+    isRecursing: boolean
+    screens: string[]
+}
 
 function chunkArray<T>(arr: T[], chunkSize: number): T[][] {
     const chunks: T[][] = [];
@@ -101,6 +108,14 @@ interface ScheduleState {
     getSchedule: () => Promise<void>
 
     addEditedBlock: (screenId: string, block: ScheduledBlock) => void
+
+
+    // === emergency  ===
+    active: EmergencyAdmin[]
+    error: string | null
+    start: (args: { playlistId: string; screensId: string[]; isRecursing: boolean }) => void
+    cancel: (emergencyId: string) => void
+    getByOrganization: (orgId: string) => void
 }
 
 export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]>(
@@ -108,128 +123,230 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
         const today = new Date()
         const zero = new Date(today.getFullYear(), today.getMonth(), today.getDate())
 
+        const isErrorPayload = (p: any) => p && typeof p === 'object' && (p.status === 'error' || p.__status === 'error')
+        const unwrap = <T = any>(p: any): T => (p && typeof p === 'object' && Array.isArray((p as any).payload)) ? (p as any).payload : p
+        let lastOrgId: string | null = null
 
-        const unpack = (incoming: any) => {
-            const isRoot =
-                incoming && typeof incoming === 'object' &&
-                ('status' in incoming || 'payload' in incoming || 'isChunked' in incoming)
+        const ws = connectWebSocket('schedule', (action, payload) => {
+            switch (action) {
+                case 'create':
+                case 'update': {
+                    // payload может быть либо корнем с {status, message}, либо самим DTO
+                    const status = (payload as any)?.status;
+                    if (status && status !== 'success') {
+                        set(s => {
+                            s.errorMessage = (payload as any)?.message ?? 'Ошибка при сохранении расписания';
+                        });
+                        return;
+                    }
+                    const dto = (payload as any)?.payload ?? payload; // ScheduleRuleDTO
+                    set(s => {
+                        if (dto?.id) s.scheduleId = dto.id;
+                        s.successMessage = action === 'create' ? 'Расписание создано' : 'Расписание обновлено';
+                    });
+                    break;
+                }
 
-            const status = isRoot ? incoming.status : undefined
-            const payload = isRoot ? incoming.payload : incoming
-            // иногда метаданные (chunkIndex/totalChunks) приходят в корне:
-            const meta = {
-                chunkIndex: incoming?.chunkIndex ?? payload?.chunkIndex ?? 0,
-                totalChunks: incoming?.totalChunks ?? payload?.totalChunks ?? 1,
-                isChunked: incoming?.isChunked ?? payload?.isChunked ?? false,
-                message: incoming?.message
-            }
-            return {status, payload, meta}
-        }
+                case 'getByBranchIds': {
+                    const status = (payload as any)?.status;
+                    if (status === 'error') {
+                        set(s => {
+                            s.errorMessage = (payload as any)?.message ?? 'Не удалось получить расписание филиала';
+                        });
+                        break;
+                    }
 
-        const ws =
-            typeof window !== 'undefined'
-                ?
-                connectWebSocket('schedule', (action, incoming, raw) => {
-                    const {status, payload: pld, meta} = unpack(raw)
+                    // payload может прийти как строка/объект/массив
+                    const raw = (payload as any)?.payload ?? payload;
+                    const inner = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                    const rules: any[] = Array.isArray(inner) ? inner : [inner];
 
-                    switch (action) {
-                        case 'create':
-                        case 'update': {
-                            // ошибки могут прийти как status==='error' или payload.error
-                            if (status === 'error' || (pld && 'error' in pld)) {
-                                set(s => {
-                                    s.errorMessage = incoming?.message || pld?.error || 'Ошибка сохранения расписания'
-                                })
-                                return
-                            }
+                    const toHms = (t: any) => {
+                        if (t == null) return t;
+                        const s = String(t);
+                        if (/^\d{2}:\d{2}:\d{2}$/.test(s)) return s;     // HH:mm:ss — оставляем
+                        if (/^\d{2}:\d{2}$/.test(s)) return s + ':00';   // HH:mm → добавим секунды
+                        return s;                                        // что-то иное — не трогаем
+                    };
+                    const asBool = (v: any) => {
+                        if (typeof v === 'boolean') return v;
+                        if (typeof v === 'number') return v !== 0;
+                        if (typeof v === 'string') return ['true', '1', 'yes'].includes(v.trim().toLowerCase());
+                        return false;
+                    };
 
-                            // попытка достать id из ответа
-                            const id = pld?.id ?? pld?.payload?.id ?? null
+                    // Нормализация всех слотов из всех правил
+                    const normalizedAll: ScheduledBlock[] = [];
+                    let meta = {
+                        id: null as string | null,
+                        startDate: null as string | null,
+                        endDate: null as string | null,
+                        isRecurring: false
+                    };
 
-                            set(s => {
-                                s.scheduleId = id
-                                s.successMessage = action === 'create' ? 'Расписание создано' : 'Расписание обновлено'
-                            })
-
-                            // если id не прислали — сразу запрашиваем объект по филиалу, чтобы получить id
-                            if (!id) {
-                                const branch = useOrganizationStore.getState?.().activeBranches?.[0]
-                                const branchId = branch?.id
-                                if (branchId) {
-                                    sendWS('schedule', {action: 'getByBranchId', branchId});
-                                }
-                            }
-                            return
+                    for (const rule of rules) {
+                        // метаданные (берём из первого правила — если нужно, можно мёржить умнее)
+                        if (!meta.id && rule?.id) {
+                            meta.id = rule.id ?? null;
+                            meta.startDate = rule.startDate ?? null;
+                            meta.endDate = rule.endDate ?? null;
+                            meta.isRecurring = asBool(rule.isRecurring ?? rule.recurring);
                         }
 
-                        case 'getByBranchId': {
-                            if (status === 'error') {
-                                set(s => {
-                                    s.errorMessage = incoming?.message || 'Ошибка загрузки расписания'
-                                })
-                                return
-                            }
+                        const rawSlots = rule?.timeSlots;
+                        const arr: any[] =
+                            typeof rawSlots === 'string' ? JSON.parse(rawSlots) :
+                                Array.isArray(rawSlots) ? rawSlots : [];
 
-                            // pld — это объект расписания (или чанк)
-                            const chunkIndex = Number.isFinite(meta.chunkIndex) ? Number(meta.chunkIndex) : 0
-                            const inner = pld?.payload ?? pld  // на всякий случай
-
-                            const normalizeSlot = (slot: any): ScheduledBlock => ({
+                        for (const slot of arr) {
+                            normalizedAll.push({
                                 dayOfWeek: slot.dayOfWeek,
-                                startDate: slot.startDate,
-                                endDate: slot.endDate,
-                                startTime: slot.startTime + ':00',
-                                endTime: slot.endTime + ':00',
+                                startDate: slot.startDate ?? null,
+                                endDate: slot.endDate ?? null,
+                                startTime: toHms(slot.startTime)!,
+                                endTime: toHms(slot.endTime)!,
                                 playlistId: slot.playlistId,
-                                isRecurring: slot.isRecurring,
-                                priority: slot.priority,
+                                isRecurring: asBool(slot.isRecurring ?? slot.recurring),
+                                priority: Number(slot.priority ?? 1),
                                 type: slot.type,
                                 screenId: slot.screenId,
-                            })
-
-                            const chunkSlotsRaw = Array.isArray(inner?.timeSlots) ? inner.timeSlots : []
-                            const normalizedChunk: ScheduledBlock[] = chunkSlotsRaw.map(normalizeSlot)
-
-                            set(s => {
-                                if (!s.scheduledFixedMap) s.scheduledFixedMap = {}
-                                if (!s.scheduledCalendarMap) s.scheduledCalendarMap = {}
-
-                                // на первом чанке сбрасываем метаданные и ставим новые
-                                if (chunkIndex === 0) {
-                                    s.isRecurring = Boolean(inner?.isRecurring)
-                                    s.startDate = inner?.startDate ?? null
-                                    s.endDate = inner?.endDate ?? null
-                                    s.scheduleId = inner?.id ?? s.scheduleId // вот тут появится id
-                                    // по желанию можно чистить старые блоки:
-                                    s.scheduledFixedMap = {}
-                                    s.scheduledCalendarMap = {}
-                                    s.selectedScreens = []
-                                }
-
-                                for (const slot of normalizedChunk) {
-                                    const mapKey = slot.startDate === null ? 'scheduledFixedMap' : 'scheduledCalendarMap'
-                                    if (!s[mapKey][slot.screenId]) s[mapKey][slot.screenId] = []
-
-                                    const exists = s[mapKey][slot.screenId].some((b: ScheduledBlock) =>
-                                        b.dayOfWeek === slot.dayOfWeek &&
-                                        b.startTime === slot.startTime &&
-                                        b.endTime === slot.endTime &&
-                                        b.playlistId === slot.playlistId &&
-                                        b.priority === slot.priority &&
-                                        b.type === slot.type &&
-                                        b.isRecurring === slot.isRecurring
-                                    )
-                                    if (!exists) s[mapKey][slot.screenId].push(slot)
-                                }
-
-                                const screens = new Set<string>(s.selectedScreens)
-                                normalizedChunk.forEach(slot => screens.add(slot.screenId))
-                                s.selectedScreens = Array.from(screens)
-                            })
-                            return
+                            });
                         }
                     }
-                }) : null
+
+                    // Записываем в стор
+                    set(s => {
+                        if (!s.scheduledFixedMap) s.scheduledFixedMap = {};
+                        if (!s.scheduledCalendarMap) s.scheduledCalendarMap = {};
+
+                        s.isRecurring = meta.isRecurring;
+                        s.startDate = meta.startDate;
+                        s.endDate = meta.endDate;
+                        s.scheduleId = meta.id;
+
+                        for (const slot of normalizedAll) {
+                            const mapKey = slot.startDate === null ? 'scheduledFixedMap' : 'scheduledCalendarMap';
+                            if (!s[mapKey][slot.screenId]) s[mapKey][slot.screenId] = [];
+
+                            const exists = s[mapKey][slot.screenId].some((b: ScheduledBlock) =>
+                                b.dayOfWeek === slot.dayOfWeek &&
+                                b.startTime === slot.startTime &&
+                                b.endTime === slot.endTime &&
+                                b.playlistId === slot.playlistId &&
+                                b.priority === slot.priority &&
+                                b.type === slot.type &&
+                                b.isRecurring === slot.isRecurring
+                            );
+                            if (!exists) s[mapKey][slot.screenId].push(slot);
+                        }
+
+                        // обязательно восстановить выбранные экраны — иначе таблица пустая
+                        const screens = new Set<string>(s.selectedScreens);
+                        normalizedAll.forEach(sl => screens.add(sl.screenId));
+                        s.selectedScreens = Array.from(screens);
+                    });
+
+                    break;
+                }
+
+                // ===== emergency  =====
+                case 'getEmergencyByOrganization': {
+                    if (isErrorPayload(payload)) {
+                        set(s => {
+                            s.errorMessage = payload?.message || 'Не удалось получить экстренные'
+                        })
+                        break
+                    }
+
+                    const asBool = (v: any): boolean => {
+                        if (typeof v === 'boolean') return v
+                        if (typeof v === 'string') {
+                            const t = v.trim().toLowerCase()
+                            return t === 'true' || t === '1' || t === 'yes'
+                        }
+                        if (typeof v === 'number') return v !== 0
+                        return false
+                    }
+
+                    const raw = unwrap<any[]>(payload)
+                    const listRaw = Array.isArray(raw) ? raw : []
+
+                    const list = listRaw
+                        // иногда в payload проскакивают посторонние объекты — отфильтруем
+                        .filter((it: any) => it && (it.playlistId || it.emergencyId || it.emrgencyId))
+                        .map((it: any): EmergencyAdmin => {
+                            // поддерживаем разные варианты имени флага
+                            const recSrc = it.recursing ?? it.isRecursing ?? it.isRecurring ?? it.loop ?? it.recurring
+                            return {
+                                emergencyId: it.emergencyId || it.emrgencyId, // опечатка бэка
+                                playlistId: it.playlistId,
+                                isRecursing: asBool(recSrc),
+                                screens: Array.isArray(it.screens) ? it.screens
+                                    : (Array.isArray(it.screensId) ? it.screensId : []),
+                            }
+                        })
+
+                    set(s => {
+                        s.active = list
+                    })
+                    break
+                }
+
+                case 'emergencyStart': {
+                    const asBool = (v: any): boolean => {
+                        if (typeof v === 'boolean') return v
+                        if (typeof v === 'string') return v.trim().toLowerCase() === 'true' || v === '1'
+                        if (typeof v === 'number') return v !== 0
+                        return false
+                    }
+
+                    const p = (payload as any)?.payload ?? payload
+                    if (p?.emergencyId) {
+                        set(s => {
+                            s.successMessage = 'Экстренный показ запущен'
+                            s.active = [
+                                {
+                                    emergencyId: p.emergencyId,
+                                    playlistId: p.playlistId,
+                                    isRecursing: asBool(p.isRecursing ?? p.recursing ?? p.isRecurring),
+                                    screens: [],
+                                },
+                                ...s.active.filter(e => e.emergencyId !== p.emergencyId),
+                            ]
+                        })
+                        if (lastOrgId) get().getByOrganization(lastOrgId)
+                    } else {
+                        set(s => {
+                            s.errorMessage = (payload as any)?.message || 'Не удалось запустить экстренный показ'
+                        })
+                    }
+                    break
+                }
+
+                case 'emergencyCancel': {
+                    const ok = (payload && typeof payload === 'object' && !!(payload as any).emergencyId)
+                        || ((payload as any)?.status === 'success')
+                    if (ok) {
+                        const emgId = (payload as any)?.emergencyId
+                        set(s => {
+                            s.successMessage = 'Экстренный показ отменён'
+                        })
+                        if (emgId) {
+                            set(s => {
+                                s.active = s.active.filter(e => e.emergencyId !== emgId)
+                            })
+                        } else if (lastOrgId) {
+                            get().getByOrganization(lastOrgId)
+                        }
+                    } else {
+                        set(s => {
+                            s.errorMessage = (payload as any)?.message || 'Не удалось отменить экстренный показ'
+                        })
+                    }
+                    break
+                }
+            }
+        });
 
         return {
             scheduledFixedMap: {},
@@ -515,12 +632,15 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     : null
 
 
-                const branchId = useOrganizationStore.getState?.().activeBranches?.[0]?.id
+                const branchIds =
+                    (useOrganizationStore.getState?.().activeBranches ?? [])
+                        .map(b => b.id)
+                        .filter(Boolean)
                 const payload = {
                     startDate: null,
                     endDate: null,
                     isRecurring,
-                    branchId,
+                    branchIds,
                 }
 
                 console.log("id расписания", scheduleId)
@@ -534,38 +654,41 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
 
                 for (let i = 0; i < totalChunks; i++) {
-                    sendWS('schedule', {
+                    ws.send(JSON.stringify({
                         action: actionName,
                         data: {
                             ...payload,
-                            ...(scheduleId ? {scheduleId} : {}),
+                            ...(scheduleId ? {id: scheduleId, scheduleId} : {}),
                             timeSlots: chunks[i],
                             chunkIndex: i,
-                            totalChunks,
+                            totalChunks
                         }
-                    })
+                    }))
                 }
             },
 
             getSchedule: async () => {
-                const branch = useOrganizationStore.getState?.().activeBranches?.[0]
-                const branchId = branch?.id
-                if (!branchId) {
+                const branchIds =
+                    (useOrganizationStore.getState?.().activeBranches ?? [])
+                        .map(b => b.id)
+                        .filter(Boolean)
+                if (branchIds.length === 0) {
                     set(s => {
                         s.errorMessage = 'Не выбран филиал (branchId)'
                     })
                     return
                 }
 
-                // (опц.) очистка локального состояния перед загрузкой
                 set(s => {
                     s.scheduledFixedMap = {}
                     s.scheduledCalendarMap = {}
                     s.selectedScreens = []
                 })
 
-
-                sendWS('schedule', {action: 'getByBranchId', branchId});
+                ws.send(JSON.stringify({
+                    action: 'getByBranchIds',
+                    branchIds
+                }))
             },
 
 
@@ -627,167 +750,37 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 s.advertisementSpecificTimes = s.advertisementSpecificTimes.filter(x => x !== t)
             }),
 
+// ===== emergency  =====
+            active: [],
+            error: null,
+
+            start: ({playlistId, screensId, isRecursing}) => {
+                const ts = new Date().toISOString()
+                console.log(`[${ts}] emergencyStart →`, {playlistId, screensId, isRecursing})
+
+                set(s => {
+                    s.successMessage = null;
+                    s.errorMessage = null
+                })
+
+                ws.send(JSON.stringify({
+                    action: 'emergencyStart',
+                    data: {playlistId, screensId, isRecursing}
+                }))
+            },
+
+            cancel: (emergencyId: string) => {
+                set(s => {
+                    s.successMessage = null;
+                    s.errorMessage = null
+                })
+                ws.send(JSON.stringify({action: 'emergencyCancel', data: {emergencyId}}))
+            },
+
+            getByOrganization: (orgId: string) => {
+                lastOrgId = orgId
+                ws.send(JSON.stringify({action: 'getEmergencyByOrganization', data: {orgId}}))
+            },
         }
     })
 )
-
-
-// sendSchedule: async () => {
-//
-//     const accessToken = getValueInStorage("accessToken")
-//
-//
-//     set(s => {
-//         s.errorMessage = null
-//     })
-//
-//     const {
-//         selectedScreens,
-//         isFixedSchedule,
-//         isRecurring,
-//         priority,
-//         scheduledFixedMap,
-//         scheduledCalendarMap,
-//         scheduleId,
-//         pauseMinutes,
-//         intervalMinutes,
-//         showMode,
-//     } = get()
-//     const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-//     const userId = typeof window !== 'undefined' ? localStorage.getItem("userId") : null
-//
-//     const slots = selectedScreens.flatMap(screenId => {
-//         const blocks = (isFixedSchedule ? scheduledFixedMap : scheduledCalendarMap)[screenId] ?? [];
-//         return blocks.map(b => ({
-//             dayOfWeek: b.dayOfWeek,
-//             startTime: b.startTime.slice(0, 5),
-//             endTime: b.endTime.slice(0, 5),
-//             playlistId: b.playlistId,
-//             screenId,
-//
-//             // берём именно из блока
-//             isRecurring: b.isRecurring,
-//             startDate: isFixedSchedule ? null : b.startDate,
-//             endDate: isFixedSchedule ? null : b.endDate,
-//
-//             // поля интервала могут быть undefined
-//             repeatIntervalMinutes: b.repeatIntervalMinutes,
-//             durationMinutes: b.durationMinutes,
-//
-//             // приоритет тоже из блока
-//             priority: b.priority,
-//         }));
-//     });
-//
-//
-//     const uniqueSlots = Array.from(new Map(slots.map(s => [
-//         `${s.screenId}|${s.dayOfWeek}|${s.startDate}|${s.startTime}|${s.endTime}|${s.playlistId}`, s
-//     ])).values())
-//
-//     const payload = {startDate: null, endDate: null, isRecurring, timeSlots: slots}
-//
-//     console.log('slots:', slots)
-//     console.log('payload:', payload)
-//
-//     try {
-//         if (scheduleId) {
-//             await axios.put(`${SERVER}schedule/${scheduleId}`, {...payload, userId},
-//                 {headers: {Authorization: `Bearer ${accessToken}`}})
-//             get().setSuccess('Расписание успешно обновлено');
-//
-//         } else {
-//             const res = await axios.post(`${SERVER}schedule`, {...payload, userId},
-//                 {headers: {Authorization: `Bearer ${accessToken}`}})
-//             set(s => {
-//                 s.scheduleId = res.data.id
-//             })
-//             get().setSuccess('Расписание успешно сохранено');
-//         }
-//     } catch (e: any) {
-//         console.error('Error save schedule:', e)
-//         const serverMsg = e?.response?.data?.message
-//         const ruMsg = 'Не удалось сохранить расписание'
-//         const finalMsg = serverMsg
-//             ? `${serverMsg}. ${ruMsg}`
-//             : ruMsg
-//
-//         get().setError(finalMsg)
-//     }
-// },
-//
-// getSchedule: async () => {
-//     const accessToken = getValueInStorage("accessToken");
-//     const SERVER = process.env.NEXT_PUBLIC_SERVER_URL;
-//
-//     try {
-//         const {data} = await axios.get<{
-//             id: string
-//             startDate: string
-//             endDate: string
-//             isRecurring: boolean
-//             timeSlots: Array<{
-//                 dayOfWeek: string
-//                 startDate: string | null
-//                 endDate: string | null
-//                 startTime: string
-//                 endTime: string
-//                 playlistId: string
-//                 screenId: string
-//                 isRecurring: boolean
-//                 priority: number
-//                 repeatIntervalMinutes?: number
-//                 durationMinutes?: number
-//             }>
-//         }>(`${SERVER}schedule/user`, {
-//             headers: {Authorization: `Bearer ${accessToken}`}
-//         });
-//
-//         console.log('getSchedule response data:', data)
-//         console.log('timeSlots:', data.timeSlots)
-//         // Сбрасываем карту
-//         set(s => {
-//             s.scheduledFixedMap = {};
-//             s.scheduledCalendarMap = {};
-//             s.isRecurring = data.isRecurring ?? false;
-//             s.startDate = data.startDate;
-//             s.endDate = data.endDate;
-//             s.scheduleId = data.id;
-//         });
-//
-//         // Заполняем
-//         const screens = new Set<string>();
-//         data.timeSlots.forEach(slot => {
-//             screens.add(slot.screenId);
-//             const mapKey =
-//                 (slot.repeatIntervalMinutes != null || slot.durationMinutes != null)
-//                     ? 'scheduledCalendarMap'
-//                     : slot.startDate === null
-//                         ? 'scheduledFixedMap'
-//                         : 'scheduledCalendarMap';
-//
-//             set(s => {
-//                 if (!s[mapKey][slot.screenId]) s[mapKey][slot.screenId] = [];
-//                 s[mapKey][slot.screenId].push({
-//                     dayOfWeek: slot.dayOfWeek as ScheduledBlock['dayOfWeek'],
-//                     startDate: slot.startDate,
-//                     endDate: slot.endDate,
-//                     startTime: slot.startTime + ':00',
-//                     endTime: slot.endTime + ':00',
-//                     playlistId: slot.playlistId,
-//                     isRecurring: Boolean(slot.isRecurring),
-//                     priority: slot.priority,
-//                     repeatIntervalMinutes: slot.repeatIntervalMinutes ?? 0,
-//                     durationMinutes: slot.durationMinutes ?? 0,
-//                 });
-//             });
-//         });
-//
-//         set(s => {
-//             s.selectedScreens = Array.from(screens);
-//         });
-//     } catch (e: any) {
-//         set(s => {
-//             s.errorMessage = e.response?.data?.message || 'Ошибка загрузки';
-//         });
-//     }
-// },
