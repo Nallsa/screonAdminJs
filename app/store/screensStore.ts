@@ -8,7 +8,7 @@ import {StateCreator} from 'zustand'
 import axios from "axios";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 
-const ONLINE_TTL_MS = 4 * 60 * 1000;
+const ONLINE_TTL_MS = 6 * 60 * 1000;
 
 export type LiveStatus = {
     status?: string;

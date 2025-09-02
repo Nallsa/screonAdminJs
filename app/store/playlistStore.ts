@@ -75,7 +75,7 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 }
 
                 // Здесь получаем состояние из другого стора
-                const orgState = useOrganizationStore.getState();
+                const orgState = useOrganizationStore.getState?.();
                 const organizationId = orgState.organizationInfo?.id; // Пример: доступ к полю из useOrganizationStore
                 // Или любой другой нужный вам данные, например, activeBranches: orgState.activeBranches
 

@@ -329,7 +329,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     if (ok) {
                         const emgId = (payload as any)?.emergencyId
                         set(s => {
-                            s.successMessage = 'Экстренный показ отменён'
+                            s.successMessage = 'Экстренный показ завершён'
                         })
                         if (emgId) {
                             set(s => {
@@ -602,6 +602,12 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
 
             sendSchedule: async () => {
+
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    console.warn('WS[schedule] not connected or not open');
+                    return;
+                }
+
                 const {
                     selectedScreens,
                     isFixedSchedule,
@@ -640,7 +646,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     startDate: null,
                     endDate: null,
                     isRecurring,
-                    branchIds,
+
                 }
 
                 console.log("id расписания", scheduleId)
@@ -661,13 +667,19 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             ...(scheduleId ? {id: scheduleId, scheduleId} : {}),
                             timeSlots: chunks[i],
                             chunkIndex: i,
-                            totalChunks
+                            totalChunks,
+                            branchIds,
                         }
                     }))
                 }
             },
 
             getSchedule: async () => {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    console.warn('WS[schedule] not connected or not open');
+                    return;
+                }
+
                 const branchIds =
                     (useOrganizationStore.getState?.().activeBranches ?? [])
                         .map(b => b.id)
@@ -754,10 +766,14 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             active: [],
             error: null,
 
+
             start: ({playlistId, screensId, isRecursing}) => {
                 const ts = new Date().toISOString()
                 console.log(`[${ts}] emergencyStart →`, {playlistId, screensId, isRecursing})
-
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    console.warn('WS[schedule] not connected or not open');
+                    return;
+                }
                 set(s => {
                     s.successMessage = null;
                     s.errorMessage = null
@@ -770,6 +786,10 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             },
 
             cancel: (emergencyId: string) => {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    console.warn('WS[schedule] not connected or not open');
+                    return;
+                }
                 set(s => {
                     s.successMessage = null;
                     s.errorMessage = null
@@ -778,6 +798,10 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             },
 
             getByOrganization: (orgId: string) => {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    console.warn('WS[schedule] not connected or not open');
+                    return;
+                }
                 lastOrgId = orgId
                 ws.send(JSON.stringify({action: 'getEmergencyByOrganization', data: {orgId}}))
             },

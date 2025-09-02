@@ -18,8 +18,7 @@ const navItems = [
     {href: "/library", label: "Библиотека", icon: "bi bi-music-note-list"},
     {href: "/schedule", label: "Расписание", icon: "bi bi-calendar-week"},
     {href: "/emergency", label: "Экстренное", icon: "bi bi-lightning-charge"},
-    {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
-    {href: "/organization", label: "Организация", icon: "bi bi-user"},
+    {href: "/organization", label: "Организация", icon: "bi bi-building-fill-gear"},
 
 ];
 export default function Sidebar({collapsed, onToggle}: Props) {
@@ -34,6 +33,7 @@ export default function Sidebar({collapsed, onToggle}: Props) {
 
 
     return (
+
         <div
             className="bg-white shadow-sm d-flex flex-column"
             style={{

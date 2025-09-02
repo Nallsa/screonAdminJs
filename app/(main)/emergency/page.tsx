@@ -81,13 +81,6 @@ export default function EmergencyPage() {
                     Запустить
                 </Button>
 
-                <Button
-                    style={{paddingLeft: 40, paddingRight: 40}}
-                    variant="success"
-                    onClick={() => getByOrganization(orgId)}
-                >
-                    Получить
-                </Button>
             </div>
 
             {/* Настройки */}
@@ -159,7 +152,6 @@ export default function EmergencyPage() {
                                                 </Badge>
                                             </div>
                                             <div className="d-flex align-items-center gap-3">
-                                                <small className="text-muted">ID: {item.emergencyId}</small>
                                                 <Button
                                                     size="sm"
                                                     variant="outline-danger"

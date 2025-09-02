@@ -5,6 +5,8 @@ import {useRouter} from 'next/navigation'
 import {useOrganizationStore} from "@/app/store/organizationStore";
 import {BranchDto} from "@/public/types/interfaces";
 import {InitialsAvatar} from "@/app/components/Organization/Organization";
+import {Button} from "react-bootstrap";
+import {useAuthStore} from "@/app/store/authStore";
 
 export default function OrganizationPage() {
     const router = useRouter();
@@ -26,6 +28,13 @@ export default function OrganizationPage() {
 
         fetchOrg();
     }, [getInfoOrg, router]);
+
+    const signOut = useAuthStore(s => s.signOut)
+
+    const handleLogout = () => {
+        signOut()
+        router.push('/auth/login')
+    }
 
     // Temporary mock data for testing since backend is not working
     const mockOrganizationInfo = {
@@ -72,48 +81,60 @@ export default function OrganizationPage() {
     }
 
     return (
-        <div className="container py-4">
-            <div className="row justify-content-center">
-                <div className="col-md-8 col-lg-6">
-                    {/* Header: photo + name */}
-                    <div className="text-center mb-4">
-                        {orgInfo.photoUrl ? (
-                            <></>
-                        ) : (
-                            <InitialsAvatar text={orgInfo.name} size={96}/>
-                        )}
-                        <h4 className="mt-3 fw-bold">{orgInfo.name}</h4>
-                    </div>
+        <>
+            {/* Кнопка выхода в правом верхнем углу экрана */}
+            <Button
+                variant="outline-danger"
+                className="position-fixed top-0 end-0 m-3 z-3 px-4"
+                onClick={handleLogout}
+            >
+                Выйти
+            </Button>
+            <div className="container py-4">
+                <div className="row justify-content-center">
+                    <div className="col-md-8 col-lg-6">
+                        {/* Header: photo + name */}
+                        <div className="text-center mb-4">
+                            {orgInfo.photoUrl ? (
+                                <></>
+                            ) : (
+                                <InitialsAvatar text={orgInfo.name} size={96}/>
 
-                    {/* Branches section */}
-                    <div className="d-flex justify-content-between align-items-center mb-3 px-2">
-                        <h5 className="mb-0">Филиалы</h5>
-                        <button
-                            className="btn btn-primary rounded-pill px-3 py-1"
-                            onClick={() => router.push('/organization/createOrgElements?isBranch=true')} // Adjust route; assuming separate route for branch creation
-                        >
-                            <i className="bi bi-plus fs-5"></i> Создать филиал
-                        </button>
-                    </div>
+                            )}
 
-                    {branches.length === 0 ? (
-                        <p className="text-muted px-2">Пока филиалов нет</p>
-                    ) : (
-                        <div className="row px-2">
-                            {branches.map((branch: BranchDto) => (
-                                <div key={branch.id} className="col-12 col-sm-6 mb-3">
-                                    <BranchCard
-                                        branch={branch}
-                                        onClick={() => toggleActiveBranch(branch)} // Changed: toggle active instead of redirect
-                                        isActive={activeBranches.some((b) => b.id === branch.id)} // New: pass isActive prop
-                                    />
-                                </div>
-                            ))}
+                            <h4 className="mt-3 fw-bold">{orgInfo.name}</h4>
                         </div>
-                    )}
+
+                        {/* Branches section */}
+                        <div className="d-flex justify-content-between align-items-center mb-3 px-2">
+                            <h5 className="mb-0">Филиалы</h5>
+                            <button
+                                className="btn btn-primary rounded-pill px-3 py-1"
+                                onClick={() => router.push('/organization/createOrgElements?isBranch=true')} // Adjust route; assuming separate route for branch creation
+                            >
+                                <i className="bi bi-plus fs-5"></i> Создать филиал
+                            </button>
+                        </div>
+
+                        {branches.length === 0 ? (
+                            <p className="text-muted px-2">Пока филиалов нет</p>
+                        ) : (
+                            <div className="row px-2">
+                                {branches.map((branch: BranchDto) => (
+                                    <div key={branch.id} className="col-12 col-sm-6 mb-3">
+                                        <BranchCard
+                                            branch={branch}
+                                            onClick={() => toggleActiveBranch(branch)} // Changed: toggle active instead of redirect
+                                            isActive={activeBranches.some((b) => b.id === branch.id)} // New: pass isActive prop
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
 

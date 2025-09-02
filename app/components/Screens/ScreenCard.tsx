@@ -1,10 +1,16 @@
 'use client'
 
-import React, {useEffect, useState} from 'react'
+import React, {useEffect, useMemo, useState} from 'react'
 import {Card, Button, Form, Modal} from 'react-bootstrap'
 import {useScreensStore} from '@/app/store/screensStore'
 import {DeviceStatus, GroupData, ScreenData} from "@/public/types/interfaces";
 import ConfirmModal from "@/app/components/Common/ConfirmModal";
+import {usePlaylistStore} from "@/app/store/playlistStore";
+import {useScheduleStore} from "@/app/store/scheduleStore";
+import {shallow} from 'zustand/shallow';
+import PreviewImage from "@/app/components/Common/PreviewImage";
+import {useCurrentPlayingPlaylist} from "@/app/hooks/useCurrentPlayingPlaylist";
+import {fmtC, fmtPct, fmtVer, formatLastSeen} from "@/app/lib/screensUtils";
 
 interface ScreenCardProps {
     screen: ScreenData
@@ -12,7 +18,6 @@ interface ScreenCardProps {
     isSelected: boolean
     onSelect?: () => void
 }
-
 
 export default function ScreenCard({
                                        screen,
@@ -40,13 +45,21 @@ export default function ScreenCard({
 
     const sendGetStatus = useScreensStore(s => s.sendGetStatus);
     const live = useScreensStore(s => s.statusByScreen[screen.id]);
-    const isOnline = useScreensStore(s => s.isScreenOnline(screen.id));
+
+    const statusEntry = useScreensStore(s => s.statusByScreen[screen.id]);
+    const ONLINE_TTL_MS = 6 * 60 * 1000;
+    const isOnline = React.useMemo(() => {
+        if (!statusEntry) return false;
+        const t = statusEntry.lastSeenAt ? Date.parse(statusEntry.lastSeenAt) : statusEntry.receivedAt;
+        return Date.now() - t <= ONLINE_TTL_MS;
+    }, [statusEntry]);
 
     const [showStatusModal, setShowStatusModal] = useState(false);
     const [statusLoading, setStatusLoading] = useState(false);
     const [seenAt, setSeenAt] = useState<string | undefined>(undefined);
     const [prevRecvAt, setPrevRecvAt] = useState<number | null>(null);
     const timeoutRef = React.useRef<any>(null);
+    const currentPl = useCurrentPlayingPlaylist(screen.id);
 
     function openStatus() {
         setShowStatusModal(true);
@@ -58,6 +71,7 @@ export default function ScreenCard({
         // clearTimeout(timeoutRef.current);
         // timeoutRef.current = setTimeout(() => setStatusLoading(false), 4000);
     }
+
 
     useEffect(() => {
         if (!statusLoading) return;
@@ -93,71 +107,6 @@ export default function ScreenCard({
     }
 
 
-    // хэлперы для модалки статуса
-    const fmtPct = (n?: number) => (n == null ? '—' : `${n.toFixed(1)} %`);
-    const fmtC = (n?: number) => (n == null ? '—' : `${n.toFixed(1)} °C`);
-    const fmtVer = (s?: string) => s ?? '—';
-
-
-    function formatAgo(iso?: string, locale = navigator.language): string {
-        if (!iso) return '—';
-        const d = new Date(iso);
-        const diffSec = Math.round((Date.now() - d.getTime()) / 1000);
-        const abs = Math.abs(diffSec);
-        if ('RelativeTimeFormat' in Intl) {
-            const rtf = new Intl.RelativeTimeFormat(locale, {numeric: 'auto'});
-            if (abs < 60) return rtf.format(-diffSec, 'second');
-            else if (abs < 3600) return rtf.format(-Math.trunc(diffSec / 60), 'minute');
-            else if (abs < 86400) return rtf.format(-Math.trunc(diffSec / 3600), 'hour');
-            return rtf.format(-Math.trunc(diffSec / 86400), 'day');
-        }
-        // fallback
-        if (abs < 60) return `${abs} с назад`;
-        if (abs < 3600) return `${Math.trunc(abs / 60)} мин назад`;
-        if (abs < 86400) return `${Math.trunc(abs / 3600)} ч назад`;
-        return `${Math.trunc(abs / 86400)} дн назад`;
-    }
-
-    function formatLastSeen(iso?: string, locale = navigator.language): string {
-        if (!iso) return '—';
-        const d = new Date(iso);
-        if (isNaN(d.getTime())) return iso;
-
-        const dtf = new Intl.DateTimeFormat(locale, {
-            dateStyle: 'medium',
-            timeStyle: 'medium',
-        });
-        const nice = dtf.format(d);
-
-        // относительное время
-        const now = new Date();
-        const diffSec = Math.round((d.getTime() - now.getTime()) / 1000);
-        const abs = Math.abs(diffSec);
-
-        let rel = '';
-        if ('RelativeTimeFormat' in Intl) {
-            const rtf = new Intl.RelativeTimeFormat(locale, {numeric: 'auto'});
-            if (abs < 60) rel = rtf.format(Math.trunc(diffSec), 'second');
-            else if (abs < 3600) rel = rtf.format(Math.trunc(diffSec / 60), 'minute');
-            else if (abs < 86400) rel = rtf.format(Math.trunc(diffSec / 3600), 'hour');
-            else rel = rtf.format(Math.trunc(diffSec / 86400), 'day');
-        } else {
-            rel = abs < 60 ? `${abs} с назад`
-                : abs < 3600 ? `${Math.trunc(abs / 60)} мин назад`
-                    : abs < 86400 ? `${Math.trunc(abs / 3600)} ч назад`
-                        : `${Math.trunc(abs / 86400)} дн назад`;
-        }
-
-        // таймзона пользователя (UTC±hh:mm)
-        const tzOffsetMin = -d.getTimezoneOffset();
-        const sign = tzOffsetMin >= 0 ? '+' : '-';
-        const hh = String(Math.floor(Math.abs(tzOffsetMin) / 60)).padStart(2, '0');
-        const mm = String(Math.abs(tzOffsetMin) % 60).padStart(2, '0');
-
-
-        return `${nice} (UTC${sign}${hh}:${mm})`;
-    }
-
     const Row = ({label, value}: { label: string; value: React.ReactNode }) => (
         <div className="d-flex align-items-start justify-content-between mb-2"
              style={{gap: 16, fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto'}}>
@@ -186,13 +135,23 @@ export default function ScreenCard({
                 {/* Превью */}
                 <div
                     style={{
-                        height: 140,
-                        background: '#000',
+                        height: 120,
                         borderTopLeftRadius: 8,
                         borderTopRightRadius: 8,
+                        overflow: 'hidden',
+                        background: currentPl?.filePreviewId ? 'transparent' : '#000',
+                        position: 'relative',              // ВАЖНО для PreviewImage с prop `fill`
                     }}
-                />
-
+                >
+                    {currentPl?.filePreviewId && isOnline && (
+                        <PreviewImage
+                            id={currentPl.filePreviewId}
+                            name={currentPl.name}
+                            fill
+                            aspectRatio={16 / 9}
+                        />
+                    )}
+                </div>
                 <Card.Body className="p-2">
                     {/* Название */}
                     <Card.Title as="h6" className="mb-1">

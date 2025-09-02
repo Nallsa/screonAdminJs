@@ -44,13 +44,7 @@ export default function PlaylistItemCard({item}: { item: PlaylistItem }) {
                 <div className="small fw-bold mb-1">{item.name}</div>
                 <div className="d-flex align-items-center mb-2">
                     <span className="me-1 small">Duration:</span>
-                    {/*<Form.Control*/}
-                    {/*    type="number"*/}
-                    {/*    size="sm"*/}
-                    {/*    value={item.duration}*/}
-                    {/*    style={{ width: 60 }}*/}
-                    {/*    readOnly*/}
-                    {/*/>*/}
+
                     <span className="ms-1 small">sec</span>
                 </div>
                 <div className="d-flex justify-content-between">
