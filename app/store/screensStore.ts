@@ -8,7 +8,6 @@ import {StateCreator} from 'zustand'
 import axios from "axios";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 
-const ONLINE_TTL_MS = 6 * 60 * 1000;
 
 export type LiveStatus = {
     status?: string;
@@ -132,15 +131,16 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             const ramUsage = payload.ramUsage ?? payload.ram_usage;
             const playerVersion = payload.playerVersion ?? payload.player_version;
             const lastSeenAt = payload.lastSeenAt ?? payload.last_seen_at;
-            const status = payload.status ?? payload.networkState ?? payload.network_state;
+            const statusRaw = payload.status ?? payload.networkState ?? payload.network_state;
+            const status = typeof statusRaw === 'string' ? statusRaw.toLowerCase() : statusRaw;
 
             get().setStatusForScreen(String(sid), {
                 status,
                 temperature: payload.temperature,
-                cpuLoad,
-                ramUsage,
-                playerVersion,
-                lastSeenAt,
+                cpuLoad: payload.cpuLoad ?? payload.cpu_load,
+                ramUsage: payload.ramUsage ?? payload.ram_usage,
+                playerVersion: payload.playerVersion ?? payload.player_version,
+                lastSeenAt: payload.lastSeenAt ?? payload.last_seen_at,
             });
 
             if (process.env.NODE_ENV !== 'production') {
@@ -474,9 +474,9 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
         isScreenOnline: (screenId) => {
             const e = get().statusByScreen[screenId];
-            if (!e) return false;
-            const t = e.lastSeenAt ? Date.parse(e.lastSeenAt) : e.receivedAt;
-            return (Date.now() - t) <= ONLINE_TTL_MS;
+            if (!e || !e.status) return false;
+            const s = String(e.status).toLowerCase();
+            return s === 'online' || s === 'connected' || s === 'ok';
         },
 
         startAutoStatusPolling: (intervalMs = POLL_DEFAULT_MS) => {

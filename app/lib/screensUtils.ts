@@ -1,25 +1,39 @@
-// хэлперы для модалки статуса
 export const fmtPct = (n?: number) => (n == null ? '—' : `${n.toFixed(1)} %`);
 export const fmtC = (n?: number) => (n == null ? '—' : `${n.toFixed(1)} °C`);
 export const fmtVer = (s?: string) => s ?? '—';
 
+type LastSeenOpts = {
+    timeZone?: 'local' | 'utc' | string; // 'Europe/Moscow', 'Asia/Almaty', …
+    showTz?: boolean;                    // показывать приписку про TZ
+};
 
-export function formatLastSeen(iso?: string, locale = navigator.language): string {
+export function formatLastSeen(
+    iso?: string,
+    locale = navigator.language,
+    opts: LastSeenOpts = {timeZone: 'local', showTz: true}
+): string {
     if (!iso) return '—';
     const d = new Date(iso);
     if (isNaN(d.getTime())) return iso;
 
-    const dtf = new Intl.DateTimeFormat(locale, {
+    // Выбираем TZ: local (по умолчанию) или конкретная
+    const tz =
+        !opts.timeZone || opts.timeZone === 'local'
+            ? undefined
+            : opts.timeZone === 'utc'
+                ? 'UTC'
+                : opts.timeZone;
+
+    const nice = new Intl.DateTimeFormat(locale, {
         dateStyle: 'medium',
         timeStyle: 'medium',
-    });
-    const nice = dtf.format(d);
+        timeZone: tz,
+    }).format(d);
 
-    // относительное время
+    // Относительное время (оставляем как есть)
     const now = new Date();
     const diffSec = Math.round((d.getTime() - now.getTime()) / 1000);
     const abs = Math.abs(diffSec);
-
     let rel = '';
     if ('RelativeTimeFormat' in Intl) {
         const rtf = new Intl.RelativeTimeFormat(locale, {numeric: 'auto'});
@@ -27,19 +41,23 @@ export function formatLastSeen(iso?: string, locale = navigator.language): strin
         else if (abs < 3600) rel = rtf.format(Math.trunc(diffSec / 60), 'minute');
         else if (abs < 86400) rel = rtf.format(Math.trunc(diffSec / 3600), 'hour');
         else rel = rtf.format(Math.trunc(diffSec / 86400), 'day');
-    } else {
-        rel = abs < 60 ? `${abs} с назад`
-            : abs < 3600 ? `${Math.trunc(abs / 60)} мин назад`
-                : abs < 86400 ? `${Math.trunc(abs / 3600)} ч назад`
-                    : `${Math.trunc(abs / 86400)} дн назад`;
     }
 
-    // таймзона пользователя (UTC±hh:mm)
-    const tzOffsetMin = -d.getTimezoneOffset();
-    const sign = tzOffsetMin >= 0 ? '+' : '-';
-    const hh = String(Math.floor(Math.abs(tzOffsetMin) / 60)).padStart(2, '0');
-    const mm = String(Math.abs(tzOffsetMin) % 60).padStart(2, '0');
+    // Подпись тайм-зоны
+    let tzLabel = '';
+    if (opts.showTz !== false) {
+        if (tz && tz !== 'UTC') {
+            tzLabel = ` (${tz})`;
+        } else if (tz === 'UTC') {
+            tzLabel = ' (UTC)';
+        } else {
+            const offMin = -d.getTimezoneOffset();
+            const sign = offMin >= 0 ? '+' : '-';
+            const hh = String(Math.floor(Math.abs(offMin) / 60)).padStart(2, '0');
+            const mm = String(Math.abs(offMin) % 60).padStart(2, '0');
+            tzLabel = ` (UTC${sign}${hh}:${mm})`;
+        }
+    }
 
-
-    return `${nice} (UTC${sign}${hh}:${mm})`;
+    return `${nice}`;
 }

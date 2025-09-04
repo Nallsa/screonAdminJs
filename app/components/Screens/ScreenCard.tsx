@@ -47,12 +47,11 @@ export default function ScreenCard({
     const live = useScreensStore(s => s.statusByScreen[screen.id]);
 
     const statusEntry = useScreensStore(s => s.statusByScreen[screen.id]);
-    const ONLINE_TTL_MS = 6 * 60 * 1000;
-    const isOnline = React.useMemo(() => {
-        if (!statusEntry) return false;
-        const t = statusEntry.lastSeenAt ? Date.parse(statusEntry.lastSeenAt) : statusEntry.receivedAt;
-        return Date.now() - t <= ONLINE_TTL_MS;
-    }, [statusEntry]);
+    const isOnline = (() => {
+        const s = statusEntry?.status?.toLowerCase();
+        return s === 'online' || s === 'connected' || s === 'ok';
+    })();
+
 
     const [showStatusModal, setShowStatusModal] = useState(false);
     const [statusLoading, setStatusLoading] = useState(false);
@@ -282,7 +281,18 @@ export default function ScreenCard({
                             <Row label="Температура процессора:" value={fmtC(live.temperature)}/>
                             <Row label="Загрузка ОЗУ:" value={fmtPct(live.ramUsage)}/>
                             <Row label="Версия плеера:" value={fmtVer(live.playerVersion)}/>
-                            <Row label="Последняя проверка:" value={formatLastSeen(live.lastSeenAt)}/>
+                            <Row
+                                label="Последняя проверка:"
+                                value={
+                                    statusEntry
+                                        ? (
+                                            <>
+                                                {formatLastSeen(statusEntry.lastSeenAt)}
+                                            </>
+                                        )
+                                        : '—'
+                                }
+                            />
                         </div>
                     )}
                 </Modal.Body>
