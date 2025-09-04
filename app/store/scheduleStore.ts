@@ -108,7 +108,8 @@ interface ScheduleState {
     getSchedule: () => Promise<void>
 
     addEditedBlock: (screenId: string, block: ScheduledBlock) => void
-
+    clearAllSlots: () => void
+    clearDaySlots: (day: Date, screenIds?: string[]) => void
 
     // === emergency  ===
     active: EmergencyAdmin[]
@@ -761,6 +762,43 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             removeAdvertisementSpecificTime: t => set(s => {
                 s.advertisementSpecificTimes = s.advertisementSpecificTimes.filter(x => x !== t)
             }),
+
+            clearAllSlots: () => {
+                set(s => {
+                    s.scheduledFixedMap = {};
+                    s.scheduledCalendarMap = {};
+                });
+            },
+
+            clearDaySlots: (day, screenIds) => {
+                set(s => {
+                    const iso = day.toISOString().slice(0, 10)
+
+                    const DAY_ENUM = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const
+                    const dowEnum = DAY_ENUM[day.getDay()] as ScheduledBlock['dayOfWeek']
+
+
+                    const targets = screenIds && screenIds.length > 0
+                        ? screenIds
+                        : Array.from(new Set([
+                            ...Object.keys(s.scheduledFixedMap || {}),
+                            ...Object.keys(s.scheduledCalendarMap || {}),
+                        ]))
+
+                    for (const sid of targets) {
+                        if (s.isFixedSchedule) {
+                            if (s.scheduledFixedMap[sid]) {
+                                s.scheduledFixedMap[sid] = s.scheduledFixedMap[sid].filter(b => b.dayOfWeek !== dowEnum)
+                            }
+                        } else {
+                            if (s.scheduledCalendarMap[sid]) {
+                                s.scheduledCalendarMap[sid] = s.scheduledCalendarMap[sid].filter(b => (b.startDate ?? '').slice(0, 10) !== iso)
+                            }
+                        }
+                    }
+                })
+            },
+
 
 // ===== emergency  =====
             active: [],

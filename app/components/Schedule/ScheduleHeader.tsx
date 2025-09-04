@@ -5,7 +5,7 @@ import {useScheduleStore} from "@/app/store/scheduleStore";
 
 export default function ScheduleHeader() {
 
-    const {sendSchedule, selectedScreens, selectedPlaylist} = useScheduleStore()
+    const {sendSchedule, selectedScreens, selectedPlaylist, clearAllSlots} = useScheduleStore()
 
     return (
         <header
@@ -16,6 +16,7 @@ export default function ScheduleHeader() {
                 alignItems: 'center'
             }}
         >
+
             <Button
 
                 style={{paddingLeft: 40, paddingRight: 40}}
@@ -29,6 +30,19 @@ export default function ScheduleHeader() {
             >
                 Сохранить
             </Button>
+
+
+            <div style={{width: 12}}></div>
+
+            <Button
+                style={{paddingLeft: 40, paddingRight: 40}}
+                variant="outline-primary"
+                onClick={clearAllSlots}
+            >
+                Очистить
+            </Button>
+
+
         </header>
     )
 }

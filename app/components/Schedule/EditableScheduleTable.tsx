@@ -28,7 +28,8 @@ export default function EditableScheduleTable() {
         selectedScreens,
         addEditedBlock,
         selectedGroup,
-        showMode
+        showMode,
+        clearDaySlots
     } = useScheduleStore()
 
 
@@ -119,6 +120,11 @@ export default function EditableScheduleTable() {
         return {colByIndex, colsByIndex};
     }, [metasByDay]);
 
+    const screensForTable = useMemo(() => (
+        selectedGroup
+            ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
+            : selectedScreens
+    ), [selectedGroup, selectedScreens, allScreens])
 
     // для позиционирования
     const tableRef = useRef<HTMLTableElement>(null)
@@ -358,9 +364,24 @@ export default function EditableScheduleTable() {
                     <th style={headerCell()}>Время</th>
                     {currentWeek.map((d, i) => (
                         <th key={i} style={headerCell()}>
-                            {isFixedSchedule
-                                ? ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'][i]
-                                : `${['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'][i]} ${d.getDate()}`}
+                            <div className="d-flex flex-row justify-content-between align-content-center">
+                                <div style={{paddingLeft: 1}}></div>
+                                {isFixedSchedule
+                                    ? ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'][i]
+                                    : `${['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'][i]} ${d.getDate()}`}
+                                <button
+                                    type="button"
+                                    className="btn  btn-sm d-inline-flex align-items-center"
+                                    title="Очистить слоты этого дня"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        clearDaySlots(currentWeek[i], screensForTable) // ← передаём дату столбца и экраны
+                                    }}
+                                    style={{lineHeight: 1, padding: '2px 2px', borderRadius: 6}}
+                                >
+                                    <i className="bi bi-x-lg" aria-hidden="true"/>
+                                </button>
+                            </div>
                         </th>
                     ))}
                 </tr>
@@ -433,9 +454,6 @@ export default function EditableScheduleTable() {
                             transform: isHovered
                                 ? 'translateY(-4px)'
                                 : undefined,
-                            // transitionProperty: 'width',
-                            // transitionDuration: '.1s',
-                            // transitionTimingFunction: 'ease-in-out',
                         }}
                         onMouseEnter={() => setHoveredBlock(m.block)}
                         onMouseLeave={() => setHoveredBlock(null)}
@@ -483,7 +501,7 @@ export default function EditableScheduleTable() {
                 <Modal.Body>
                     {error && <div className="text-danger mb-2">{error}</div>}
                     <Form>
-                        {/* 1. выбор типа слота */}
+                        {/*  выбор типа слота */}
                         <Form.Group className="mb-3">
                             <Form.Label>Тип слота</Form.Label>
                             <div className="d-flex gap-3">
@@ -502,7 +520,6 @@ export default function EditableScheduleTable() {
                             </div>
                         </Form.Group>
 
-                        {/* 2.a. если обычный слот — once / cycle */}
                         {editTypeMode === 'PLAYLIST' && (
                             <Form.Group className="mb-3">
                                 <Form.Label>Режим показа</Form.Label>
@@ -640,7 +657,7 @@ function rowsOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number)
     return aStart < bEnd && bStart < aEnd;
 }
 
-// назначение колонок (жадный алгоритм) для слотов одного дня
+// назначение колонок для слотов одного дня
 function assignColumnsForDay(dayMetas: Array<Meta & { _i: number }>) {
     // сортируем по началу, затем по длительности (длинные раньше — чуть устойчивее)
     const sorted = [...dayMetas].sort((a, b) =>
@@ -673,7 +690,7 @@ function assignColumnsForDay(dayMetas: Array<Meta & { _i: number }>) {
     return colByIndex;
 }
 
-// для каждого блока считаем, сколько одновременно с ним колонок используется (это и будет делитель ширины)
+
 function computeColsForDay(
     dayMetas: Array<Meta & { _i: number }>,
     colByIndex: Map<number, number>
