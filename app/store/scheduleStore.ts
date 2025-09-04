@@ -652,9 +652,9 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 console.log("id расписания", scheduleId)
 
                 const CHUNK_SIZE = 20
-                const chunks = chunkArray(slots, CHUNK_SIZE)
+                const chunks = slots.length ? chunkArray(slots, CHUNK_SIZE) : [[]];
                 const totalChunks = chunks.length
-                if (totalChunks === 0) return
+                // if (totalChunks === 0) return
 
                 const actionName = scheduleId ? 'update' : 'create'
 

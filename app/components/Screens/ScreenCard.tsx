@@ -139,7 +139,7 @@ export default function ScreenCard({
                         borderTopLeftRadius: 8,
                         borderTopRightRadius: 8,
                         overflow: 'hidden',
-                        background: currentPl?.filePreviewId ? 'transparent' : '#000',
+                        background: '#000',
                         position: 'relative',              // ВАЖНО для PreviewImage с prop `fill`
                     }}
                 >
