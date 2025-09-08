@@ -1,9 +1,9 @@
 import {create} from 'zustand';
-import {SERVER_URL} from "@/app/API/api";
-import {BranchDto, OrganizationDto} from "@/public/types/interfaces";
-import {addValueInStorage, getValueInStorage} from "@/app/API/localStorage";
-import {useAuthStore} from "@/app/store/authStore";
-import axios from "axios";
+import axios from 'axios';
+import {SERVER_URL} from '@/app/API/api';
+import {BranchDto, OrganizationDto, RoleType} from '@/public/types/interfaces';
+import {addValueInStorage, getValueInStorage} from '@/app/API/localStorage';
+import {useAuthStore} from '@/app/store/authStore';
 
 const baseUrl = SERVER_URL // Or whatever the actual base is
 const api = {
@@ -38,7 +38,8 @@ interface OrganizationState {
     errorMessage: string | null;
     successMessage: string | null;
     orgBranches: BranchDto[] | null;
-    activeBranches: BranchDto[]; // New: array of active branches
+    activeBranches: BranchDto[];
+    role: RoleType | null;
 
     setHasOrg: (value: boolean) => void;
     clearInviteCode: () => void;
@@ -49,9 +50,10 @@ interface OrganizationState {
     createBranch: (branchName: string, description: string | null, onResult: (id: string | null, error: string | null) => void) => void;
     generateInviteCode: (branchId: string) => void;
     getInfoOrg: () => Promise<boolean>;
-
-    joinOrganizationByCode: (referralCode: string) => Promise<boolean>
-    toggleActiveBranch: (branch: BranchDto) => void; // New: toggle active branch
+    joinOrganizationByCode: (referralCode: string) => Promise<boolean>;
+    toggleActiveBranch: (branch: BranchDto) => void;
+    leaveFromBranch: () => void;
+    removeBranch: (branchId: string) => Promise<boolean>; // New
 }
 
 export const useOrganizationStore = create<OrganizationState>((set, get) => ({
@@ -63,7 +65,8 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
     errorMessage: null,
     successMessage: null,
     orgBranches: null,
-    activeBranches: [], // New: initial empty array
+    activeBranches: [],
+    role: null,
 
     setHasOrg: (value) => set({hasOrg: value}),
 
@@ -116,15 +119,12 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
             const json: OrganizationDto = JSON.parse(responseText);
 
             addValueInStorage('organizationId', json.id);
-            set({hasOrg: true, organizationInfo: json}); // Update state directly
+            set({hasOrg: true, organizationInfo: json});
 
-
-            const store = useAuthStore.getState(); // Access active branches from the other store
-
-            await store.checkToken()
+            const store = useAuthStore.getState();
+            await store.checkToken();
 
             get().setSuccess('Организация создана.');
-
             onResult(json.id, null);
         } catch (e: any) {
             const err = e.message || 'Ошибка при создании организации.';
@@ -170,7 +170,7 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
         try {
             const body = JSON.stringify({
                 name: trimmed,
-                // description, // Uncomment if needed
+                description,
             });
 
             const responseText = await api.post('organizations/branches', body, false);
@@ -182,10 +182,9 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
                 return;
             }
 
-            const createdOrg: OrganizationDto = JSON.parse(responseText); // Assuming response is OrganizationDto
+            const createdOrg: OrganizationDto = JSON.parse(responseText);
 
-            await get().getInfoOrg(); // Refresh org info
-
+            await get().getInfoOrg();
             get().setSuccess('Филиал создан.');
             onResult(createdOrg.id, null);
         } catch (e: any) {
@@ -210,8 +209,7 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
 
         try {
             const url = `organizations/${organizationInfo.id}/invite-code?userId=${userId}&branchId=${branchId}`;
-
-            const responseText = await api.post(url, '',); // data is empty string
+            const responseText = await api.post(url, '');
 
             if (responseText && responseText.trim() !== '') {
                 let code: string | null = null;
@@ -243,7 +241,7 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
     },
 
     getInfoOrg: async () => {
-        set({isCheckingOrg: true}); // Added for parity, though not in original
+        set({isCheckingOrg: true});
         const result = await api.get('organizations/organization');
 
         if (result) {
@@ -252,13 +250,18 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
 
                 addValueInStorage('organizationId', orgInfo.id);
 
-                let newActiveBranches: BranchDto[] = get().activeBranches
+                let newActiveBranches: BranchDto[] = get().activeBranches;
 
-                if (newActiveBranches.length == 0) {
-                    newActiveBranches = [orgInfo.branches[0]]
+                if (newActiveBranches.length === 0) {
+                    newActiveBranches = orgInfo.branches ? [orgInfo.branches[0]] : [];
                 }
 
-                set({organizationInfo: orgInfo, hasOrg: true, activeBranches: newActiveBranches});
+                set({
+                    organizationInfo: orgInfo,
+                    hasOrg: true,
+                    activeBranches: newActiveBranches,
+                    role: orgInfo.role,
+                });
 
                 return true;
             } catch (e) {
@@ -271,56 +274,100 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
         }
     },
 
-
     joinOrganizationByCode: async (referralCode: string): Promise<boolean> => {
-
-        const accessToken = getValueInStorage("accessToken")
-        const userId = getValueInStorage("userId")
+        const accessToken = getValueInStorage('accessToken');
+        const userId = getValueInStorage('userId');
 
         if (!userId || !accessToken) {
-            set({errorMessage: 'Нет userId или accessToken.'})
-            return false
+            set({errorMessage: 'Нет userId или accessToken.'});
+            return false;
         }
 
-        set({errorMessage: null, successMessage: null})
+        set({errorMessage: null, successMessage: null});
 
         try {
-            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL!
+            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL!;
             const res = await axios.post(
                 `${SERVER}organizations/join`,
                 {referralCode, userId},
                 {headers: {Authorization: `Bearer ${accessToken}`}}
-            )
+            );
 
             if (res.status === 200) {
-                localStorage.setItem('organizationId', res.data.id)
-                // set({
-                //     organizationId: res.data.id,
-                //     hasOrg: true,
-                //     successMessage: 'Успешно вступили в организацию.',
-                // })
-                return true
+                localStorage.setItem('organizationId', res.data.id);
+                set({successMessage: 'Успешно вступили в организацию.'});
+                return true;
             } else {
-                set({errorMessage: 'Неожиданный ответ от сервера при вступлении в организацию.'})
-                return false
+                set({errorMessage: 'Неожиданный ответ от сервера при вступлении в организацию.'});
+                return false;
             }
         } catch (e: any) {
-            const msg = e.response?.data?.message ?? e.message ?? 'Ошибка при вступлении.'
-            set({errorMessage: msg})
-            return false
+            const msg = e.response?.data?.message ?? e.message ?? 'Ошибка при вступлении.';
+            set({errorMessage: msg});
+            return false;
         }
     },
-
 
     toggleActiveBranch: (branch) =>
         set((state) => {
             const isActive = state.activeBranches.some((b) => b.id === branch.id);
+
+            if (state.activeBranches.length === 1 && isActive) {
+                return {activeBranches: state.activeBranches};
+            }
+
             return {
                 activeBranches: isActive
                     ? state.activeBranches.filter((b) => b.id !== branch.id)
                     : [...state.activeBranches, branch],
             };
         }),
+
+    leaveFromBranch: () => {
+        set({inviteCode: null});
+    },
+
+    removeBranch: async (branchId: string): Promise<boolean> => {
+        const accessToken = getValueInStorage('accessToken');
+        const userId = getValueInStorage('userId');
+
+        if (!userId || !accessToken || !branchId) {
+            set({errorMessage: 'Не хватает данных: userId, accessToken, branchId, adminId или ownerId.'});
+            return false;
+        }
+
+        if (get().role !== 'OWNER') {
+            set({errorMessage: 'Только владелец может удалить филиал.'});
+            return false;
+        }
+
+        set({errorMessage: null, successMessage: null});
+
+        try {
+            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL!;
+            const res = await axios.delete(
+                `${SERVER}organizations/${branchId}/owner/${userId}`,
+                {headers: {Authorization: `Bearer ${accessToken}`}}
+            );
+
+            if (res.status === 204) {
+                // Обновляем orgBranches и activeBranches, удаляя филиал
+                set((state) => ({
+                    orgBranches: state.orgBranches ? state.orgBranches.filter((b) => b.id !== branchId) : null,
+                    activeBranches: state.activeBranches.filter((b) => b.id !== branchId),
+                    successMessage: 'Филиал успешно удален.',
+                }));
+                // Обновляем информацию об организации
+                await get().getInfoOrg();
+                return true;
+            } else {
+                set({errorMessage: 'Неожиданный ответ от сервера при удалении филиала.'});
+                return false;
+            }
+        } catch (e: any) {
+            const msg = e.response?.data?.message ?? e.message ?? 'Ошибка при удалении филиала.';
+            set({errorMessage: msg});
+            return false;
+        }
+    },
 }));
-// Optional: Call getInfoOrg on init if needed, but typically call from component
-// useOrganizationStore.getState().getInfoOrg();

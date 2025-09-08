@@ -5,13 +5,13 @@ import Image from 'next/image';
 import {InitialsAvatar} from "@/app/components/Organization/Organization";
 import {useOrganizationStore} from '@/app/store/organizationStore';
 import {useEffect, useState} from "react";
-import {BranchDto} from "@/public/types/interfaces";
+import {BranchDto, RoleType} from "@/public/types/interfaces";
 
 
 export default function OrgBranchPage() {
     const params = useParams();
     const router = useRouter();
-    const {organizationInfo, getInfoOrg} = useOrganizationStore();
+    const {organizationInfo, getInfoOrg, role, leaveFromBranch, removeBranch} = useOrganizationStore();
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     const searchParams = useSearchParams();
@@ -27,13 +27,21 @@ export default function OrgBranchPage() {
         getInfoOrg(); // Fetch org info if needed
     }, [getInfoOrg]);
 
-    const handleDelete = () => {
-        // TODO: organizationViewModel.deleteBranch(branch.id)
+
+    const handleDelete = async () => {
+        await removeBranch(branch.id)
         router.push('/organization');
         setShowDeleteDialog(false);
     };
 
     console.log(branch)
+
+
+    useEffect(() => {
+        return () => {
+            leaveFromBranch()
+        };
+    }, []);
 
     return (
         <div className="container py-4">
@@ -78,9 +86,11 @@ export default function OrgBranchPage() {
                     )}
 
                     {/* Delete Button */}
-                    <button className="btn btn-danger w-100 mb-3" onClick={() => setShowDeleteDialog(true)}>
-                        <i className="bi bi-trash me-2"></i> Удалить филиал
-                    </button>
+                    {role == RoleType.OWNER ? (
+                        <button className="btn btn-danger w-100 mb-3" onClick={() => setShowDeleteDialog(true)}>
+                            <i className="bi bi-trash me-2"></i> Удалить филиал
+                        </button>) : null}
+
 
                     {/* Invite Code Generator */}
                     <InviteCodeGenerator branchId={branch.id}/>

@@ -65,7 +65,7 @@ export interface OrganizationDto {
     name: string;
     branches: BranchDto[];
     photoUrl?: string | null;
-    role?: string | null;
+    role?: RoleType
 }
 
 export interface BranchDto {
@@ -73,4 +73,10 @@ export interface BranchDto {
     name: string;
     logoUrl?: string | null;
     description?: string | null;
+}
+
+
+export enum RoleType {
+    ADMIN = "ADMIN",
+    OWNER = "OWNER",
 }
