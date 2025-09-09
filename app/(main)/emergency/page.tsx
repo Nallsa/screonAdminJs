@@ -1,18 +1,17 @@
-// app/emergency/page.tsx
 'use client'
 
 import React, {useEffect, useMemo, useState} from 'react'
-import {Card, Button, Form, ListGroup, Badge} from 'react-bootstrap'
+import {Badge, Button, Card, ListGroup} from 'react-bootstrap'
 import {useRouter} from 'next/navigation'
 
 import {usePlaylistStore} from '@/app/store/playlistStore'
 import {useScreensStore} from '@/app/store/screensStore'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import {useSettingsStore} from '@/app/store/settingsStore'
-import WhereToShowCard from '@/app/components/Schedule/Settings/WhereToShowCard'
-import PlaylistSelect from '@/app/components/Schedule/Settings/Playlist/PlaylistSelect'
 import {WarningModal} from "@/app/components/Common/WarningModal";
 import ErrorModal from "@/app/components/Common/ErrorModal";
+import {EmergencyCreateModal} from "@/app/components/Emergency/EmergencyCreateModal";
+import {ScenarioCreateModal} from "@/app/components/Emergency/ScenarioCreateModal";
 
 export default function EmergencyPage() {
     const router = useRouter()
@@ -20,10 +19,10 @@ export default function EmergencyPage() {
 
     const {playlistItems} = usePlaylistStore()
     const {allScreens, groups} = useScreensStore()
-    const {selectedScreens, selectedGroup, selectedPlaylist} = useScheduleStore()
+    const {selectedScreens, selectedGroup, selectedPlaylist, canStartScenarioOn} = useScheduleStore()
 
     const {
-        active,
+        emergency,
         start,
         cancel,
         getByOrganization,
@@ -31,151 +30,277 @@ export default function EmergencyPage() {
         errorMessage,
         setSuccess,
         setError,
+        scenarios,
+        createScenario,
+        startScenario,
+        cancelScenario,
 
     } = useScheduleStore()
-    const [isLoop, setIsLoop] = useState(true)
 
-    const selectedPlaylistObj = playlistItems.find(p => p.id === selectedPlaylist) || null
 
     useEffect(() => {
         if (orgId) getByOrganization(orgId)
     }, [orgId, getByOrganization])
 
-    const screensToUse = useMemo(() => {
-        if (selectedGroup) {
-            return allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
-        }
-        return selectedScreens
-    }, [allScreens, selectedGroup, selectedScreens])
 
-    const canSubmit = !!selectedPlaylist && (selectedGroup !== null || screensToUse.length > 0)
+    const screenNameById = useMemo(() => {
+        const m = new Map<string, string>()
+        allScreens.forEach(s => m.set(s.id, s.name))
+        return m
+    }, [allScreens])
 
-    const handleSend = () => {
-        if (!selectedPlaylistObj) {
-            setError('Выберите плейлист');
-            return
-        }
-        if (screensToUse.length === 0 && !selectedGroup) {
-            setError('Выберите экраны или группу');
-            return
+    const prettyScreens = (ids?: string[], fallbackCount?: number) => {
+        const names = (ids ?? []).map(id => screenNameById.get(id) ?? id)
+
+        if (names.length > 0) {
+            return names.length > 6
+                ? `${names.slice(0, 6).join(', ')} и ещё ${names.length - 6}`
+                : names.join(', ')
         }
 
-        start({
-            playlistId: selectedPlaylistObj.id,
-            screensId: screensToUse,
-            isRecursing: isLoop,
-        })
+        const n = fallbackCount ?? 0
+        const mod10 = n % 10, mod100 = n % 100
+        if (mod10 === 1 && mod100 !== 11) return `${n} экран`
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${n} экрана`
+        return `${n} экранов`
     }
 
+
+    const [showEmergencyModal, setShowEmergencyModal] = useState(false)
+    const [showScenarioModal, setShowScenarioModal] = useState(false)
+
     return (
-        <div className="p-4">
-            <div className="d-flex justify-content-between align-items-center mb-3 rounded">
-                <h4 className="mb-0">Экстренное проигрывание</h4>
-
-                <Button
-                    style={{paddingLeft: 40, paddingRight: 40}}
-                    variant="success"
-                    onClick={handleSend}
-                    disabled={!canSubmit}
-                >
-                    Запустить
-                </Button>
-
+        <div className="p-4 d-flex flex-column align-items-center gap-4 w-100">
+            {/* хэдер + кнопки */}
+            <div className="w-100 d-flex justify-content-between align-items-center mb-2">
+                <h4 className="mb-0">Сценарии и экстренное проигрывание</h4>
+                <div className="d-flex gap-2">
+                    <Button variant="primary" onClick={() => setShowEmergencyModal(true)}>
+                        Создать экстренное
+                    </Button>
+                    <Button variant="outline-primary" onClick={() => setShowScenarioModal(true)}>
+                        Создать сценарий
+                    </Button>
+                </div>
             </div>
 
-            {/* Настройки */}
-            <div className="d-flex flex-wrap gap-3 align-items-stretch">
-                <Card style={{minWidth: 250}}>
-                    <Card.Header>Плейлист</Card.Header>
-                    <Card.Body className="d-flex align-items-center justify-content-center" style={{height: 90}}>
-                        <PlaylistSelect onEmptyClick={() => router.push('/playlists')}/>
-                    </Card.Body>
-                </Card>
-
-                <Card style={{minWidth: 180}}>
-                    <Card.Header>Режим</Card.Header>
-                    <Card.Body className="d-flex flex-column align-items-center justify-content-center text-center"
-                               style={{height: 90}}>
-                        <Form.Check
-                            type="radio"
-                            id="emg-loop"
-                            name="emg-mode"
-                            label="Зациклено"
-                            checked={isLoop}
-                            onChange={() => setIsLoop(true)}
-                            className="mb-2"
-                        />
-                        <Form.Check
-                            type="radio"
-                            id="emg-once"
-                            name="emg-mode"
-                            label="Один раз"
-                            checked={!isLoop}
-                            onChange={() => setIsLoop(false)}
-                        />
-                    </Card.Body>
-                </Card>
-
-                <Card className="flex-grow-0">
-                    <Card.Header>Где показывать</Card.Header>
-                    <Card.Body className="d-flex align-items-center justify-content-center" style={{height: 90}}>
-                        <div className="w-100" style={{maxWidth: 400}}>
-                            <WhereToShowCard
-                                onNoScreensClick={(e) => {
-                                    e.preventDefault()
-                                    alert('Сначала добавьте экраны')
-                                }}
-                            />
-                        </div>
-                    </Card.Body>
-                </Card>
-            </div>
-
-            {/* Активные экстренные ниже настроек */}
-            {active.length > 0 && (
-                <Card className="mt-4">
+            <div className="d-flex flex-column align-items-center gap-4 w-100">
+                {/* Список экстренных  */}
+                <Card className="w-100 mx-auto shadow-sm" style={{maxWidth: 600}}>
                     <Card.Header>Активные экстренные</Card.Header>
                     <Card.Body>
-                        <ListGroup>
-                            {active.map(item => {
-                                const plName = playlistItems.find(p => p.id === item.playlistId)?.name || item.playlistId
-                                const screenNames = item.screens
-                                    .map(id => allScreens.find(s => s.id === id)?.name || id)
-                                    .join(', ')
-                                return (
-                                    <ListGroup.Item key={item.emergencyId} className="d-flex flex-column gap-2">
-                                        <div className="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <strong>{plName}</strong>{' '}
-                                                <Badge bg={item.isRecursing ? 'success' : 'secondary'}>
-                                                    {item.isRecursing ? 'Зациклено' : 'Один раз'}
-                                                </Badge>
-                                            </div>
-                                            <div className="d-flex align-items-center gap-3">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline-danger"
-                                                    onClick={() => cancel(item.emergencyId)}
-                                                >
-                                                    Отменить
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        {!!item.screens.length && (
+                        {emergency.length === 0 ? (
+                            <div className="text-muted">Сейчас нет активных экстренных показов</div>
+                        ) : (
+                            <ListGroup>
+                                {emergency.map(item => {
+                                    const started = item.startedAt ? new Date(item.startedAt).toLocaleString() : '—'
 
-                                            <div className="text-muted">
-                                                <strong>Экраны:</strong> {screenNames}
+                                    const badgeVariant =
+                                        item.status === 'ACTIVE' ? 'success'
+                                            : item.status === 'FINISHED' ? 'secondary'
+                                                : 'primary'
+
+                                    const status = item.status == 'ACTIVE' ? 'Активен' : item.status == 'STOPPED' || 'DRAFT' ? 'Пауза' : 'Не активен'
+
+                                    return (
+                                        <ListGroup.Item key={item.emergencyId} className="d-flex flex-column gap-2">
+
+                                            <div className="d-flex justify-content-between align-items-center">
+                                                <div className="d-flex align-items-center gap-2">
+                                                    <strong>Экстренный показ</strong>
+                                                    <Badge bg={badgeVariant}>{status}</Badge>
+                                                </div>
+                                                <div className="d-flex align-items-center gap-3">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline-danger"
+                                                        onClick={() => cancel(item.emergencyId)}
+                                                    >
+                                                        Отменить
+                                                    </Button>
+                                                </div>
                                             </div>
-                                        )}
-                                    </ListGroup.Item>
-                                )
-                            })}
-                        </ListGroup>
+
+
+                                            <div className="text-muted d-flex flex-wrap gap-3">
+                                                <div><strong>Старт:</strong> {started}</div>
+                                                <div>
+                                                    <strong>Экраны:</strong> {prettyScreens(item.screensIds, item.screens)}
+                                                </div>
+                                            </div>
+                                        </ListGroup.Item>
+                                    )
+                                })}
+                            </ListGroup>
+                        )}
                     </Card.Body>
                 </Card>
-            )}
 
+                {/* Список сценариев  */}
+                <Card className="w-100 mx-auto shadow-sm" style={{maxWidth: 600}}>
+                    <Card.Header className="d-flex justify-content-between align-items-center">
+                        <span>Сценарии</span>
+                    </Card.Header>
+                    <Card.Body>
+                        {scenarios.length === 0 ? (
+                            <div className="text-muted ">Сценариев пока нет</div>
+                        ) : (
+                            <ListGroup>
+                                {scenarios.map(item => {
 
+                                    const badgeVariant =
+                                        item.status === 'ACTIVE' ? 'success'
+                                            : item.status === 'DRAFT' ? 'dark'
+                                                : item.status === 'STOPPED' ? 'dark'
+                                                    : 'primary'
+                                    const status = item.status == 'ACTIVE' ? 'Активен' : item.status == 'STOPPED' || 'DRAFT' ? 'Пауза' : 'Не активен'
+                                    return (
+                                        <ListGroup.Item key={item.emergencyId} className="d-flex flex-column gap-2"
+                                        >
+                                            <div className="d-flex justify-content-between align-items-center">
+                                                <div className="d-flex align-items-center gap-2">
+                                                    <strong>{item.name}</strong>
+                                                    <Badge bg={badgeVariant}>{status}</Badge>
+                                                    <Badge bg={item.recurring ? 'success' : 'secondary'}>
+                                                        {item.recurring ? 'Зациклено' : 'Один раз'}
+                                                    </Badge>
+                                                </div>
+                                                <div className="d-flex align-items-center gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="success"
+                                                        onClick={() => {
+                                                            const ids = item.screensIds ?? []
+                                                            if (ids.length === 0) {
+                                                                setError('Нельзя запустить: сервер не вернул экраны сценария для проверки пересечений')
+                                                                return
+                                                            }
+                                                            const [ok, msg] = canStartScenarioOn(ids)
+                                                            if (!ok) {
+                                                                setError(msg || 'Нельзя запустить сценарий');
+                                                                return
+                                                            }
+                                                            startScenario(item.emergencyId)
+                                                        }}
+                                                        disabled={item.status === 'ACTIVE'}
+                                                    >
+                                                        Запустить
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline-danger"
+                                                        onClick={() => cancelScenario(item.emergencyId)}
+                                                        disabled={item.status !== 'ACTIVE'}
+                                                    >
+                                                        Отменить
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <div className="text-muted d-flex flex-wrap gap-3">
+                                                <div>
+                                                    <strong>Экраны:</strong> {prettyScreens(item.screensIds, item.screens)}
+                                                </div>
+                                            </div>
+                                        </ListGroup.Item>
+                                    )
+                                })}
+                            </ListGroup>
+                        )}
+                    </Card.Body>
+                </Card>
+            </div>
+
+            {/* Модалка Создать экстренное */}
+            <EmergencyCreateModal
+                show={showEmergencyModal}
+                onHide={() => setShowEmergencyModal(false)}
+                onSubmit={() => {
+                    const selectedPlaylistObj = playlistItems.find(p => p.id === selectedPlaylist) || null
+                    const screensToUse = selectedGroup
+                        ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
+                        : selectedScreens
+
+                    // валидация
+                    if (!selectedPlaylistObj) {
+                        setError('Выберите плейлист');
+                        return
+                    }
+                    if (screensToUse.length === 0 && !selectedGroup) {
+                        setError('Выберите экраны или группу');
+                        return
+                    }
+
+                    // проверка пересечений с уже активными
+                    const busyIds = new Set<string>()
+                    for (const a of emergency) {
+                        if (!a) continue
+                        if (Array.isArray((a as any).screenIds)) (a as any).screenIds.forEach((x: string) => busyIds.add(x))
+                        else if (Array.isArray((a as any).screensIds)) (a as any).screensIds.forEach((x: string) => busyIds.add(x))
+                        else if (Array.isArray((a as any).assignments)) {
+                            for (const asg of (a as any).assignments) (asg?.screens || []).forEach((x: string) => busyIds.add(x))
+                        }
+                    }
+                    const conflict = screensToUse.filter(id => busyIds.has(id))
+                    if (conflict.length) {
+                        const byId = new Map(allScreens.map(s => [s.id, s.name]))
+                        const names = conflict.slice(0, 5).map(id => byId.get(id) || id).join(', ')
+                        const more = conflict.length > 5 ? ` и ещё ${conflict.length - 5}` : ''
+                        setError(`Нельзя запустить экстренное. Уже заняты экраны: ${names}${more}.`)
+                        return
+                    }
+
+                    start({
+                        organizationId: orgId,
+                        recurring: (document.getElementById('emg-loop') as HTMLInputElement)?.checked ?? true,
+                        assignments: [{playlistId: selectedPlaylistObj.id, screens: screensToUse}],
+                    })
+
+                    setShowEmergencyModal(false)
+                }}
+            />
+
+            {/* Модалка Создать сценарий */}
+            <ScenarioCreateModal
+                show={showScenarioModal}
+                onHide={() => setShowScenarioModal(false)}
+                onSubmit={async (name, recurring, groups) => {
+                    if (!orgId) {
+                        setError('Не выбрана организация');
+                        return
+                    }
+                    if (!name.trim()) {
+                        setError('Введите название сценария');
+                        return
+                    }
+                    if (groups.length === 0) {
+                        setError('Добавьте хотя бы одну группу');
+                        return
+                    }
+
+                    // Проверим, что экраны в группах не пересекаются
+                    const seen = new Set<string>()
+                    for (const g of groups) {
+                        for (const id of g.screens) {
+                            if (seen.has(id)) {
+                                setError('Экраны в группах сценария не должны пересекаться');
+                                return
+                            }
+                            seen.add(id)
+                        }
+                    }
+
+                    await createScenario({
+                        organizationId: orgId,
+                        name: name.trim(),
+                        recurring,
+                        assignments: groups,
+                    })
+                    setShowScenarioModal(false)
+                }}
+            />
+
+            {/* уведомления */}
             <WarningModal
                 show={!!successMessage}
                 title="Готово"

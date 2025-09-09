@@ -10,37 +10,39 @@ export default function ScheduleHeader() {
     return (
         <header
             style={{
-                padding: 20,
+                padding: 10,
                 display: 'flex',
-                justifyContent: 'flex-end',
+                justifyContent: 'space-between',
                 alignItems: 'center'
             }}
         >
+            <h4 className="mb-0">Расписание</h4>
 
-            <Button
+            <div className="d-flex flex-row align-content-center justify-content-center">
+                <Button
 
-                style={{paddingLeft: 40, paddingRight: 40}}
-                onClick={sendSchedule}
-                variant="success"
-                disabled={selectedScreens.length === 0
-                    // || !selectedPlaylist
-                }
-
-
-            >
-                Сохранить
-            </Button>
+                    style={{paddingLeft: 40, paddingRight: 40}}
+                    onClick={sendSchedule}
+                    variant="success"
+                    disabled={selectedScreens.length === 0
+                    }
 
 
-            <div style={{width: 12}}></div>
+                >
+                    Сохранить
+                </Button>
 
-            <Button
-                style={{paddingLeft: 40, paddingRight: 40}}
-                variant="outline-primary"
-                onClick={clearAllSlots}
-            >
-                Очистить
-            </Button>
+
+                <div style={{width: 12}}></div>
+
+                <Button
+                    style={{paddingLeft: 40, paddingRight: 40}}
+                    variant="outline-primary"
+                    onClick={clearAllSlots}
+                >
+                    Очистить
+                </Button>
+            </div>
 
 
         </header>

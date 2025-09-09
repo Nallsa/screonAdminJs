@@ -22,11 +22,32 @@ export type AdShowMode = 'minutes' | 'hours' | 'specific'
 
 type ByScreen<T> = Record<string, T[]>
 
-export type EmergencyAdmin = {
+
+export type Emergency = {
+    emergencyId: string
+    status: 'ACTIVE' | 'FINISHED' | string
+    startedAt?: string
+    screens: number
+    playlistId?: string
+    recurring?: boolean
+    screensIds?: string[]
+}
+
+export type EmergencyScreenState = {
     emergencyId: string
     playlistId: string
-    isRecursing: boolean
-    screens: string[]
+    recurring: boolean
+}
+
+export type Scenario = {
+    emergencyId: string
+    name: string
+    status: 'DRAFT' | 'ACTIVE' | 'STOPPED' | string
+    recurring: boolean
+    startedAt?: string
+    screens: number
+    screensIds?: string[]
+    groups: { playlistId: string; screens: number }[]
 }
 
 function chunkArray<T>(arr: T[], chunkSize: number): T[][] {
@@ -112,11 +133,34 @@ interface ScheduleState {
     clearDaySlots: (day: Date, screenIds?: string[]) => void
 
     // === emergency  ===
-    active: EmergencyAdmin[]
+    emergency: Emergency[]
+    currentScreenEmergency: EmergencyScreenState | null
     error: string | null
-    start: (args: { playlistId: string; screensId: string[]; isRecursing: boolean }) => void
+
+    start: (
+        args:
+            | { organizationId: string; recurring: boolean; assignments: { playlistId: string; screens: string[] }[] }
+            | { organizationId: string; playlistId: string; screensId: string[]; isRecursing: boolean }
+    ) => void
     cancel: (emergencyId: string) => void
-    getByOrganization: (orgId: string) => void
+    getByOrganization: (organizationId: string) => void
+
+    // === scenarios ===
+    scenarios: Scenario[]
+    createScenario: (args: {
+        organizationId: string
+        name: string
+        recurring: boolean
+        assignments: { playlistId: string; screens: string[] }[]
+    }) => Promise<void>
+    startScenario: (scenarioId: string) => void
+    cancelScenario: (scenarioId: string) => void
+
+    busyEmergencyScreens: () => Set<string>;
+    activeScenarioScreens: () => Set<string>;
+
+    canStartEmergencyOn: (ids: string[]) => [boolean, string?];
+    canStartScenarioOn: (ids: string[]) => [boolean, string?];
 }
 
 export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]>(
@@ -132,7 +176,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             switch (action) {
                 case 'create':
                 case 'update': {
-                    // payload может быть либо корнем с {status, message}, либо самим DTO
                     const status = (payload as any)?.status;
                     if (status && status !== 'success') {
                         set(s => {
@@ -140,7 +183,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         });
                         return;
                     }
-                    const dto = (payload as any)?.payload ?? payload; // ScheduleRuleDTO
+                    const dto = (payload as any)?.payload ?? payload;
                     set(s => {
                         if (dto?.id) s.scheduleId = dto.id;
                         s.successMessage = action === 'create' ? 'Расписание создано' : 'Расписание обновлено';
@@ -165,9 +208,9 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     const toHms = (t: any) => {
                         if (t == null) return t;
                         const s = String(t);
-                        if (/^\d{2}:\d{2}:\d{2}$/.test(s)) return s;     // HH:mm:ss — оставляем
-                        if (/^\d{2}:\d{2}$/.test(s)) return s + ':00';   // HH:mm → добавим секунды
-                        return s;                                        // что-то иное — не трогаем
+                        if (/^\d{2}:\d{2}:\d{2}$/.test(s)) return s;
+                        if (/^\d{2}:\d{2}$/.test(s)) return s + ':00';
+                        return s;
                     };
                     const asBool = (v: any) => {
                         if (typeof v === 'boolean') return v;
@@ -176,7 +219,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         return false;
                     };
 
-                    // Нормализация всех слотов из всех правил
+
                     const normalizedAll: ScheduledBlock[] = [];
                     let meta = {
                         id: null as string | null,
@@ -186,7 +229,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     };
 
                     for (const rule of rules) {
-                        // метаданные (берём из первого правила — если нужно, можно мёржить умнее)
+
                         if (!meta.id && rule?.id) {
                             meta.id = rule.id ?? null;
                             meta.startDate = rule.startDate ?? null;
@@ -215,7 +258,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         }
                     }
 
-                    // Записываем в стор
+
                     set(s => {
                         if (!s.scheduledFixedMap) s.scheduledFixedMap = {};
                         if (!s.scheduledCalendarMap) s.scheduledCalendarMap = {};
@@ -241,7 +284,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             if (!exists) s[mapKey][slot.screenId].push(slot);
                         }
 
-                        // обязательно восстановить выбранные экраны — иначе таблица пустая
+                        // обязательно восстановить выбранные экраны
                         const screens = new Set<string>(s.selectedScreens);
                         normalizedAll.forEach(sl => screens.add(sl.screenId));
                         s.selectedScreens = Array.from(screens);
@@ -254,98 +297,158 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 case 'getEmergencyByOrganization': {
                     if (isErrorPayload(payload)) {
                         set(s => {
-                            s.errorMessage = payload?.message || 'Не удалось получить экстренные'
+                            s.errorMessage = payload?.message || 'Не удалось получить экстренные/сценарии'
                         })
                         break
                     }
+                    const root = (payload as any)?.payload ?? payload
 
-                    const asBool = (v: any): boolean => {
-                        if (typeof v === 'boolean') return v
-                        if (typeof v === 'string') {
-                            const t = v.trim().toLowerCase()
-                            return t === 'true' || t === '1' || t === 'yes'
+                    // --- legacy emergencies  ---
+                    const legacyActive = Array.isArray(root?.legacyActive) ? root.legacyActive : []
+                    const legacyList: Emergency[] = legacyActive.map((it: any) => {
+                        const arr =
+                            Array.isArray(it.screensId) ? it.screensId :
+                                Array.isArray(it.screenIds) ? it.screenIds :
+                                    Array.isArray(it.assignments)
+                                        ? it.assignments.flatMap((g: any) => Array.isArray(g?.screens) ? g.screens : [])
+                                        : []
+
+                        return {
+                            emergencyId: it.emergencyId ?? it.id ?? 'unknown',
+                            status: it.status ?? 'ACTIVE',
+                            startedAt: it.startedAt ?? it.started_at ?? undefined,
+                            screens: arr.length || (typeof it.screens === 'number' ? it.screens : 0),
+                            playlistId: it.playlistId,
+                            recurring: Boolean(it.recurring ?? it.isRecurring),
+                            screensIds: arr.length ? arr : undefined,
                         }
-                        if (typeof v === 'number') return v !== 0
-                        return false
-                    }
+                    })
 
-                    const raw = unwrap<any[]>(payload)
-                    const listRaw = Array.isArray(raw) ? raw : []
+                    // --- scenarios  ---
+                    const scnRaw = Array.isArray(root?.scenarios) ? root.scenarios : []
+                    const scnList: Scenario[] = scnRaw.map((it: any) => {
+                        const collected =
+                            Array.isArray(it.screensIds) ? it.screensIds :
+                                Array.isArray(it.screenIds) ? it.screenIds :
+                                    Array.isArray(it.assignments)
+                                        ? it.assignments.flatMap((g: any) => Array.isArray(g?.screens) ? g.screens : [])
+                                        : []
 
-                    const list = listRaw
-                        // иногда в payload проскакивают посторонние объекты — отфильтруем
-                        .filter((it: any) => it && (it.playlistId || it.emergencyId || it.emrgencyId))
-                        .map((it: any): EmergencyAdmin => {
-                            // поддерживаем разные варианты имени флага
-                            const recSrc = it.recursing ?? it.isRecursing ?? it.isRecurring ?? it.loop ?? it.recurring
-                            return {
-                                emergencyId: it.emergencyId || it.emrgencyId, // опечатка бэка
-                                playlistId: it.playlistId,
-                                isRecursing: asBool(recSrc),
-                                screens: Array.isArray(it.screens) ? it.screens
-                                    : (Array.isArray(it.screensId) ? it.screensId : []),
-                            }
-                        })
+                        return {
+                            emergencyId: it.emergencyId ?? it.id ?? 'unknown',
+                            name: it.name ?? 'Сценарий',
+                            status: it.status ?? 'DRAFT',
+                            recurring: Boolean(it.recurring ?? it.isRecurring),
+                            startedAt: it.startedAt ?? it.started_at ?? undefined,
+                            screens: collected.length || Number(it.screens ?? 0),
+                            screensIds: collected.length ? collected : undefined,
+                            groups: Array.isArray(it.groups)
+                                ? it.groups.map((g: any) => ({
+                                    playlistId: g.playlistId,
+                                    screens: Number(g.screens ?? 0),
+                                }))
+                                : [],
+                        }
+                    })
 
                     set(s => {
-                        s.active = list
+                        s.emergency = legacyList
+                        s.scenarios = scnList
                     })
                     break
                 }
 
-                case 'emergencyStart': {
-                    const asBool = (v: any): boolean => {
-                        if (typeof v === 'boolean') return v
-                        if (typeof v === 'string') return v.trim().toLowerCase() === 'true' || v === '1'
-                        if (typeof v === 'number') return v !== 0
-                        return false
-                    }
 
+                case 'legacyEmergencyStart': {
                     const p = (payload as any)?.payload ?? payload
-                    if (p?.emergencyId) {
-                        set(s => {
-                            s.successMessage = 'Экстренный показ запущен'
-                            s.active = [
-                                {
-                                    emergencyId: p.emergencyId,
-                                    playlistId: p.playlistId,
-                                    isRecursing: asBool(p.isRecursing ?? p.recursing ?? p.isRecurring),
-                                    screens: [],
-                                },
-                                ...s.active.filter(e => e.emergencyId !== p.emergencyId),
-                            ]
-                        })
-                        if (lastOrgId) get().getByOrganization(lastOrgId)
-                    } else {
+                    if (!p) {
                         set(s => {
                             s.errorMessage = (payload as any)?.message || 'Не удалось запустить экстренный показ'
                         })
+                        break
                     }
+
+                    const toBool = (v: any) => typeof v === 'boolean' ? v
+                        : typeof v === 'string' ? ['true', '1', 'yes'].includes(v.trim().toLowerCase())
+                            : !!v
+
+
+                    if (p.emergencyId && p.playlistId) {
+                        set(s => {
+                            s.currentScreenEmergency = {
+                                emergencyId: p.emergencyId,
+                                playlistId: p.playlistId,
+                                recurring: toBool(p.isRecurring ?? p.recurring),
+                            }
+                            s.successMessage = 'Экстренный показ запущен'
+                        })
+                    } else {
+                        set(s => {
+                            s.successMessage = 'Экстренный показ запущен'
+                        })
+                    }
+
+
+                    if (lastOrgId) get().getByOrganization(lastOrgId)
                     break
                 }
 
-                case 'emergencyCancel': {
-                    const ok = (payload && typeof payload === 'object' && !!(payload as any).emergencyId)
-                        || ((payload as any)?.status === 'success')
-                    if (ok) {
-                        const emgId = (payload as any)?.emergencyId
+                case 'emergencyStart': {
+                    const p = (payload as any)?.payload ?? payload
+                    if (!p) {
                         set(s => {
-                            s.successMessage = 'Экстренный показ завершён'
+                            s.errorMessage = (payload as any)?.message || 'Не удалось запустить'
                         })
-                        if (emgId) {
-                            set(s => {
-                                s.active = s.active.filter(e => e.emergencyId !== emgId)
-                            })
-                        } else if (lastOrgId) {
-                            get().getByOrganization(lastOrgId)
-                        }
+                        break
+                    }
+
+
+                    if (p.playlistId && p.emergencyId) {
+                        set(s => {
+                            s.currentScreenEmergency = {
+                                emergencyId: p.emergencyId,
+                                playlistId: p.playlistId,
+                                recurring: Boolean(p.isRecurring ?? p.recurring),
+                            }
+                            s.successMessage = 'Запущено'
+                        })
                     } else {
                         set(s => {
-                            s.errorMessage = (payload as any)?.message || 'Не удалось отменить экстренный показ'
+                            s.successMessage = 'Запущено'
                         })
                     }
+
+                    if (lastOrgId) get().getByOrganization(lastOrgId)
                     break
                 }
+
+
+                case 'emergencyCancel': {
+                    const p = (payload as any)?.payload ?? payload
+                    if (!p || p.status === 'error') {
+                        set(s => {
+                            s.errorMessage = (payload as any)?.message || 'Не удалось отменить'
+                        })
+                        break
+                    }
+                    set(s => {
+                        s.successMessage = 'Показ завершён'
+                    })
+
+                    const emgId = p.emergencyId
+                    if (emgId) {
+                        set(s => {
+                            s.emergency = s.emergency.filter(e => e.emergencyId !== emgId)
+                        })
+                    }
+                    set(s => {
+                        s.currentScreenEmergency = null
+                    })
+
+                    if (lastOrgId) get().getByOrganization(lastOrgId)
+                    break
+                }
+
             }
         });
 
@@ -362,7 +465,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
             startDate: null,
             endDate: null,
-
+            currentScreenEmergency: null,
             setPriority: (p) => set(s => {
                 s.priority = p
             }),
@@ -438,7 +541,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     return;
                 }
 
-                // берём уже посчитанное
                 const durationMin = Math.ceil(playlist.totalDurationSeconds / 60)
 
                 console.log(durationMin, 'мин totalDurationMinutes');
@@ -557,20 +659,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 }
 
                 setSuccess(`Добавлено ${totalAdded} ${typeMode === 'ADVERTISEMENT' ? 'рекламных' : 'обычных'} слотов`);
-
-                // setSuccess(`Добавлено ${newBlocks.length} …`);
-
-                // selectedScreens.forEach(screenId => {
-                //     const mapKey = isFixedSchedule
-                //         ? 'scheduledFixedMap'
-                //         : 'scheduledCalendarMap'
-                //     set(s => {
-                //         if (!s[mapKey][screenId]) s[mapKey][screenId] = []
-                //         s[mapKey][screenId].push(...newBlocks)
-                //     })
-                // })
-                //
-
             },
 
 
@@ -655,7 +743,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 const CHUNK_SIZE = 20
                 const chunks = slots.length ? chunkArray(slots, CHUNK_SIZE) : [[]];
                 const totalChunks = chunks.length
-                // if (totalChunks === 0) return
 
                 const actionName = scheduleId ? 'update' : 'create'
 
@@ -738,7 +825,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 s.isRecurring = (m === 'PLAYLIST');
             }),
 
-            // по-умолчанию реклама выключена, но режим выбираем минуты
+
             advertisementShowMode: 'minutes',
             setAdvertisementShowMode: m => set(s => {
                 s.advertisementShowMode = m
@@ -801,32 +888,52 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
 
 // ===== emergency  =====
-            active: [],
+            emergency: [],
+            scenarios: [],
             error: null,
 
 
-            start: ({playlistId, screensId, isRecursing}) => {
+            start: (args) => {
                 const ts = new Date().toISOString()
-                console.log(`[${ts}] emergencyStart →`, {playlistId, screensId, isRecursing})
+                console.log(`[${ts}] legacyEmergencyStart →`, args)
                 if (!ws || ws.readyState !== WebSocket.OPEN) {
                     console.warn('WS[schedule] not connected or not open');
-                    return;
+                    return
                 }
                 set(s => {
                     s.successMessage = null;
                     s.errorMessage = null
                 })
 
-                ws.send(JSON.stringify({
-                    action: 'emergencyStart',
-                    data: {playlistId, screensId, isRecursing}
-                }))
+
+                const sendOne = (organizationId: string | undefined, playlistId: string, screensId: string[], recurring: boolean) => {
+                    ws.send(JSON.stringify({
+                        action: 'legacyEmergencyStart',
+                        data: {
+                            playlistId,
+                            screensId,
+                            isRecursing: recurring,
+                            ...(organizationId ? {organizationId} : {})
+                        }
+                    }))
+                }
+
+                if ('assignments' in args) {
+                    const org = args.organizationId
+                    const rec = !!args.recurring
+                    for (const asg of (args.assignments || [])) {
+                        if (!asg?.playlistId || !Array.isArray(asg?.screens) || asg.screens.length === 0) continue
+                        sendOne(org, asg.playlistId, asg.screens, rec)
+                    }
+                } else {
+                    sendOne(args.organizationId, args.playlistId, args.screensId, !!args.isRecursing)
+                }
             },
 
             cancel: (emergencyId: string) => {
                 if (!ws || ws.readyState !== WebSocket.OPEN) {
                     console.warn('WS[schedule] not connected or not open');
-                    return;
+                    return
                 }
                 set(s => {
                     s.successMessage = null;
@@ -835,14 +942,110 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 ws.send(JSON.stringify({action: 'emergencyCancel', data: {emergencyId}}))
             },
 
-            getByOrganization: (orgId: string) => {
+            getByOrganization: (organizationId: string) => {
                 if (!ws || ws.readyState !== WebSocket.OPEN) {
                     console.warn('WS[schedule] not connected or not open');
-                    return;
+                    return
                 }
-                lastOrgId = orgId
-                ws.send(JSON.stringify({action: 'getEmergencyByOrganization', data: {orgId}}))
+                lastOrgId = organizationId
+                ws.send(JSON.stringify({action: 'getEmergencyByOrganization', data: {orgId: organizationId}}))
             },
+
+            createScenario: async ({organizationId, name, recurring, assignments}) => {
+                try {
+                    const accessToken = getValueInStorage("accessToken")
+
+                    const res = await axios.post(`${SERVER_URL}schedule/emergency-scenarios`, {
+                            organizationId, recurring, name, assignments
+                        },
+                        {headers: {Authorization: `Bearer ${accessToken}`}})
+
+                    const dto = await res.data
+                    set(s => {
+                        s.successMessage = 'Сценарий создан'
+                    })
+                    if (organizationId) get().getByOrganization(organizationId)
+                } catch (e: any) {
+                    set(s => {
+                        s.errorMessage = `Не удалось создать сценарий: ${e?.message ?? e}`
+                    })
+                }
+            },
+
+            startScenario: (scenarioId: string) => {
+                const wsInst = ws
+                if (!wsInst || wsInst.readyState !== WebSocket.OPEN) {
+                    console.warn('WS[schedule] not connected or not open')
+                    return
+                }
+                set(s => {
+                    s.successMessage = null;
+                    s.errorMessage = null
+                })
+                wsInst.send(JSON.stringify({action: 'emergencyStart', data: {scenarioId}}))
+            },
+
+            cancelScenario: (scenarioId: string) => {
+                const wsInst = ws
+                if (!wsInst || wsInst.readyState !== WebSocket.OPEN) {
+                    console.warn('WS[schedule] not connected or not open')
+                    return
+                }
+                set(s => {
+                    s.successMessage = null;
+                    s.errorMessage = null
+                })
+                wsInst.send(JSON.stringify({action: 'emergencyCancel', data: {emergencyId: scenarioId}}))
+            },
+
+
+            busyEmergencyScreens: (): Set<string> => {
+                const set = new Set<string>()
+                for (const a of get().emergency) {
+                    if (!a) continue
+                    const any = a as any
+                    if (Array.isArray(any.screenIds)) any.screenIds.forEach((x: string) => set.add(x))
+                    else if (Array.isArray(any.screensIds)) any.screensIds.forEach((x: string) => set.add(x))
+                    else if (Array.isArray(any.assignments)) any.assignments.forEach((g: any) => (g?.screens || []).forEach((x: string) => set.add(x)))
+                }
+                return set
+            },
+
+            activeScenarioScreens: (): Set<string> => {
+                const set = new Set<string>()
+                for (const s of get().scenarios) {
+                    if (s?.status !== 'ACTIVE') continue
+                    const any = s as any
+                    const collected =
+                        Array.isArray(any.screensIds) ? any.screensIds :
+                            Array.isArray(any.screenIds) ? any.screenIds :
+                                Array.isArray(any.assignments) ? any.assignments.flatMap((g: any) => Array.isArray(g?.screens) ? g.screens : []) :
+                                    []
+                    collected.forEach((x: string) => set.add(x))
+                }
+                return set
+            },
+
+            canStartEmergencyOn: (ids: string[]): [boolean, string?] => {
+                const busyEmg = get().busyEmergencyScreens()
+                if (ids.some(id => busyEmg.has(id)))
+                    return [false, 'Нельзя запустить экстренное — часть экранов уже занята другим экстренным']
+                const busyScn = get().activeScenarioScreens()
+                if (ids.some(id => busyScn.has(id)))
+                    return [false, 'Нельзя запустить экстренное — часть экранов занята активным сценарием']
+                return [true]
+            },
+
+            canStartScenarioOn: (ids: string[]): [boolean, string?] => {
+                const busyEmg = get().busyEmergencyScreens()
+                if (ids.some(id => busyEmg.has(id)))
+                    return [false, 'Нельзя запустить сценарий — экраны заняты экстренным']
+                const busyScn = get().activeScenarioScreens()
+                if (ids.some(id => busyScn.has(id)))
+                    return [false, 'Нельзя запустить сценарий — экраны заняты другим сценарием']
+                return [true]
+            },
+
         }
     })
 )

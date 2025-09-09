@@ -1,18 +1,22 @@
 type WSChannel = 'pairing' | 'schedule' | 'status';
 
 const RECONNECT_BASE_DELAY = 2000;
-const HEARTBEAT_INTERVAL = 120000;
+const HEARTBEAT_INTERVAL = 100_000;
 
 const isBrowser = typeof globalThis.window !== 'undefined';
 
 let sockets: Record<WSChannel, WebSocket | null> = {pairing: null, schedule: null, status: null};
 let reconnectAttempts: Record<WSChannel, number> = {pairing: 0, schedule: 0, status: 0};
 
+const heartbeatIds: Record<WSChannel, number | null> = {pairing: null, schedule: null, status: null};
+
+
 const URLS: Record<WSChannel, string> = {
     schedule: 'wss://dev1.videotrade.ru/ws/schedule',
     pairing: 'wss://dev1.videotrade.ru/ws-pairing',
     status: 'wss://dev1.videotrade.ru/ws-status',
 };
+
 
 function buildUrl(channel: WSChannel): string {
     if (channel !== 'schedule') return URLS[channel];
@@ -43,7 +47,7 @@ export function connectWebSocket(
         return ws;
     }
 
-    let heartbeatHandle: ReturnType<typeof setInterval> | null = null;
+    let heartbeatHandle: ReturnType<typeof window.setInterval> | null = null;
 
     console.log(`WS[${channel}] connecting...`);
     ws = new WebSocket(buildUrl(channel));
@@ -53,9 +57,10 @@ export function connectWebSocket(
         console.log(`WS[${channel}] connected`);
         reconnectAttempts[channel] = 0;
 
-        heartbeatHandle = setInterval(() => {
+        heartbeatIds[channel] = window.setInterval(() => {
             const alive = sockets[channel];
             if (alive && alive.readyState === WebSocket.OPEN) {
+                alive.send(JSON.stringify({action: 'PING'}));
             }
         }, HEARTBEAT_INTERVAL);
     };
@@ -72,7 +77,11 @@ export function connectWebSocket(
 
     ws.onclose = (ev) => {
         console.warn(`WS[${channel}] closed`, ev);
-        if (heartbeatHandle) clearInterval(heartbeatHandle);
+        const id = heartbeatIds[channel];
+        if (id != null) {
+            window.clearInterval(id);
+            heartbeatIds[channel] = null;
+        }
         scheduleReconnect(channel, onMessage);
     };
 

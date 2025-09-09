@@ -17,7 +17,7 @@ const navItems = [
     {href: "/playlists", label: "Плейлисты", icon: "bi bi-collection-play"},
     {href: "/library", label: "Библиотека", icon: "bi bi-music-note-list"},
     {href: "/schedule", label: "Расписание", icon: "bi bi-calendar-week"},
-    {href: "/emergency", label: "Экстренное", icon: "bi bi-lightning-charge"},
+    {href: "/emergency", label: "Сценарии", icon: "bi bi-lightning-charge"},
     {href: "/organization", label: "Организация", icon: "bi bi-building-fill-gear"},
 
 ];
