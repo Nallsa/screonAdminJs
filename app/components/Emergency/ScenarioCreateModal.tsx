@@ -125,7 +125,7 @@ export function ScenarioCreateModal({
                                 clearErr();
                                 setName(e.target.value)
                             }}
-                            placeholder="Например, Пожар — этаж 2"
+                            placeholder="Например, День рождения"
                         />
                     </Form.Group>
 
