@@ -5,6 +5,7 @@ import {getValueInStorage} from "@/app/API/localStorage";
 // import {FaBars} from "react-icons/fa";
 import {useSettingsStore} from "@/app/store/settingsStore";
 import {FaBars} from "react-icons/fa";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 interface Props {
     collapsed: boolean
@@ -19,21 +20,20 @@ const navItems = [
     {href: "/schedule", label: "Расписание", icon: "bi bi-calendar-week"},
     {href: "/emergency", label: "Сценарии", icon: "bi bi-lightning-charge"},
     {href: "/organization", label: "Организация", icon: "bi bi-building-fill-gear"},
+    {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
 
 ];
-export default function Sidebar({collapsed, onToggle}: Props) {
+export default function Sidebar({ collapsed, onToggle }: Props) {
     const pathname = usePathname();
-    const organizationId = useSettingsStore(state => state.organizationId)
+    const hasOrg = useOrganizationStore(state => state.hasOrg);
 
     if (pathname.startsWith('/auth')) {
-        return null
+        return null;
     }
 
-    const width = collapsed ? 46 : 220
-
+    const width = collapsed ? 46 : 220;
 
     return (
-
         <div
             className="bg-white shadow-sm d-flex flex-column"
             style={{
@@ -45,16 +45,15 @@ export default function Sidebar({collapsed, onToggle}: Props) {
                 top: 0,
                 left: 0,
                 zIndex: 1040
-            }}>
+            }}
+        >
             {/* HEADER: бургер */}
             <div
                 className="d-flex align-items-center"
                 style={{
                     height: 80,
                     borderBottom: '1px solid #eaeaea',
-                    // если свернуто — центрируем бургер, иначе — логотип слева, бургер справа
                     justifyContent: collapsed ? 'center' : 'space-between',
-                    // когда свернуто — небольшой единый паддинг, когда развернуто — побольше
                     padding: collapsed ? '0 1.5rem' : '0 0.7rem',
                     transition: 'padding 0.3s ease-in-out, justify-content 0.3s ease-in-out',
                 }}
@@ -66,7 +65,6 @@ export default function Sidebar({collapsed, onToggle}: Props) {
                     style={{
                         width: 132,
                         height: 122,
-                        // плавно появляем / скрываем
                         opacity: collapsed ? 0 : 1,
                         transform: collapsed ? 'translateX(-10px)' : 'translateX(0)',
                         transition: 'opacity 0.3s ease-in-out, transform 0.3s ease-in-out',
@@ -78,29 +76,35 @@ export default function Sidebar({collapsed, onToggle}: Props) {
                     className="btn btn-outline-secondary"
                     onClick={onToggle}
                 >
-                    <FaBars/>
+                    <FaBars />
                 </button>
             </div>
 
-            {navItems.map(({href, label, icon}) => {
-
+            {navItems.map(({ href, label, icon }) => {
                 const active = pathname === href;
 
                 return (
-                    //кнопки навигации
+                    // кнопки навигации
                     <Link
                         key={href}
                         href={href}
-
+                        onClick={(e) => {
+                            if (!hasOrg) {
+                                e.preventDefault(); // Prevent navigation if hasOrg is false
+                            }
+                        }}
                         className={
                             'text-decoration-none d-flex align-items-center w-100 py-3 ' +
-                            (active ? 'bg-light fw-bold text-dark' : 'text-secondary')
+                            (active && hasOrg ? 'bg-light fw-bold text-dark' : 'text-secondary') +
+                            (!hasOrg ? ' disabled' : '')
                         }
                         style={{
                             textDecoration: 'none',
                             paddingLeft: collapsed ? '0.75rem' : '1.2rem',
                             paddingRight: collapsed ? '0.75rem' : '1.2rem',
-                            transition: 'padding 0.3s ease-in-out'
+                            transition: 'padding 0.3s ease-in-out',
+                            pointerEvents: hasOrg ? 'auto' : 'none', // Disable pointer events if hasOrg is false
+                            opacity: hasOrg ? 1 : 0.5, // Visual cue for disabled state
                         }}
                     >
                         <i className={`${icon} fs-5`}></i>
@@ -118,12 +122,11 @@ export default function Sidebar({collapsed, onToggle}: Props) {
                                     'opacity .3s ease-in-out .1s'
                             }}
                         >
-                {label}
-              </span>
+                            {label}
+                        </span>
                     </Link>
-                )
+                );
             })}
         </div>
     );
 };
-

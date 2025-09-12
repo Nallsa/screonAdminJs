@@ -7,19 +7,18 @@ import {useSettingsStore} from "@/app/store/settingsStore";
 import {Button} from "react-bootstrap";
 import InviteCodeGenerator from "@/app/components/Settings/InviteCodeGenerator";
 import {useAuthStore} from "@/app/store/authStore";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 export default function SettingsPage() {
     const router = useRouter()
     const {
-        organizationId,
-        userId,
-        accessToken,
         errorMessage,
-        setOrganizationId,
-        setUserId,
-        setAccessToken,
         setError,
     } = useSettingsStore()
+
+    const {
+        hasOrg
+    } = useOrganizationStore()
 
     const signOut = useAuthStore(s => s.signOut)
 
@@ -29,25 +28,14 @@ export default function SettingsPage() {
     }
 
     useEffect(() => {
-        if (!organizationId) {
-            const stored = localStorage.getItem('organizationId')?.trim()
-            if (stored) setOrganizationId(stored)
+        if (!hasOrg) {
+            router.push('/organization')
         }
-        if (!userId) {
-            const stored = localStorage.getItem('userId')?.trim()
-            if (stored) setUserId(stored)
-        }
-        if (!accessToken) {
-            const stored = localStorage.getItem('accessToken')
-            if (stored) setAccessToken(stored)
-        }
-    }, [organizationId, userId, accessToken, setOrganizationId, setUserId, setAccessToken])
+    }, [])
 
 
     return (
         <div className="p-6 max-w-xl mx-auto space-y-6">
-            <InviteCodeGenerator/>
-
 
             <section className="border">
                 <div className="p-4 flex justify-between items-center">

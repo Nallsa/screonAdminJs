@@ -39,6 +39,7 @@ export default function ScreensPage() {
     // для модалки Добавить экран
     const [showAddModal, setShowAddModal] = useState(false)
     const [screenCode, setScreenCode] = useState('')
+    const [certificateCode, setCertificateCode] = useState('')
 
     useEffect(() => {
         const initialize = async () => {
@@ -59,6 +60,10 @@ export default function ScreensPage() {
     const handleConfirmAdd = () => {
         if (!screenCode) {
             alert('Пожалуйста, введите код экрана')
+            return
+        }
+        if (!certificateCode) {
+            alert('Пожалуйста, введите сертификат')
             return
         }
 
@@ -174,9 +179,9 @@ export default function ScreensPage() {
             <Modal show={showAddModal} onHide={handleCloseAddModal} centered>
                 <Modal.Header
                     className="border-0 position-relative"
-                    style={{justifyContent: 'center'}}
+                    style={{ justifyContent: 'center' }}
                 >
-                    <Modal.Title>Введите код экрана</Modal.Title>
+                    <Modal.Title>Введите код экрана и сертификата</Modal.Title>
 
                     {/* свой крестик */}
                     <button
@@ -192,18 +197,38 @@ export default function ScreensPage() {
                     />
                 </Modal.Header>
 
-                <Modal.Body className="d-flex justify-content-center">
-                    <Form.Group controlId="screenCode" className="w-50">
+                <Modal.Body className="d-flex flex-column align-items-center">
+                    <Form.Group controlId="screenCode" className="w-50 mb-3">
+                        <Form.Label>Код экрана</Form.Label>
                         <Form.Control
+                            maxLength={8}
+                            className="mb-2"
                             size="sm"
                             type="text"
                             inputMode="text"
                             pattern="[A-Z0-9]*"
                             placeholder="ABC123"
                             value={screenCode}
-                            onChange={e => {
-                                const upper = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
-                                setScreenCode(upper)
+                            onChange={(e) => {
+                                const upper = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                                setScreenCode(upper);
+                            }}
+                        />
+                    </Form.Group>
+
+                    <Form.Group controlId="certificateCode" className="w-50">
+                        <Form.Label>Код сертификата</Form.Label>
+                        <Form.Control
+                            className="mb-2"
+                            size="sm"
+                            type="text"
+                            inputMode="text"
+                            pattern="[A-Z0-9]*"
+                            placeholder="XYZ789"
+                            value={certificateCode}
+                            onChange={(e) => {
+                                const upper = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                                setCertificateCode(upper);
                             }}
                         />
                     </Form.Group>
@@ -212,8 +237,8 @@ export default function ScreensPage() {
                 <Modal.Footer className="border-0 justify-content-center">
                     <Button
                         variant="success"
-                        onClick={handleConfirmAdd}
-                        disabled={screenCode.length < 8 || screenCode.length > 8}
+                        onClick={() => handleConfirmAdd()}
+                        disabled={screenCode.length !== 8 || certificateCode.length !== 8}
                     >
                         Добавить экран
                     </Button>

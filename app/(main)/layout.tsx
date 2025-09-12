@@ -34,6 +34,19 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const router = useRouter()
 
     useEffect(() => {
+        async function fetchOrg() {
+            const success = await getInfoOrg();
+            if (!success) {
+                router.push('/organization/createOrgElements?isBranch=false');
+            } else {
+                router.push('/screens'); // редиректим
+            }
+        }
+
+        fetchOrg();
+    }, [getInfoOrg, router]);
+
+    useEffect(() => {
         async function init() {
             console.log("dasdasdasasdasd")
             const resCheck = await checkToken();
@@ -48,35 +61,32 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
             const orgInfo = await getInfoOrg()
 
             if (orgInfo) {
-                if (playlistItems.length === 0) {
+                if (libraryItems.length == 0) {
                     await getFilesInLibrary()
                 }
+
+                if (playlistItems.length === 0) {
+                    await getPlaylists()
+                }
+
+                if (allScreens.length == 0) {
+                    await getScreens()
+                    await getGroups()
+                    await requestStatusesForAll();
+                    startAutoStatusPolling()
+                }
+
+                const isScheduleEmpty =
+                    Object.keys(scheduledFixedMap).length === 0 &&
+                    Object.keys(scheduledCalendarMap).length === 0;
+
+                if (isScheduleEmpty) {
+                    await getSchedule();
+                }
+            } else {
+                router.push('/organization/createOrgElements?isBranch=false');
             }
 
-            if (allScreens.length == 0) {
-                await getScreens()
-                await getGroups()
-                await requestStatusesForAll();
-                startAutoStatusPolling()
-            }
-
-            if (libraryItems.length == 0) {
-                await getFilesInLibrary()
-            }
-
-
-            if (playlistItems.length === 0) {
-                await getPlaylists()
-            }
-
-
-            const isScheduleEmpty =
-                Object.keys(scheduledFixedMap).length === 0 &&
-                Object.keys(scheduledCalendarMap).length === 0;
-
-            if (isScheduleEmpty) {
-                await getSchedule();
-            }
         }
 
 
