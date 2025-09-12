@@ -1,7 +1,7 @@
 'use client'
 
 import React, {useEffect, useMemo, useState} from 'react'
-import {Card, Button, Form, Modal} from 'react-bootstrap'
+import {Card, Button, Form, Modal, Spinner} from 'react-bootstrap'
 import {useScreensStore} from '@/app/store/screensStore'
 import {DeviceStatus, GroupData, ScreenData} from "@/public/types/interfaces";
 import ConfirmModal from "@/app/components/Common/ConfirmModal";
@@ -273,39 +273,57 @@ export default function ScreenCard({
                     <Modal.Title>Статус экрана</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {statusLoading && <div>Запрашиваем статус…</div>}
-                    {!statusLoading && live && (
-                        <div>
-                            <Row label="Статус:" value={isOnline ? 'Онлайн' : 'Оффлайн'}/>
-                            <Row label="Загрузка процессора:" value={fmtPct(live.cpuLoad)}/>
-                            <Row label="Температура процессора:" value={fmtC(live.temperature)}/>
-                            <Row label="Загрузка ОЗУ:" value={fmtPct(live.ramUsage)}/>
-                            <Row label="Версия плеера:" value={fmtVer(live.playerVersion)}/>
-                            <Row
-                                label="Последняя проверка:"
-                                value={
-                                    statusEntry
-                                        ? (
-                                            <>
-                                                {formatLastSeen(statusEntry.lastSeenAt)}
-                                            </>
-                                        )
-                                        : '—'
-                                }
-                            />
-                        </div>
-                    )}
+                    <div style={{position: 'relative', minHeight: isOnline ? 160 : 30}}>
+                        {!isOnline && (
+                            <div>Офлайн</div>
+                        )}
+                        {live && (
+                            <div aria-hidden={statusLoading}>
+                                <Row label="Статус:" value={isOnline ? 'Онлайн' : 'Оффлайн'}/>
+                                <Row label="Загрузка процессора:" value={fmtPct(live.cpuLoad)}/>
+                                <Row label="Температура процессора:" value={fmtC(live.temperature)}/>
+                                <Row label="Загрузка ОЗУ:" value={fmtPct(live.ramUsage)}/>
+                                <Row label="Версия плеера:" value={fmtVer(live.playerVersion)}/>
+                                <Row label="Последняя проверка:"
+                                     value={statusEntry ? formatLastSeen(statusEntry.lastSeenAt) : '—'}/>
+                            </div>
+                        )}
+
+                        {/* Полупрозрачный оверлей со спиннером */}
+                        {statusLoading && (
+                            <div
+                                style={{
+                                    position: 'absolute', inset: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: 'rgba(255,255,255,0.6)',  // или var(--bs-body-bg) с opacity
+                                    backdropFilter: 'blur(1px)'
+                                }}
+                            >
+                                <Spinner animation="border" className="me-2"/> Обновляем…
+                            </div>
+                        )}
+                    </div>
                 </Modal.Body>
                 <Modal.Footer>
                     <Button
                         variant="primary"
                         onClick={() => {
                             setStatusLoading(true);
-                            setSeenAt(live?.lastSeenAt);
+                            setPrevRecvAt(live?.receivedAt ?? null);
                             sendGetStatus(screen.id);
+                            clearTimeout(timeoutRef.current);
+                            timeoutRef.current = setTimeout(() => setStatusLoading(false), 4000);
                         }}
+                        disabled={statusLoading}
                     >
-                        Обновить
+                        {statusLoading ? (
+                            <>
+                                <Spinner as="span" animation="border" size="sm" className="me-2"/>
+                                Обновляем…
+                            </>
+                        ) : (
+                            'Обновить'
+                        )}
                     </Button>
                 </Modal.Footer>
 

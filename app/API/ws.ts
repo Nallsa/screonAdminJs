@@ -19,17 +19,25 @@ const URLS: Record<WSChannel, string> = {
 
 
 function buildUrl(channel: WSChannel): string {
-    if (channel !== 'schedule') return URLS[channel];
-    if (!isBrowser) return URLS.schedule;
+    const base = URLS[channel];
+    if (!isBrowser) return base;
 
-    const role = 'admin';
-    const userId = globalThis.window?.localStorage?.getItem('userId') ?? '';
-    const orgId = globalThis.window?.localStorage?.getItem('organizationId') ?? '';
+    if (channel === 'schedule') {
+        const role = 'admin';
+        const userId = globalThis.window?.localStorage?.getItem('userId') ?? '';
+        const orgId = globalThis.window?.localStorage?.getItem('organizationId') ?? '';
+        const q = new URLSearchParams({role});
+        if (userId) q.set('userId', userId);
+        if (orgId) q.set('organizationId', orgId);
+        return `${base}?${q.toString()}`;
+    }
 
-    let url = `${URLS.schedule}?role=${encodeURIComponent(role)}`;
-    if (userId) url += `&userId=${encodeURIComponent(userId)}`;
-    if (orgId) url += `&organizationId=${encodeURIComponent(orgId)}`;
-    return url;
+    if (channel === 'status') {
+        // админка
+        return `${base}?role=admin`;
+    }
+
+    return base;
 }
 
 export function connectWebSocket(
