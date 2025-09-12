@@ -100,12 +100,9 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             'playerVersion' in payload || 'player_version' in payload ||
             'lastSeenAt' in payload || 'last_seen_at' in payload
         );
-        if (action === 'UNKNOWN' && looksLikeStatus) action = 'UPDATE_STATUS';
 
-        if (payload?.error) {
-            if (process.env.NODE_ENV !== 'production') console.warn('WS[status] error:', payload);
-            return;
-        }
+        if (action === 'UNKNOWN' && looksLikeStatus) action = 'UPDATE_STATUS';
+        if (action === 'GET_STATUS_RESPONSE') action = 'UPDATE_STATUS';
 
         if (action === 'UPDATE_STATUS' || action === 'STATUS_UPDATE' || action === 'STATUS') {
             let sid =
@@ -144,14 +141,12 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             });
 
             if (process.env.NODE_ENV !== 'production') {
-                console.log('WS[status] applied:', {action, sid, status, cpuLoad, ramUsage, playerVersion, lastSeenAt});
+                console.log('WS[status] applied:', {action, cpuLoad, ramUsage, playerVersion, lastSeenAt});
             }
             return;
         }
 
-        if (process.env.NODE_ENV !== 'production') {
-            console.log('WS[status] unknown action:', action, payload);
-        }
+
     });
 
 
@@ -510,7 +505,6 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             if (statusWs.readyState !== WebSocket.OPEN) await waitOpen(statusWs);
 
             markStatusRequested(screenId);
-
             statusWs.send(JSON.stringify({action: 'GET_STATUS', screenId}));
         },
 
