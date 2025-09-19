@@ -12,7 +12,7 @@ export default function PlaylistShowModePicker() {
     const {showMode, setShowMode} = useScheduleStore()
     return (
         <Form.Group>
-            <div className="d-flex gap-3 flex-row justify-content-around">
+            <div className="d-flex gap-3 flex-column flex-sm-row justify-content-around">
                 <Form.Check
                     inline
                     type="checkbox"

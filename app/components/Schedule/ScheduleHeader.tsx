@@ -13,43 +13,31 @@ export default function ScheduleHeader() {
     const {sendSchedule, selectedScreens, selectedPlaylist, clearAllSlots} = useScheduleStore()
 
     return (
-        <header
-            style={{
-                padding: 10,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-            }}
-        >
-            <h4 className="mb-0">Расписание</h4>
+        <header className="mb-3">
+            <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2">
+                <h4 className="mb-0">Расписание</h4>
 
-            <div className="d-flex flex-row align-content-center justify-content-center">
-                <Button
+                <div className="ms-md-auto w-100">
+                    <div className="d-grid gap-2 d-sm-inline-flex w-100 justify-content-md-end">
+                        <Button
+                            className="w-100 w-sm-auto px-4"
+                            onClick={sendSchedule}
+                            variant="success"
+                            disabled={selectedScreens.length === 0}
+                        >
+                            Сохранить
+                        </Button>
 
-                    style={{paddingLeft: 40, paddingRight: 40}}
-                    onClick={sendSchedule}
-                    variant="success"
-                    disabled={selectedScreens.length === 0
-                    }
-
-
-                >
-                    Сохранить
-                </Button>
-
-
-                <div style={{width: 12}}></div>
-
-                <Button
-                    style={{paddingLeft: 40, paddingRight: 40}}
-                    variant="outline-primary"
-                    onClick={clearAllSlots}
-                >
-                    Очистить
-                </Button>
+                        <Button
+                            className="w-100 w-sm-auto px-4"
+                            variant="outline-primary"
+                            onClick={clearAllSlots}
+                        >
+                            Очистить
+                        </Button>
+                    </div>
+                </div>
             </div>
-
-
         </header>
     )
 }

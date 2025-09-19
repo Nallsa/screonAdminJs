@@ -16,17 +16,10 @@ type Props = {
 }
 
 export default function WhatToShowCard({onNoPlaylistsClick}: Props) {
-    const {playlistItems} = usePlaylistStore()
-    const {
-        selectedPlaylist,
-        setSelectedPlaylist,
-        typeMode,
-        priority,
-        setPriority,
-    } = useScheduleStore()
+    const {} = useScheduleStore()
 
     return (
-        <div className="d-flex flex-row justify-content-center align-items-center gap-3">
+        <div className="d-flex flex-column flex-sm-row justify-content-center align-items-center gap-3">
             <Col xs="auto">
                 <PlaylistSelect onEmptyClick={onNoPlaylistsClick}/>
             </Col>

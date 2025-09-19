@@ -143,7 +143,32 @@ export default function EditableScheduleTable() {
         if (firstRow) setSlotH(firstRow.getBoundingClientRect().height)
     }, [])
 
-    const totalCols = currentWeek.length + 1
+    // --------- мобилка + выбранный день
+    const [isMobile, setIsMobile] = useState(false)
+    const [selectedDay, setSelectedDay] = useState(0)
+    const dayShort = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС']
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        const mq = window.matchMedia('(max-width: 1100px)')
+        const onChange = () => setIsMobile(mq.matches)
+        onChange()
+        mq.addEventListener?.('change', onChange)
+        return () => mq.removeEventListener?.('change', onChange)
+    }, [])
+
+    // по умолчанию ставим сегодня
+    useEffect(() => {
+        const js = new Date().getDay()
+        const mondayFirst = (js + 6) % 7
+        setSelectedDay(mondayFirst)
+    }, [])
+
+    // ---- видимые дни
+    const visibleWeek = isMobile ? [currentWeek[selectedDay]].filter(Boolean) : currentWeek
+
+    //const totalCols = currentWeek.length + 1
+    const totalCols = visibleWeek.length + 1
     const colWidth = 100 / totalCols
 
     const screenColors = [
@@ -355,253 +380,274 @@ export default function EditableScheduleTable() {
 
     return (
         <div style={{position: 'relative', overflowX: 'auto'}}>
-            {/* Таблица */}
-            <table
-                ref={tableRef}
-                style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    tableLayout: 'fixed',
-                }}
-            >
-                <thead>
-                <tr>
-                    <th style={headerCell()}>Время</th>
-                    {currentWeek.map((d, i) => (
-                        <th key={i} style={headerCell()}>
-                            <div className="d-flex flex-row justify-content-between align-content-center">
-                                <div style={{paddingLeft: 1}}></div>
-                                {isFixedSchedule
-                                    ? ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'][i]
-                                    : `${['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'][i]} ${d.getDate()}`}
-                                <button
-                                    type="button"
-                                    className="btn  btn-sm d-inline-flex align-items-center"
-                                    title="Очистить слоты этого дня"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        clearDaySlots(currentWeek[i], screensForTable) // ← передаём дату столбца и экраны
-                                    }}
-                                    style={{lineHeight: 1, padding: '2px 2px', borderRadius: 6}}
-                                >
-                                    <i className="bi bi-x-lg" aria-hidden="true"/>
-                                </button>
-                            </div>
-                        </th>
-                    ))}
-                </tr>
-                </thead>
-                <tbody>
-                {times.map(t => (
-                    <tr key={t}>
-                        <td style={timeCell()}>{t}</td>
-                        {currentWeek.map((_, ci) => (
-                            <td key={ci} style={slotCell()}/>
-                        ))}
+            {/* Переключатель дня — только на мобиле */}
+            {isMobile && (
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                    <button className="btn btn-outline-secondary btn-sm"
+                            onClick={() => setSelectedDay(d => d === 0 ? 6 : d - 1)}>‹
+                    </button>
+                    <div className="fw-semibold">
+                        {dayShort[selectedDay]} {currentWeek[selectedDay]?.getDate() ?? ''}
+                    </div>
+                    <button className="btn btn-outline-secondary btn-sm"
+                            onClick={() => setSelectedDay(d => d === 6 ? 0 : d + 1)}>›
+                    </button>
+                </div>
+            )}
+
+            <div style={{position: 'relative'}}>
+                {/* Таблица */}
+                <table
+                    ref={tableRef}
+                    style={{width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed'}}
+                >
+                    <thead>
+                    <tr>
+                        <th style={headerCell()}>Время</th>
+                        {visibleWeek.map((d, i) => {
+                            const origIdx = isMobile ? selectedDay : i
+                            return (
+                                <th key={origIdx} style={headerCell()}>
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div/>
+                                        {isFixedSchedule ? dayShort[origIdx] : `${dayShort[origIdx]} ${d.getDate()}`}
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm d-inline-flex align-items-center"
+                                            title="Очистить слоты этого дня"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                clearDaySlots(currentWeek[origIdx], screensForTable)
+                                            }}
+                                            style={{lineHeight: 1, padding: '2px 2px', borderRadius: 6}}
+                                        >
+                                            <i className="bi bi-x-lg" aria-hidden="true"/>
+                                        </button>
+                                    </div>
+                                </th>
+                            )
+                        })}
                     </tr>
-                ))}
-                </tbody>
-            </table>
+                    </thead>
 
-            {/* Блоки поверх таблицы */}
-            {metasWithIdx.map((m) => {
-                // индекс колонки и число колонок для этого блока
-                const idx = layout.colByIndex.get(m._i) ?? 0;
-                const cols = layout.colsByIndex.get(m._i) ?? 1;
+                    <tbody>
+                    {times.map(t => (
+                        <tr key={t}>
+                            <td style={timeCell()}>{t}</td>
+                            {visibleWeek.map((_, i) => (
+                                <td key={i} style={slotCell()}/>
+                            ))}
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
 
-                const left = (1 + m.dayIndex + idx / cols) * colWidth;
-                const width = colWidth / cols;
+                {/* Блоки поверх таблицы */}
+                {metasWithIdx.map((m) => {
+                    // индекс колонки и число колонок для этого блока
+                    const idx = layout.colByIndex.get(m._i) ?? 0;
+                    const cols = layout.colsByIndex.get(m._i) ?? 1;
 
-                const top = headerH + m.startRow * slotH;
-                const height = (m.endRow - m.startRow) * slotH;
+                    const relDay = isMobile ? 0 : m.dayIndex
 
-                const playlistName = playlistItems.find(p => p.id === m.block.playlistId)?.name ?? m.block.playlistId;
-                const screenName = allScreens.find(s => s.id === m.screenId)?.name ?? m.screenId;
-                const isAd = m.block.type === 'ADVERTISEMENT';
+                    const left = (1 + relDay + idx / cols) * colWidth
+                    const width = colWidth / cols
 
-                const screenColorsMap = new Map<string, string>();
-                allScreens.forEach((screen, index) => {
-                    const color = screenColors[index % screenColors.length];
-                    screenColorsMap.set(screen.id, color);
-                });
-                const backgroundColor = screenColorsMap.get(m.screenId) ?? '#cccccc';
-                const isHovered = hoveredBlock === m.block;
+                    const top = headerH + m.startRow * slotH;
+                    const height = (m.endRow - m.startRow) * slotH;
 
-                return (
-                    <div
-                        key={`${m.screenId}-${m._i}`}
-                        style={{
-                            position: 'absolute',
-                            top,
-                            left: `${left}%`,
-                            width: `${width}%`,
-                            height,
-                            minHeight: 24,
-                            backgroundColor: backgroundColor,
-                            borderRadius: 4,
-                            padding: '4px 2px',
-                            border: '1px solid #fff',
-                            boxSizing: 'border-box',
-                            fontSize: 9,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            textOverflow: 'ellipsis',
+                    const playlistName = playlistItems.find(p => p.id === m.block.playlistId)?.name ?? m.block.playlistId;
+                    const screenName = allScreens.find(s => s.id === m.screenId)?.name ?? m.screenId;
+                    const isAd = m.block.type === 'ADVERTISEMENT';
 
-                            zIndex: isHovered ? 10 : 1,
-                            boxShadow: isHovered
-                                ? '0 4px 8px rgba(0,0,0,0.15)'
-                                : undefined,
-                            transform: isHovered
-                                ? 'translateY(-4px)'
-                                : undefined,
-                        }}
-                        onMouseEnter={() => setHoveredBlock(m.block)}
-                        onMouseLeave={() => setHoveredBlock(null)}
-                        onClick={() => setEditingMeta(m)}
-                    >
+                    const screenColorsMap = new Map<string, string>();
+                    allScreens.forEach((screen, index) => {
+                        const color = screenColors[index % screenColors.length];
+                        screenColorsMap.set(screen.id, color);
+                    });
+                    const backgroundColor = screenColorsMap.get(m.screenId) ?? '#cccccc';
+                    const isHovered = hoveredBlock === m.block;
+
+                    return (
                         <div
+                            key={`${m.screenId}-${m._i}`}
                             style={{
-                                fontSize: 10,
-                                marginBottom: 2,
-                                width: '100%',
-                                textAlign: 'center',
+                                position: 'absolute',
+                                top,
+                                left: `${left}%`,
+                                width: `${width}%`,
+                                height,
+                                minHeight: 24,
+                                backgroundColor: backgroundColor,
+                                borderRadius: 4,
+                                padding: '4px 2px',
+                                border: '1px solid #fff',
+                                boxSizing: 'border-box',
+                                fontSize: 9,
+                                display: 'flex',
+                                flexDirection: 'column',
                                 justifyContent: 'center',
+                                alignItems: 'center',
+                                cursor: 'pointer',
                                 overflow: 'hidden',
                                 whiteSpace: 'nowrap',
                                 textOverflow: 'ellipsis',
+
+                                zIndex: isHovered ? 10 : 1,
+                                boxShadow: isHovered
+                                    ? '0 4px 8px rgba(0,0,0,0.15)'
+                                    : undefined,
+                                transform: isHovered
+                                    ? 'translateY(-4px)'
+                                    : undefined,
                             }}
+                            onMouseEnter={() => setHoveredBlock(m.block)}
+                            onMouseLeave={() => setHoveredBlock(null)}
+                            onClick={() => setEditingMeta(m)}
                         >
-                            {isAd
-                                ? `Реклама: ${screenName}`
-                                : screenName
-                            }
+                            <div
+                                style={{
+                                    fontSize: 10,
+                                    marginBottom: 2,
+                                    width: '100%',
+                                    textAlign: 'center',
+                                    justifyContent: 'center',
+                                    overflow: 'hidden',
+                                    whiteSpace: 'nowrap',
+                                    textOverflow: 'ellipsis',
+                                }}
+                            >
+                                {isAd
+                                    ? `Реклама: ${screenName}`
+                                    : screenName
+                                }
+                            </div>
+
+
+                            {hoveredBlock === m.block && (
+                                <span
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        removeBlock(m.screenId, m.block)
+                                        console.log(scheduledCalendarMap, "asfasfasfasfasfasfasfasfasfasfasf")
+                                    }}
+                                    style={removeCircle()}
+                                >
+                ×
+            </span>
+                            )}
                         </div>
 
 
-                        {hoveredBlock === m.block && (
-                            <span
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    removeBlock(m.screenId, m.block)
-                                    console.log(scheduledCalendarMap, "asfasfasfasfasfasfasfasfasfasfasf")
-                                }}
-                                style={removeCircle()}
-                            >
-                ×
-            </span>
-                        )}
-                    </div>
-                )
-            })}
+                    )
+                })}
 
 
-            {/* --- МОДАЛКА РЕДАКТИРОВАНИЯ ТАЙМСЛОТА --- */}
-            <Modal show={!!editingMeta} onHide={() => setEditingMeta(null)} centered>
-                <Modal.Header closeButton><Modal.Title>Редактировать слот</Modal.Title></Modal.Header>
-                <Modal.Body>
-                    {error && <div className="text-danger mb-2">{error}</div>}
-                    <Form>
-                        {/*  выбор типа слота */}
-                        <Form.Group className="mb-3">
-                            <Form.Label>Тип слота</Form.Label>
-                            <div className="d-flex gap-3">
-                                <Form.Check
-                                    inline type="checkbox" id="edit-type-playlist" name="editTypeMode"
-                                    label="Обычный слот"
-                                    checked={editTypeMode === 'PLAYLIST'}
-                                    onChange={() => setEditTypeMode('PLAYLIST')}
-                                />
-                                <Form.Check
-                                    inline type="checkbox" id="edit-type-ad" name="editTypeMode"
-                                    label="Реклама"
-                                    checked={editTypeMode === 'ADVERTISEMENT'}
-                                    onChange={() => setEditTypeMode('ADVERTISEMENT')}
-                                />
-                            </div>
-                        </Form.Group>
-
-                        {editTypeMode === 'PLAYLIST' && (
+                {/* --- МОДАЛКА РЕДАКТИРОВАНИЯ ТАЙМСЛОТА --- */}
+                <Modal show={!!editingMeta} onHide={() => setEditingMeta(null)} centered>
+                    <Modal.Header closeButton><Modal.Title>Редактировать слот</Modal.Title></Modal.Header>
+                    <Modal.Body>
+                        {error && <div className="text-danger mb-2">{error}</div>}
+                        <Form>
+                            {/*  выбор типа слота */}
                             <Form.Group className="mb-3">
-                                <Form.Label>Режим показа</Form.Label>
+                                <Form.Label>Тип слота</Form.Label>
                                 <div className="d-flex gap-3">
                                     <Form.Check
-                                        inline type="checkbox" id="edit-show-once" name="editShowMode"
-                                        label="Один раз"
-                                        checked={editShowMode === 'once'}
-                                        onChange={() => setEditShowMode('once')}
+                                        inline type="checkbox" id="edit-type-playlist" name="editTypeMode"
+                                        label="Обычный слот"
+                                        checked={editTypeMode === 'PLAYLIST'}
+                                        onChange={() => setEditTypeMode('PLAYLIST')}
                                     />
                                     <Form.Check
-                                        inline type="checkbox" id="edit-show-cycle" name="editShowMode"
-                                        label="Зациклено"
-                                        checked={editShowMode === 'cycle'}
-                                        onChange={() => setEditShowMode('cycle')}
+                                        inline type="checkbox" id="edit-type-ad" name="editTypeMode"
+                                        label="Реклама"
+                                        checked={editTypeMode === 'ADVERTISEMENT'}
+                                        onChange={() => setEditTypeMode('ADVERTISEMENT')}
                                     />
                                 </div>
                             </Form.Group>
-                        )}
+
+                            {editTypeMode === 'PLAYLIST' && (
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Режим показа</Form.Label>
+                                    <div className="d-flex gap-3">
+                                        <Form.Check
+                                            inline type="checkbox" id="edit-show-once" name="editShowMode"
+                                            label="Один раз"
+                                            checked={editShowMode === 'once'}
+                                            onChange={() => setEditShowMode('once')}
+                                        />
+                                        <Form.Check
+                                            inline type="checkbox" id="edit-show-cycle" name="editShowMode"
+                                            label="Зациклено"
+                                            checked={editShowMode === 'cycle'}
+                                            onChange={() => setEditShowMode('cycle')}
+                                        />
+                                    </div>
+                                </Form.Group>
+                            )}
 
 
-                        {/* общие поля: время, экраны, плейлист, приоритет */}
-                        <Form.Group className="mb-3">
-                            <Form.Label>Время с</Form.Label>
-                            <Form.Control type="time" value={editStart} onChange={e => setEditStart(e.target.value)}/>
-                        </Form.Group>
-                        {editTypeMode === 'PLAYLIST' && editShowMode === 'cycle' && (
+                            {/* общие поля: время, экраны, плейлист, приоритет */}
                             <Form.Group className="mb-3">
-                                <Form.Label>До</Form.Label>
-                                <Form.Control type="time" value={editEnd} onChange={e => setEditEnd(e.target.value)}/>
+                                <Form.Label>Время с</Form.Label>
+                                <Form.Control type="time" value={editStart}
+                                              onChange={e => setEditStart(e.target.value)}/>
                             </Form.Group>
-                        )}
+                            {editTypeMode === 'PLAYLIST' && editShowMode === 'cycle' && (
+                                <Form.Group className="mb-3">
+                                    <Form.Label>До</Form.Label>
+                                    <Form.Control type="time" value={editEnd}
+                                                  onChange={e => setEditEnd(e.target.value)}/>
+                                </Form.Group>
+                            )}
 
-                        <Form.Group className="mb-3">
-                            <Form.Label>Экраны</Form.Label>
-                            <Form.Select multiple value={editScreens} style={{height: 100}}
-                                         onChange={e => {
-                                             const opts = Array.from(e.target.selectedOptions).map(o => o.value)
-                                             setEditScreens(opts)
-                                         }}
-                            >
-                                {allScreens.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Плейлист</Form.Label>
-                            <Form.Select value={editPlaylist} onChange={e => setEditPlaylist(e.target.value)}>
-                                {playlistItems.map(pl => (
-                                    <option key={pl.id} value={pl.id}>{pl.name}</option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
-                        {editTypeMode === 'PLAYLIST' ? (
                             <Form.Group className="mb-3">
-                                <Form.Label>Приоритет</Form.Label>
-                                <Form.Select value={editPriority} onChange={e => setEditPriority(+e.target.value)}>
-                                    {Array.from({length: 10}, (_, i) => i + 1).map(n => (
-                                        <option key={n} value={n}>{n}</option>
+                                <Form.Label>Экраны</Form.Label>
+                                <Form.Select multiple value={editScreens} style={{height: 100}}
+                                             onChange={e => {
+                                                 const opts = Array.from(e.target.selectedOptions).map(o => o.value)
+                                                 setEditScreens(opts)
+                                             }}
+                                >
+                                    {allScreens.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
                                     ))}
                                 </Form.Select>
                             </Form.Group>
-                        ) : (
-                            <div className="mb-3">Высокий приоритет у рекламы</div>
-                        )}
-                    </Form>
-                </Modal.Body>
-                <Modal.Footer className="justify-content-center gap-3 border-0">
-                    <Button variant="primary" onClick={onSave} disabled={!canSave()}>Сохранить</Button>
-                    <Button variant="danger" onClick={() => {
-                        if (editingMeta) removeBlock(editingMeta.screenId, editingMeta.block)
-                        setEditingMeta(null)
-                    }}>Удалить</Button>
-                </Modal.Footer>
-            </Modal>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Плейлист</Form.Label>
+                                <Form.Select value={editPlaylist} onChange={e => setEditPlaylist(e.target.value)}>
+                                    {playlistItems.map(pl => (
+                                        <option key={pl.id} value={pl.id}>{pl.name}</option>
+                                    ))}
+                                </Form.Select>
+                            </Form.Group>
+                            {editTypeMode === 'PLAYLIST' ? (
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Приоритет</Form.Label>
+                                    <Form.Select value={editPriority} onChange={e => setEditPriority(+e.target.value)}>
+                                        {Array.from({length: 10}, (_, i) => i + 1).map(n => (
+                                            <option key={n} value={n}>{n}</option>
+                                        ))}
+                                    </Form.Select>
+                                </Form.Group>
+                            ) : (
+                                <div className="mb-3">Высокий приоритет у рекламы</div>
+                            )}
+                        </Form>
+                    </Modal.Body>
+                    <Modal.Footer className="justify-content-center gap-3 border-0">
+                        <Button variant="primary" onClick={onSave} disabled={!canSave()}>Сохранить</Button>
+                        <Button variant="danger" onClick={() => {
+                            if (editingMeta) removeBlock(editingMeta.screenId, editingMeta.block)
+                            setEditingMeta(null)
+                        }}>Удалить</Button>
+                    </Modal.Footer>
+                </Modal>
 
+            </div>
         </div>
     )
 }
@@ -644,14 +690,14 @@ function timeCell(): React.CSSProperties {
         padding: '4px',
         fontSize: 12,
         textAlign: 'center',
-        width: '12.5%',
+
     }
 }
 
 function slotCell(): React.CSSProperties {
     return {
         border: '1px solid #eee',
-        width: '12.5%',
+
         height: 45,
         padding: 0,
         fontSize: 10,
@@ -716,3 +762,4 @@ function computeColsForDay(
 
     return colsByIndex;
 }
+

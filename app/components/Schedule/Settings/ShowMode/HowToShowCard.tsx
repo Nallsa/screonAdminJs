@@ -45,7 +45,7 @@ export default function HowToShowCard() {
 
                 {typeMode === 'ADVERTISEMENT' && (
                     <div className="d-flex justify-content-center align-content-center">
-                        <div className="mt-3">
+                        <div className="mt-3 flex-column flex-sm-row">
                             {advertisementShowMode === 'minutes' && (
                                 <InputGroup style={{maxWidth: 300}} className="mb-2">
                                     <InputGroup.Text>Интервал, мин</InputGroup.Text>

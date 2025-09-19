@@ -18,7 +18,7 @@ export default function TypeOfTimeSlot() {
 
 
                 <Form.Group>
-                    <div className="d-flex gap-3 flex-row">
+                    <div className="d-flex gap-3 flex-column flex-sm-row">
                         <Form.Check
                             inline
                             type="checkbox"

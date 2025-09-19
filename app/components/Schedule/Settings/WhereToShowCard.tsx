@@ -31,10 +31,11 @@ export default function WhereToShowCard({onNoScreensClick}: Props) {
                         Экраны
                     </Button>
                 ) : (
-                    <div className="d-flex flex-row justify-content-lg-evenly align-content-center gap-3">
+                    <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center">
                         {/* Экраны */}
-                        <Dropdown autoClose="outside">
-                            <Dropdown.Toggle disabled={!!selectedGroup} style={{paddingLeft: 40, paddingRight: 40}}>
+                        <Dropdown autoClose="outside" className="flex-grow-1 flex-sm-grow-0">
+                            <Dropdown.Toggle className="w-100" disabled={!!selectedGroup}
+                                             style={{paddingLeft: 40, paddingRight: 40}}>
                                 Экраны
                             </Dropdown.Toggle>
                             <Dropdown.Menu style={{padding: 0}}>
@@ -82,8 +83,8 @@ export default function WhereToShowCard({onNoScreensClick}: Props) {
                         </Dropdown>
 
                         {/* Группа экранов */}
-                        <Dropdown>
-                            <Dropdown.Toggle style={{paddingLeft: 40, paddingRight: 40}}>
+                        <Dropdown className="flex-grow-1 flex-sm-grow-0">
+                            <Dropdown.Toggle className="w-100" style={{paddingLeft: 40, paddingRight: 40}}>
                                 {selectedGroup ? groups.find(g => g.id === selectedGroup)?.name : 'Группа экранов'}
                             </Dropdown.Toggle>
                             <Dropdown.Menu style={{minWidth: 200}}>
