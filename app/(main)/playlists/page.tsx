@@ -29,9 +29,8 @@ export default function PlaylistsPage() {
     const activeBranches = useOrganizationStore(state => state.activeBranches)
 
 
-
     useEffect(() => {
-            getPlaylists()
+        getPlaylists()
     }, [activeBranches.length])
 
 
@@ -76,13 +75,23 @@ export default function PlaylistsPage() {
     return (
         <>
             <div className="p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3 gap-3">
-                    <h4 className="mb-0">Плейлисты</h4>
-                    <Button style={{paddingLeft: 40, paddingRight: 40}} variant="primary" onClick={handleNewPlaylist}>
-                        + Новый плейлист
-                    </Button>
+                {/* Хедер */}
+                <div className="mb-3">
+                    <div className="row g-2 align-items-center">
+                        <div className="col">
+                            <h4 className="mb-0">Плейлисты</h4>
+                        </div>
 
-
+                        <div className="col-12 col-md-auto ms-md-auto d-grid d-sm-inline-flex gap-2">
+                            <Button
+                                className="px-sm-4 w-100 w-sm-auto"
+                                variant="primary"
+                                onClick={handleNewPlaylist}
+                            >
+                                + Новый плейлист
+                            </Button>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="d-flex flex-wrap gap-3">

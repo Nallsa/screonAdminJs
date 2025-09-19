@@ -143,8 +143,10 @@ export function ScenarioCreateModal({
 
                     <Card>
                         <Card.Header>Режим</Card.Header>
-                        <Card.Body className="d-flex flex-row align-items-center justify-content-center text-center"
-                                   style={{height: 70}}>
+                        <Card.Body
+                            className="d-flex flex-column flex-sm-row align-items-center justify-content-center text-center gap-2"
+                            style={{minHeight: 70}}>
+
                             <Form.Check
                                 type="radio"
                                 id="scn-loop"
@@ -174,7 +176,8 @@ export function ScenarioCreateModal({
 
                     <Card>
                         <Card.Header>Где показывать</Card.Header>
-                        <Card.Body className="d-flex align-items-center justify-content-center" style={{height: 80}}>
+                        <Card.Body className="pt-3 d-flex align-items-center justify-content-center"
+                                   style={{height: 100}}>
                             <div className="w-100" style={{maxWidth: 420}}>
                                 <WhereToShowCard
                                     onNoScreensClick={(e) => {
@@ -222,12 +225,18 @@ export function ScenarioCreateModal({
 
                 </div>
             </Modal.Body>
-            <Modal.Footer>
-                <div className="d-flex flex-row justify-content-between align-content-center flex-grow-1">
+            <Modal.Footer className="w-100">
+                {/* Мобилка: 100%-кнопки столбиком */}
+                <div className="d-grid gap-2 w-100 d-sm-none">
+                    <Button className="w-100" variant="secondary" onClick={onHide}>Отмена</Button>
+                    <Button className="w-100" variant="success" onClick={addCurrentSelection}>Добавить группу</Button>
+                    <Button className="w-100" variant="primary" onClick={handleSubmit}>Создать сценарий</Button>
+                </div>
+
+                {/* ≥ sm: в ряд справа */}
+                <div className="d-none d-sm-flex justify-content-sm-between w-100 gap-2 ms-sm-auto">
                     <Button variant="secondary" onClick={onHide}>Отмена</Button>
-                    <Button variant="success" onClick={addCurrentSelection}>
-                        Добавить группу
-                    </Button>
+                    <Button variant="success" onClick={addCurrentSelection}>Добавить группу</Button>
                     <Button variant="primary" onClick={handleSubmit}>Создать сценарий</Button>
                 </div>
             </Modal.Footer>

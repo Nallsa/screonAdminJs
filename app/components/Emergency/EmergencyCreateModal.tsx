@@ -85,8 +85,9 @@ export function EmergencyCreateModal({
 
                     <Card>
                         <Card.Header>Режим</Card.Header>
-                        <Card.Body className="d-flex flex-row align-items-center justify-content-center text-center"
-                                   style={{height: 70}}>
+                        <Card.Body
+                            className="d-flex flex-column  flex-sm-row align-items-center justify-content-center text-center"
+                            style={{height: 80}}>
                             <Form.Check
                                 type="radio"
                                 id="emg-loop"
@@ -116,7 +117,8 @@ export function EmergencyCreateModal({
 
                     <Card>
                         <Card.Header>Где показывать</Card.Header>
-                        <Card.Body className="d-flex align-items-center justify-content-center" style={{height: 80}}>
+                        <Card.Body className="d-flex pt-3 align-items-center justify-content-center"
+                                   style={{height: 100}}>
                             <div className="w-100" style={{maxWidth: 420}}>
                                 <WhereToShowCard onNoScreensClick={(e) => {
                                     e.preventDefault();
@@ -130,8 +132,14 @@ export function EmergencyCreateModal({
                 </div>
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="secondary" onClick={onHide}>Отмена</Button>
-                <Button variant="success" onClick={onSubmit ?? handleSubmit}>Запустить</Button>
+                <div className="d-grid gap-2 flex-sm-row flex-column d-sm-flex d-flex justify-content-between w-100">
+                    <Button className="w-100 " variant="secondary" onClick={onHide}>
+                        Отмена
+                    </Button>
+                    <Button className="w-100 " variant="success" onClick={onSubmit ?? handleSubmit}>
+                        Запустить
+                    </Button>
+                </div>
             </Modal.Footer>
         </Modal>
     )

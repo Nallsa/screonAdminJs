@@ -10,14 +10,10 @@ import {SERVER_URL} from '@/app/API/api'
 interface PreviewImageProps {
     id: string
     name: string
-    /** fill = true → аспект-рейтио режим (100% ширины), иначе фикс. */
     fill?: boolean
-    /** для fill-режима: соотношение width/height (по умолчанию 16/9) */
     aspectRatio?: number
-    /** для фикс-режима: точные размеры */
     width?: number
     height?: number
-    /** URL резерва, если сервер вернёт 404 */
     fallbackSrc?: string
 }
 
@@ -31,15 +27,12 @@ export default function PreviewImage({
                                          fallbackSrc = '/assets/default-thumbnail.svg',
                                      }: PreviewImageProps) {
     const [errored, setErrored] = useState(false)
-    // если превьюшка не загрузилась — используем резерв
     const src = errored
         ? fallbackSrc
         : `${SERVER_URL}files/${id}/preview`
 
     console.log(`${src}    ${name}`)
-    // --- fill-режим (для карточки) ---
     if (fill) {
-        // paddingTop в % = (height/width)*100%
         const paddingTop = 100 / aspectRatio
         return (
             <div
@@ -64,7 +57,6 @@ export default function PreviewImage({
         )
     }
 
-    // для списка
     return (
         <div
             style={{

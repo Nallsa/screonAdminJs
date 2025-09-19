@@ -92,70 +92,73 @@ export default function ScreensPage() {
 
     return (
         <div className="p-4">
-            {/* хэдер */}
-            <div className="d-flex justify-content-between align-items-center mb-3 rounded">
-                <h4 className="mb-0">Экраны</h4>
-                <div className="d-flex gap-4">
-                    <Button style={{paddingLeft: 40, paddingRight: 40}} variant="primary" onClick={handleOpenAddModal}>
-                        Добавить экран
-                    </Button>
-                    <Button
-                        style={{paddingLeft: 40, paddingRight: 40}}
-                        variant="primary"
-                        onClick={startCreateGroup}
-                        disabled={allScreens.length === 0}
-                    >
-                        Создать группу
-                    </Button>
+            {/* Хедер */}
+            <div className="mb-3">
+                <div className="row g-2 align-items-center">
+                    <div className="col">
+                        <h4 className="mb-0">Экраны</h4>
+                    </div>
+
+                    {/* xs: col-12 на всю ширину; md+: auto и прижатие вправо */}
+                    <div className="col-12 col-md-auto ms-md-auto d-grid d-sm-inline-flex gap-2">
+                        <Button className="px-sm-4" variant="primary" onClick={handleOpenAddModal}>
+                            Добавить экран
+                        </Button>
+                        <Button
+                            className="px-sm-4"
+                            variant="primary"
+                            onClick={startCreateGroup}
+                            disabled={allScreens.length === 0}
+                        >
+                            Создать группу
+                        </Button>
+                    </div>
                 </div>
             </div>
 
             {/* Поиск и фильтр */}
-            <div className="d-flex align-items-center gap-3 mb-3">
+            <div className="row g-2 g-md-3 mb-3">
+                <div className="col-12 col-md-auto">
+                    <Dropdown onSelect={(k) => setGroupFilter(k!)} className="w-100">
+                        <Dropdown.Toggle disabled={allScreens.length === 0} variant="outline-primary" className="w-100">
+                            {groupFilter === 'all'
+                                ? 'Все группы'
+                                : groupFilter === 'nogroup'
+                                    ? 'Без группы'
+                                    : groups.find((g) => g.id === groupFilter)?.name}
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                            <Dropdown.Item eventKey="all">Все группы</Dropdown.Item>
+                            <Dropdown.Item eventKey="nogroup">Без группы</Dropdown.Item>
+                            {groups.map((g) => (
+                                <Dropdown.Item key={g.id} eventKey={g.id}>
+                                    {g.name}
+                                </Dropdown.Item>
+                            ))}
+                        </Dropdown.Menu>
+                    </Dropdown>
+                </div>
 
-
-                <Dropdown onSelect={k => setGroupFilter(k!)}>
-                    <Dropdown.Toggle disabled={allScreens.length === 0} style={{paddingLeft: 40, paddingRight: 40}}
-                                     variant="outline-primary">
-                        {groupFilter === 'all'
-                            ? 'Все группы'
-                            : groupFilter === 'nogroup'
-                                ? 'Без группы'
-                                : groups.find(g => g.id === groupFilter)?.name}
-                    </Dropdown.Toggle>
-                    <Dropdown.Menu>
-                        <Dropdown.Item eventKey="all">Все группы</Dropdown.Item>
-                        <Dropdown.Item eventKey="nogroup">Без группы</Dropdown.Item>
-                        {groups.map(g => (
-                            <Dropdown.Item key={g.id} eventKey={g.id}>
-                                {g.name}
-                            </Dropdown.Item>
-                        ))}
-                    </Dropdown.Menu>
-                </Dropdown>
-
-                <Form.Control
-                    type="text"
-                    placeholder="Поиск по названию..."
-                    style={{maxWidth: 3500}}
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                />
+                <div className="col-12 col-md">
+                    <Form.Control
+                        type="text"
+                        placeholder="Поиск по названию..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
             </div>
 
             {/* Форма создания группы */}
             {isCreatingGroup && (
-                <div className="mb-4 rounded d-flex flex-row">
-                    <InputGroup className="mb-2" style={{maxWidth: 400}}>
-                        <InputGroup.Text>Название группы</InputGroup.Text>
-                        <Form.Control
-                            value={newGroupName}
-                            onChange={e => setNewGroupName(e.target.value)}
-                        />
-                    </InputGroup>
-
-
-                    <div className="d-flex gap-2 ms-2 mb-2">
+                <div className="row g-2 mb-4">
+                    <div className="col-12 col-md-6 col-lg-4">
+                        <InputGroup>
+                            <InputGroup.Text>Название группы</InputGroup.Text>
+                            <Form.Control value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)}/>
+                        </InputGroup>
+                    </div>
+                    <div className="col-12 col-md-auto d-flex gap-2">
                         <Button size="sm" variant="success" onClick={saveGroup}>
                             Сохранить группу
                         </Button>
@@ -184,7 +187,7 @@ export default function ScreensPage() {
             <Modal show={showAddModal} onHide={handleCloseAddModal} centered>
                 <Modal.Header
                     className="border-0 position-relative"
-                    style={{ justifyContent: 'center' }}
+                    style={{justifyContent: 'center'}}
                 >
                     <Modal.Title>Введите код экрана и сертификата</Modal.Title>
 

@@ -140,53 +140,64 @@ export default function PlaylistContentPage() {
     return (
         <>
             <div className="p-4">
-                <div className="d-flex justify-content-between align-items-end mb-4 rounded">
-                    <div className="d-flex align-items-center gap-3">
-                        {isEditingName ? (
-                            <>
-                                <Form.Control
-                                    value={name}
-                                    maxLength={150}
-                                    onChange={e => setName(e.target.value)}
-                                    style={{width: 200}}
-                                />
-                                <Button disabled={name.trim() === ''} onClick={() => setIsEditingName(false)}>
-                                    Сохранить
-                                </Button>
-                                <Button onClick={() => {
-                                    setIsEditingName(false);
-                                    setName('Default Playlist')
-                                }}>
-                                    Отмена
-                                </Button>
+                {/* Хедер */}
+                <div className="mb-3">
+                    <div className="row g-2 align-items-center">
+                        {/* Левая зона */}
+                        <div className="col">
+                            {isEditingName ? (
+                                <div className="d-grid d-sm-inline-flex gap-2">
+                                    <Form.Control
+                                        value={name}
+                                        maxLength={150}
+                                        onChange={e => setName(e.target.value)}
+                                        className="w-100 w-sm-auto"
+                                        style={{minWidth: 220}}
+                                    />
+                                    <Button
+                                        onClick={() => setIsEditingName(false)}
+                                        disabled={name.trim() === ''}
+                                    >
+                                        Сохранить
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => {
+                                            setIsEditingName(false);
+                                            setName('Default Playlist')
+                                        }}
+                                    >
+                                        Отмена
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="d-grid d-sm-inline-flex align-items-center gap-2">
+                                    <h5 className="mb-0">{name}</h5>
+                                    <Button variant="outline-primary" onClick={() => setIsEditingName(true)}>
+                                        Редактировать
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
 
-                            </>
-                        ) : (
-                            <>
-                                <h5 className="mb-0">{name}</h5>
-                                <Button onClick={() => setIsEditingName(true)}>
-                                    Редактировать
-                                </Button>
-                            </>
-                        )}
-                    </div>
-                    <div className="d-flex align-items-center gap-3">
-                        <Button
-                            style={{paddingLeft: 36, paddingRight: 36}}
-                            variant="success"
-                            onClick={handleSavePlaylist}
-                            disabled={items.length === 0 || name.trim() === ''}
-                        >
-                            Сохранить
-                        </Button>
-
-                        <Button
-                            style={{paddingLeft: 36, paddingRight: 36}}
-                            variant="danger"
-                            onClick={() => setShowDeleteModal(true)}
-                        >
-                            Удалить
-                        </Button>
+                        {/* Правая зона */}
+                        <div className="col-12 col-md-auto ms-md-auto d-grid d-sm-inline-flex gap-2">
+                            <Button
+                                className="px-sm-4 w-100 w-sm-auto"
+                                variant="success"
+                                onClick={handleSavePlaylist}
+                                disabled={items.length === 0 || name.trim() === ''}
+                            >
+                                Сохранить
+                            </Button>
+                            <Button
+                                className="px-sm-4 w-100 w-sm-auto"
+                                variant="danger"
+                                onClick={() => setShowDeleteModal(true)}
+                            >
+                                Удалить
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -210,7 +221,7 @@ export default function PlaylistContentPage() {
                         </DndContext>
                     </div>
 
-                    <div style={{width: 300}}>
+                    <div style={{width: 350}}>
 
                         <UploadZone/>
 

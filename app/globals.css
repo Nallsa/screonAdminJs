@@ -126,3 +126,47 @@ img {
     margin-left: var(--sidebar-current);
     transition: margin-left .3s ease;
 }
+
+.screen-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+/* Чуть плотнее на очень узких экранах */
+@media (max-width: 420px) {
+    .screen-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (min-width: 576px) {
+    .w-sm-auto {
+        width: auto !important;
+    }
+}
+
+/* Сетка дней расписания */
+.week-grid {
+    display: grid;
+    gap: 12px;
+}
+
+/* xs–sm: по одному дню */
+@media (max-width: 575.98px) {
+    .week-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* sm+: все семь дней (или как у вас было) */
+@media (min-width: 576px) {
+    .week-grid {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+}
+
+/* опционально, чтобы колонки красиво тянулись */
+.week-col {
+    min-width: 0; /* помогает со встроенными списками/скроллами */
+}

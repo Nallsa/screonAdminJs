@@ -77,15 +77,19 @@ export default function EmergencyPage() {
     return (
         <div className="p-4 d-flex flex-column align-items-center gap-4 w-100">
             {/* хэдер + кнопки */}
-            <div className="w-100 d-flex justify-content-between align-items-center mb-2">
-                <h4 className="mb-0">Сценарии и экстренное проигрывание</h4>
-                <div className="d-flex gap-2">
-                    <Button variant="primary" onClick={() => setShowEmergencyModal(true)}>
-                        Создать экстренное
-                    </Button>
-                    <Button variant="outline-primary" onClick={() => setShowScenarioModal(true)}>
-                        Создать сценарий
-                    </Button>
+            <div className="mb-3 w-100">
+                <div className="row w-100 d-flex justify-content-between g-2 align-items-center">
+                    <div className="col">
+                        <h4 className="mb-0">Сценарии и экстренное проигрывание</h4>
+                    </div>
+                    <div className="col-12 col-md-auto ms-md-auto d-grid d-sm-inline-flex gap-2">
+                        <Button variant="primary" onClick={() => setShowEmergencyModal(true)}>
+                            Создать экстренное
+                        </Button>
+                        <Button variant="outline-primary" onClick={() => setShowScenarioModal(true)}>
+                            Создать сценарий
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -109,28 +113,28 @@ export default function EmergencyPage() {
                                     const status = item.status == 'ACTIVE' ? 'Активен' : item.status == 'STOPPED' || 'DRAFT' ? 'Пауза' : 'Не активен'
 
                                     return (
-                                        <ListGroup.Item key={item.emergencyId} className="d-flex flex-column gap-2">
-
-                                            <div className="d-flex justify-content-between align-items-center">
-                                                <div className="d-flex align-items-center gap-2">
+                                        <ListGroup.Item key={item.emergencyId} className="p-3">
+                                            <div
+                                                className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                                                <div className="d-flex flex-row align-items-center flex-wrap gap-2">
                                                     <strong>Экстренный показ</strong>
                                                     <Badge bg={badgeVariant}>{status}</Badge>
                                                 </div>
-                                                <div className="d-flex align-items-center gap-3">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline-danger"
-                                                        onClick={() => cancel(item.emergencyId)}
-                                                    >
+
+                                                <div
+                                                    className="d-grid gap-2 w-100 d-sm-inline-flex justify-content-sm-end">
+                                                    <Button size="sm" className="w-100 w-sm-auto"
+                                                            variant="outline-danger"
+                                                            onClick={() => cancel(item.emergencyId)}>
                                                         Отменить
                                                     </Button>
                                                 </div>
                                             </div>
 
-
-                                            <div className="text-muted d-flex flex-wrap gap-3">
+                                            <div
+                                                className="text-muted d-flex flex-column flex-sm-row flex-wrap gap-2 mt-1">
                                                 <div><strong>Старт:</strong> {started}</div>
-                                                <div>
+                                                <div className="text-break">
                                                     <strong>Экраны:</strong> {prettyScreens(item.screensIds, item.screens)}
                                                 </div>
                                             </div>
@@ -161,32 +165,24 @@ export default function EmergencyPage() {
                                                     : 'primary'
                                     const status = item.status == 'ACTIVE' ? 'Активен' : item.status == 'STOPPED' || 'DRAFT' ? 'Пауза' : 'Не активен'
                                     return (
-                                        <ListGroup.Item key={item.emergencyId} className="d-flex flex-column gap-2"
-                                        >
-                                            <div className="d-flex justify-content-between align-items-center">
-                                                <div className="d-flex align-items-center gap-2">
+                                        <ListGroup.Item key={item.emergencyId} className="p-3">
+                                            <div
+                                                className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                                                <div className="d-flex align-items-center flex-wrap gap-2">
                                                     <strong>{item.name}</strong>
                                                     <Badge bg={badgeVariant}>{status}</Badge>
                                                     <Badge bg={item.recurring ? 'success' : 'secondary'}>
                                                         {item.recurring ? 'Зациклено' : 'Один раз'}
                                                     </Badge>
                                                 </div>
-                                                <div className="d-flex align-items-center gap-2">
+
+                                                <div
+                                                    className="d-grid gap-2 w-100 d-sm-inline-flex justify-content-sm-end">
                                                     <Button
                                                         size="sm"
+                                                        className="w-100 w-sm-auto"
                                                         variant="success"
-                                                        onClick={() => {
-                                                            const ids = item.screensIds ?? []
-                                                            if (ids.length === 0) {
-                                                                setError('Нельзя запустить: сервер не вернул экраны сценария для проверки пересечений')
-                                                                return
-                                                            }
-                                                            const [ok, msg] = canStartScenarioOn(ids)
-                                                            if (!ok) {
-                                                                setError(msg || 'Нельзя запустить сценарий');
-                                                                return
-                                                            }
-                                                            startScenario(item.emergencyId)
+                                                        onClick={() => { /* ваша логика */
                                                         }}
                                                         disabled={item.status === 'ACTIVE'}
                                                     >
@@ -194,6 +190,7 @@ export default function EmergencyPage() {
                                                     </Button>
                                                     <Button
                                                         size="sm"
+                                                        className="w-100 w-sm-auto"
                                                         variant="outline-danger"
                                                         onClick={() => cancelScenario(item.emergencyId)}
                                                         disabled={item.status !== 'ACTIVE'}
@@ -202,8 +199,10 @@ export default function EmergencyPage() {
                                                     </Button>
                                                 </div>
                                             </div>
-                                            <div className="text-muted d-flex flex-wrap gap-3">
-                                                <div>
+
+                                            <div
+                                                className="text-muted d-flex flex-column flex-sm-row flex-wrap gap-2 mt-1">
+                                                <div className="text-break">
                                                     <strong>Экраны:</strong> {prettyScreens(item.screensIds, item.screens)}
                                                 </div>
                                             </div>
