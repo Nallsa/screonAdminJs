@@ -486,8 +486,9 @@ export default function EditableScheduleTable() {
                                 fontSize: 9,
                                 display: 'flex',
                                 flexDirection: 'column',
-                                justifyContent: 'center',
-                                alignItems: 'center',
+                                justifyContent: 'flex-start', // было 'center'
+                                alignItems: 'center',         // горизонтальный центр
+                                paddingTop: 2,
                                 cursor: 'pointer',
                                 overflow: 'hidden',
                                 whiteSpace: 'nowrap',
@@ -511,10 +512,10 @@ export default function EditableScheduleTable() {
                                     marginBottom: 2,
                                     width: '100%',
                                     textAlign: 'center',
-                                    justifyContent: 'center',
                                     overflow: 'hidden',
                                     whiteSpace: 'nowrap',
                                     textOverflow: 'ellipsis',
+                                    fontWeight: 'bold',
                                 }}
                             >
                                 {isAd
