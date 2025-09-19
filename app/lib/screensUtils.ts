@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 export const fmtPct = (n?: number) => (n == null ? '—' : `${n.toFixed(1)} %`);
 export const fmtC = (n?: number) => (n == null ? '—' : `${n.toFixed(1)} °C`);
 export const fmtVer = (s?: string) => s ?? '—';

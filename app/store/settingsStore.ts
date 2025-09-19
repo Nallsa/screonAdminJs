@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 // stores/useSettingsStore.ts
 import {create} from 'zustand'
 import axios from 'axios'

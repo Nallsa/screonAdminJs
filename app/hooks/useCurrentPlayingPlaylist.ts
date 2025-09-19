@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 import React from "react";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 import {usePlaylistStore} from "@/app/store/playlistStore";

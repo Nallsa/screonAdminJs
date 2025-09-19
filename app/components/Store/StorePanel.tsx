@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 // app/components/Store/StorePanel.tsx
 'use client';
 

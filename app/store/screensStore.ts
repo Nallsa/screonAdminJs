@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 'use client'
 import {create} from 'zustand'
 import {immer} from 'zustand/middleware/immer'

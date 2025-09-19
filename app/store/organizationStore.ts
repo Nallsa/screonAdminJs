@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 import {create} from 'zustand';
 import {SERVER_URL} from "@/app/API/api";
 import {BranchDto, OrganizationDto} from "@/public/types/interfaces";

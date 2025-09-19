@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 import React, {useMemo, useState} from 'react'
 import {Button, Card, Form, Modal} from 'react-bootstrap'
 import {useRouter} from 'next/navigation'

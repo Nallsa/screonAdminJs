@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 export function addValueInStorage(key: string, value: string): void {
     if (typeof window !== 'undefined') {
         localStorage.setItem(key, value);

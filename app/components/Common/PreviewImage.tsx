@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 import React, {useState} from 'react'
 import Image from 'next/image'
 import {SERVER_URL} from '@/app/API/api'

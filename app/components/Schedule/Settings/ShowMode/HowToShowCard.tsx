@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 'use client'
 import React, {useState} from 'react'
 import {Form, InputGroup, Button, ListGroup, Card} from 'react-bootstrap'

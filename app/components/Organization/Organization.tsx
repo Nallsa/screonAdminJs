@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 
 
 export function InitialsAvatar({ text, size }: { text: string; size: number }) {

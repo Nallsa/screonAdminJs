@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 'use client'
 import React, {useEffect} from 'react'
 import ScheduleHeader from '@/app/components/Schedule/ScheduleHeader'

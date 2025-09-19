@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 'use client'
 import React from 'react'
 import {Button, Dropdown} from 'react-bootstrap'

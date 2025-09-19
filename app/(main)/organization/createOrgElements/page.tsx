@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'; // Ensure this import

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 import { Raleway } from "next/font/google";
 import "./globals.css";
 import 'bootstrap/dist/css/bootstrap.css';

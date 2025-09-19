@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 'use client'
 import React, {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import type {ShowMode} from '@/app/store/scheduleStore'

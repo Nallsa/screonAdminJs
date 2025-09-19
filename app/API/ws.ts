@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 type WSChannel = 'pairing' | 'schedule' | 'status';
 
 const RECONNECT_BASE_DELAY = 2000;
