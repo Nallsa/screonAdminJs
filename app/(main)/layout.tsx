@@ -28,9 +28,8 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const {getSchedule, scheduledFixedMap, scheduledCalendarMap} = useScheduleStore();
     const {getInfoOrg} = useOrganizationStore();
     const [showOrgModal, setShowOrgModal] = useState(false);
-    const pathname = usePathname();
-    const [collapsed, setCollapsed] = useState(false)
 
+    const [collapsed, setCollapsed] = useState(true);
     const router = useRouter()
 
     useEffect(() => {
@@ -47,6 +46,11 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     }, [getInfoOrg, router]);
 
     useEffect(() => {
+
+        if (typeof window !== 'undefined' && window.matchMedia('(min-width: 992px)').matches) {
+            setCollapsed(false);
+        }
+
         async function init() {
             console.log("dasdasdasasdasd")
             const resCheck = await checkToken();
@@ -104,13 +108,14 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
             <BootstrapClient/>
             {/*<OrgCheckModal/>*/}
 
-            <div className="d-flex">
+            <div className={`layout d-flex ${collapsed ? 'is-collapsed' : 'is-expanded'}`}>
                 <Sidebar
+                    className="sidebar"
                     collapsed={collapsed}
                     onToggle={() => setCollapsed(v => !v)}
                 />
                 <main
-                    className="flex-fill"
+                    className="main flex-fill"
                     style={{
                         marginLeft: collapsed ? 50 : 220,
                         transition: 'margin-left .3s ease-in-out'

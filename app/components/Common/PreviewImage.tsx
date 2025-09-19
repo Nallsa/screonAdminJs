@@ -31,6 +31,7 @@ export default function PreviewImage({
         ? fallbackSrc
         : `${SERVER_URL}files/${id}/preview`
 
+    console.log(`${src}    ${name}`)
     // --- fill-режим (для карточки) ---
     if (fill) {
         // paddingTop в % = (height/width)*100%

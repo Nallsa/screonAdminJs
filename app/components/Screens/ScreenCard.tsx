@@ -26,6 +26,7 @@ export default function ScreenCard({
                                        onSelect,
                                    }: ScreenCardProps) {
 
+
     const delScreen = useScreensStore(state => state.delScreen)
     const groups = useScreensStore(state => state.groups)
     const assignGroupToScreen = useScreensStore(state => state.assignGroupToScreen)
@@ -37,14 +38,16 @@ export default function ScreenCard({
     const [editModalName, setEditModalName] = useState(screen.name)
     const [editModalGroup, setEditModalGroup] = useState<string | null>(screen.groupId ?? null);
 
+    const sendGetStatus = useScreensStore(s => s.sendGetStatus);
+    const live = useScreensStore(s => s.statusByScreen[screen.id]);
+    const needsUpdate = useScreensStore(s => s.needsUpdate);
+    const latestName = useScreensStore(s => s.latestPlayerVersionName);
+
     // Собираем имена групп, в которые входит этот экран
     const groupName = screen.groupId
         ? groups.find(g => g.id === screen.groupId)?.name || '— без группы —'
         : ' без группы '
 
-
-    const sendGetStatus = useScreensStore(s => s.sendGetStatus);
-    const live = useScreensStore(s => s.statusByScreen[screen.id]);
 
     const statusEntry = useScreensStore(s => s.statusByScreen[screen.id]);
     const isOnline = (() => {
@@ -191,20 +194,25 @@ export default function ScreenCard({
                                 size="sm"
                                 variant="outline-primary"
                                 className="flex-grow-1"
-
                                 onClick={() => {
-                                    if (label == 'Удалить') {
-                                        setShowConfirm(true)
-                                    }
+                                    if (label == 'Удалить') setShowConfirm(true)
                                     if (label === 'Редактировать') openEdit()
-                                    if (label === 'Статус') openStatus();
-
+                                    if (label === 'Статус') openStatus()
                                 }}
                             >
                                 {label}
+                                {label === 'Статус' && needsUpdate(screen.id) && (
+                                    <span
+                                        className="ms-1"
+                                        title={latestName ? `Доступно обновление (${latestName})` : 'Доступно обновление'}
+                                        aria-label="Доступно обновление"
+                                        style={{lineHeight: 1}}
+                                    >
+                                        ⚠️
+                                    </span>
+                                )}
                             </Button>
-                        ))
-                        }
+                        ))}
 
 
                     </div>
@@ -223,7 +231,7 @@ export default function ScreenCard({
                 onCancel={() => setShowConfirm(false)}
             />
 
-
+            {/*Редактирование экрана*/}
             <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered size="lg">
                 <Modal.Header closeButton>
                     <Modal.Title>Редактировать экран</Modal.Title>
@@ -268,6 +276,7 @@ export default function ScreenCard({
                 </Modal.Footer>
             </Modal>
 
+            {/*Статус*/}
             <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Статус экрана</Modal.Title>
@@ -289,7 +298,6 @@ export default function ScreenCard({
                             </div>
                         )}
 
-                        {/* Полупрозрачный оверлей со спиннером */}
                         {statusLoading && (
                             <div
                                 style={{
@@ -300,6 +308,18 @@ export default function ScreenCard({
                                 }}
                             >
                                 <Spinner animation="border" className="me-2"/> Обновляем…
+                            </div>
+                        )}
+
+                        {needsUpdate(screen.id) && (
+                            <div className="mt-3 p-2 rounded-2"
+                                 style={{
+                                     background: '#fff3cd',
+                                     border: '1px solid #ffe69c',
+                                     color: '#664d03',
+                                     fontSize: 13
+                                 }}>
+                                Доступно обновление{latestName ? ` (${latestName})` : ''}. Перезапустите экран.
                             </div>
                         )}
                     </div>

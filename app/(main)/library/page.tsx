@@ -21,6 +21,8 @@ import {useLibraryStore} from "@/app/store/libraryStore";
 import UploadZone from "@/app/components/Library/UploadZone";
 import ErrorModal from "@/app/components/Common/ErrorModal";
 import {useOrganizationStore} from "@/app/store/organizationStore";
+import PreviewImage from "@/app/components/Common/PreviewImage";
+import StorePanel from "@/app/components/Store/StorePanel";
 
 
 export default function LibraryPage() {
@@ -60,51 +62,54 @@ export default function LibraryPage() {
 
     return (
         <>
-            <div className="p-4">
-                <div className="d-flex justify-content-between align-libraryItems-center mb-3">
-                    <h4>Библиотека</h4>
-                </div>
+            <div className="d-flex gap-4 p-4">
+
+                <div className="flex-grow-1 min-w-0">
+
+                    <div className="d-flex justify-content-between align-libraryItems-center mb-3">
+                        <h4>Библиотека</h4>
+                    </div>
 
 
-                <div className="d-flex justify-content-start  mb-3">
+                    <div className="d-flex justify-content-start  mb-3">
+                        <Form.Control
+                            type="search"
+                            placeholder="Поиск по названию..."
+                            style={{maxWidth: 300}}
+                        />
+                    </div>
 
-                    <Form.Control
+                    <UploadZone/>
 
-                        type="search"
-                        placeholder="Поиск по названию..."
-                        style={{maxWidth: 300}}
-                    />
-                </div>
 
-                <UploadZone/>
-
-                <DndContext
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                >
-                    <SortableContext
-                        items={libraryItems.map((i) => i.fileId)}
-                        strategy={horizontalListSortingStrategy}
+                    {/*библиотека*/}
+                    <DndContext
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
                     >
-                        <div className="d-flex flex-wrap gap-3">
-                            {libraryItems.map((item) => (
-                                <MediaCard
-                                    key={item.fileId}
-                                    item={item}
-                                    isPlaylist={false}
-                                    onDelete={() => handleDelItem(item.fileId)}
-                                    onUpdate={(updatedItem) => updateLibraryItem(updatedItem)}
-                                />
-                            ))}
-                        </div>
-                    </SortableContext>
-                </DndContext>
+                        <SortableContext
+                            items={libraryItems.map((i) => i.fileId)}
+                            strategy={horizontalListSortingStrategy}
+                        >
+                            <div className="d-flex flex-wrap gap-3">
+                                {libraryItems.map((item) => (
+                                    <MediaCard
+                                        key={item.fileId}
+                                        item={item}
+                                        isPlaylist={false}
+                                        onDelete={() => handleDelItem(item.fileId)}
+                                        onUpdate={(updatedItem) => updateLibraryItem(updatedItem)}
+                                    />
+                                ))}
+                            </div>
+                        </SortableContext>
+                    </DndContext>
+                </div>
+
+
+                {/*магазин*/}
+                <StorePanel/>
             </div>
-            {/*<ErrorModal*/}
-            {/*    show={!!errorMessage}*/}
-            {/*    message={errorMessage || ''}*/}
-            {/*    onClose={() => setError(null)}*/}
-            {/*/>*/}
         </>
     )
 }

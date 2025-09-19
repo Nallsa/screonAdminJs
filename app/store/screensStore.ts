@@ -1,7 +1,7 @@
 'use client'
 import {create} from 'zustand'
 import {immer} from 'zustand/middleware/immer'
-import {FileItem, GroupData, ScreenData} from "@/public/types/interfaces"
+import {FileItem, GroupData, ScreenData, UpdateInfoDto} from "@/public/types/interfaces"
 import {getValueInStorage} from "@/app/API/localStorage"
 import {connectWebSocket, sendConfirmPairing} from '../API/ws'
 import {StateCreator} from 'zustand'
@@ -59,6 +59,7 @@ interface ScreensState {
     connectWsForScreen: () => Promise<void>
     addPairingConfirm: (code: string) => Promise<void>
 
+    //Status
     statusByScreen: Record<string, StatusEntry>;
     setStatusForScreen: (screenId: string, st: LiveStatus) => void;
     isScreenOnline: (screenId: string) => boolean;
@@ -69,6 +70,16 @@ interface ScreensState {
     startAutoStatusPolling: (intervalMs?: number) => void;
     stopAutoStatusPolling: () => void;
 
+    latestPlayerVersionName: string | null
+    latestPlayerVersionFetchedAt: number | null
+
+    getLatestPlayerVersionName: (opts?: {
+        app?: string; channel?: string; versionCode?: number; sdk?: number;
+    }) => Promise<void>
+
+    needsUpdate: (screenId: string) => boolean
+
+    //errors
     errorMessage: string | null
     setError: (msg: string | null) => void
 }
@@ -241,10 +252,16 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
                 console.log("Экраны", screens)
 
-
                 set(state => {
                     state.filteredScreens = screens;
                     state.allScreens = screens;
+                })
+
+                await get().getLatestPlayerVersionName({
+                    app: 'player',
+                    channel: 'stable',
+                    versionCode: 1,
+                    sdk: 21,
                 })
             } catch (error: any) {
                 console.error("Ошибка при загрузке экранов:", error)
@@ -456,6 +473,17 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             }
         },
 
+        //====================STATUS==================
+
+        latestPlayerVersionName: null,
+        latestPlayerVersionFetchedAt: null,
+
+        needsUpdate: (screenId) => {
+            const latest = get().latestPlayerVersionName?.trim();
+            const pv = get().statusByScreen[screenId]?.playerVersion?.trim();
+            if (!latest || !pv) return false;
+            return pv !== latest;
+        },
 
         setStatusForScreen: (screenId, st) =>
             set(s => {
@@ -522,6 +550,29 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             );
         },
 
+        getLatestPlayerVersionName: async (opts) => {
+            try {
+                const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
+
+                const app = opts?.app ?? 'player'
+                const channel = opts?.channel ?? 'stable'
+                const versionCode = opts?.versionCode ?? 1
+                const sdk = opts?.sdk ?? 21
+
+                const {data} = await axios.get<UpdateInfoDto>(`${SERVER}updates`, {
+                    params: {app, channel, versionCode, sdk},
+                })
+
+                set(s => {
+                    s.latestPlayerVersionName = data.versionName?.trim() || null
+                    s.latestPlayerVersionFetchedAt = Date.now() // можно оставить/игнорировать
+                })
+            } catch (error: any) {
+                if (process.env.NODE_ENV !== 'production') {
+                    console.warn('Не удалось получить последнюю версию плеера', error)
+                }
+            }
+        },
     }
 }
 export const useScreensStore = create<ScreensState>()(immer(createScreensStore))

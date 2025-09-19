@@ -23,6 +23,37 @@ export interface FileItem {
     orderIndex: number
 }
 
+export interface CatalogAsset {
+    id: string;
+    bucket: string;
+    path: string;
+    previewPath: string;
+    contentType: string;
+    size: number;
+    sha256: string;
+    width?: number;
+    height?: number;
+    duration?: number;
+    originalName: string;
+    createdAt?: string;
+    isMain?: boolean;
+}
+
+export interface AddToLibraryReq {
+    userId: string;
+    organizationId: string;
+    bucket: string;
+    path: string;
+    previewPath?: string;
+    contentType: string;
+    size: number;
+    sha256: string;
+    width?: number;
+    height?: number;
+    duration?: number;
+    originalName: string;
+}
+
 export enum DeviceStatus {
     'ONLINE',
     'OFFLINE',
@@ -75,4 +106,16 @@ export interface BranchDto {
     name: string;
     logoUrl?: string | null;
     description?: string | null;
+}
+
+export type UpdateInfoDto = {
+    id: string
+    latestVersionCode: number
+    minSupportedVersionCode: number
+    versionName: string
+    apkUrl: string
+    sizeBytes: number
+    sha256: string
+    releaseNotes?: string | null
+    force?: boolean
 }

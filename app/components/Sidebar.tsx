@@ -9,7 +9,8 @@ import {useOrganizationStore} from "@/app/store/organizationStore";
 
 interface Props {
     collapsed: boolean
-    onToggle: () => void
+    onToggle: () => void,
+    className: string,
 }
 
 
@@ -20,10 +21,10 @@ const navItems = [
     {href: "/schedule", label: "Расписание", icon: "bi bi-calendar-week"},
     {href: "/emergency", label: "Сценарии", icon: "bi bi-lightning-charge"},
     {href: "/organization", label: "Организация", icon: "bi bi-building-fill-gear"},
-    {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
+    // {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
 
 ];
-export default function Sidebar({ collapsed, onToggle }: Props) {
+export default function Sidebar({collapsed, onToggle, className = ''}: Props) {
     const pathname = usePathname();
     const hasOrg = useOrganizationStore(state => state.hasOrg);
 
@@ -35,9 +36,9 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
 
     return (
         <div
-            className="bg-white shadow-sm d-flex flex-column"
+            className={`bg-white shadow-sm d-flex flex-column sidebar ${className}`}
             style={{
-                width,
+                // width,
                 transition: 'width .3s ease-in-out',
                 overflowX: 'hidden',
                 height: '100vh',
@@ -76,11 +77,11 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
                     className="btn btn-outline-secondary"
                     onClick={onToggle}
                 >
-                    <FaBars />
+                    <FaBars/>
                 </button>
             </div>
 
-            {navItems.map(({ href, label, icon }) => {
+            {navItems.map(({href, label, icon}) => {
                 const active = pathname === href;
 
                 return (
@@ -94,7 +95,7 @@ export default function Sidebar({ collapsed, onToggle }: Props) {
                             }
                         }}
                         className={
-                            'text-decoration-none d-flex align-items-center w-100 py-3 ' +
+                            'text-decoration-none d-flex align-items-center py-3 ' +
                             (active && hasOrg ? 'bg-light fw-bold text-dark' : 'text-secondary') +
                             (!hasOrg ? ' disabled' : '')
                         }

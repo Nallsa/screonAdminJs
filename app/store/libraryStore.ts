@@ -126,7 +126,7 @@ export const useLibraryStore = create<LibraryStore>()(
                 const accessToken = getValueInStorage("accessToken")
 
 
-                const activeBranches = useOrganizationStore.getState().activeBranches; // Access active branches from the other store
+                const activeBranches = useOrganizationStore.getState?.().activeBranches; // Access active branches from the other store
 
                 const response = await axios.post(`${SERVER_URL}files/user-files`, {
                         userId: getValueInStorage('userId'),

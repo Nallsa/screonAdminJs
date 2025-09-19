@@ -698,34 +698,43 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 }
 
                 const {
-                    selectedScreens,
-                    isFixedSchedule,
+                    scheduledFixedMap,
+                    scheduledCalendarMap,
                     isRecurring,
                     scheduleId,
-                } = get()
+                } = get();
 
-                const slots = selectedScreens.flatMap(screenId => {
-                    const blocks = ((isFixedSchedule
-                        ? get().scheduledFixedMap
-                        : get().scheduledCalendarMap)[screenId] || [])
-                    return blocks.map(b => ({
+                // соберём уникальный список экранов из обеих карт
+                const screenIds = Array.from(
+                    new Set([
+                        ...Object.keys(scheduledCalendarMap || {}),
+                    ])
+                );
+
+                // нормализация тайм-слотов для отправки
+                const toSlots = (
+                    blocks: ScheduledBlock[] | undefined,
+                    fixed: boolean,
+                    screenId: string
+                ) =>
+                    (blocks || []).map(b => ({
                         dayOfWeek: b.dayOfWeek,
-                        startDate: isFixedSchedule ? null : b.startDate,
-                        endDate: isFixedSchedule ? null : b.endDate,
-                        startTime: b.startTime.slice(0, 5),
-                        endTime: b.endTime.slice(0, 5),
+                        startDate: fixed ? null : b.startDate,
+                        endDate: fixed ? null : b.endDate,
+                        startTime: (b.startTime ?? '').slice(0, 5), // "HH:mm"
+                        endTime: (b.endTime ?? '').slice(0, 5),
                         playlistId: b.playlistId,
                         isRecurring: b.isRecurring,
                         priority: b.priority,
                         screenId,
-                        type: b.type
-                    }))
-                })
+                        type: b.type,
+                    }));
 
-                const userId = typeof window !== 'undefined'
-                    ? localStorage.getItem('userId')
-                    : null
-
+                // собираем слоты по всем экранам из обеих карт
+                const slots: any[] = [];
+                for (const sid of screenIds) {
+                    slots.push(...toSlots(scheduledCalendarMap[sid], false, sid));
+                }
 
                 const branchIds =
                     (useOrganizationStore.getState?.().activeBranches ?? [])

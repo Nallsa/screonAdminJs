@@ -80,3 +80,44 @@ img {
     justify-content: center;
     align-items: center;
 }
+
+:root {
+    --sidebar-expanded: 220px;
+    --sidebar-collapsed: 50px;
+}
+
+/* Десктоп: по умолчанию раскрыт, кнопка может сжать */
+.layout {
+    --sidebar-current: var(--sidebar-expanded);
+}
+
+.layout.is-collapsed {
+    --sidebar-current: var(--sidebar-collapsed);
+}
+
+/* Мобилки: по умолчанию сжат, но если явно is-expanded — раскрываем */
+@media (max-width: 991.98px) {
+    .layout {
+        --sidebar-current: var(--sidebar-collapsed);
+    }
+
+    .layout.is-expanded {
+        --sidebar-current: var(--sidebar-expanded);
+    }
+
+    /* Прятать подписи только когда реально сжато */
+    .layout:not(.is-expanded) .sidebar .item-label {
+        display: none;
+    }
+}
+
+/* Применяем переменную ширины */
+.sidebar {
+    width: var(--sidebar-current);
+    transition: width .3s ease;
+}
+
+.main {
+    margin-left: var(--sidebar-current);
+    transition: margin-left .3s ease;
+}
