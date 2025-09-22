@@ -3,7 +3,6 @@
  * All rights reserved.
  */
 
-// app/components/Store/StorePanel.tsx
 'use client';
 
 import {useEffect, useMemo, useState} from 'react';
@@ -36,13 +35,11 @@ export default function StorePanel() {
     }, [assets, q]);
 
     return (
-        <div style={{width: 520}} className="ps-4">
-            <div className="d-flex align-items-center justify-content-between mb-3">
-                <h4>Магазин</h4>
-                <Badge bg="light" text="dark">
-                    {assets.length}
-                </Badge>
-            </div>
+        <div className="ps-0">
+            {/*<div className="d-flex align-items-center justify-content-between mb-3">*/}
+            {/*    <h4 className="mb-0">Магазин</h4>*/}
+            {/*    <Badge bg="light" text="dark">{assets.length}</Badge>*/}
+            {/*</div>*/}
 
             <Form.Control
                 value={q}
@@ -51,7 +48,7 @@ export default function StorePanel() {
                 className="mb-3"
             />
 
-            <div className="border rounded-3 p-3 bg-white">
+            <div className=" rounded-3 pt-3 bg-white">
                 {loading && (
                     <div className="p-4 text-center text-muted">
                         <Spinner animation="border" size="sm" className="me-2"/>
@@ -65,24 +62,23 @@ export default function StorePanel() {
 
                 {!loading && !error && (
                     <div
-                        className="row g-3"
+                        className="d-flex flex-wrap gap-3 pb-4"
                         style={{maxHeight: 720, overflowY: 'auto'}}
                     >
                         <AnimatePresence initial={false}>
-                            {filtered.map((a) => (
+                            {filtered.map(a => (
                                 <motion.div
                                     key={a.id}
-                                    className="col-12 col-md-6"
                                     initial={{opacity: 0, y: 12}}
                                     animate={{opacity: 1, y: 0}}
                                     exit={{opacity: 0, y: -12}}
                                 >
                                     <div
-                                        className="card shadow-sm border-0 overflow-hidden h-100"
-                                        style={{borderRadius: 16, cursor: 'pointer'}}
+                                        className="card shadow-sm  border-0 overflow-hidden"
+                                        style={{width: 300, borderRadius: 16, cursor: 'pointer'}}
                                         onClick={() => {
                                             setSelected(a);
-                                            setModal(true);
+                                            setModal(true)
                                         }}
                                     >
                                         <div className="position-relative">
@@ -92,32 +88,25 @@ export default function StorePanel() {
                                                 id={a.previewPath}
                                                 name={a.originalName}
                                             />
-
-                                            {/* Hover overlay */}
                                             <div
                                                 className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-end"
                                                 style={{
-                                                    background:
-                                                        'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%)',
+                                                    background: 'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%)',
                                                     padding: 12,
                                                 }}
                                             >
                                                 <div className="text-white fw-semibold text-truncate">
                                                     {a.originalName}
                                                 </div>
-
                                             </div>
                                         </div>
 
-                                        {/* нижняя часть карточки */}
                                         <div className="card-body">
                                             <div className="d-flex small text-muted justify-content-between">
                                                 <div className="text-truncate">
                                                     {a.width && a.height ? `${a.width}×${a.height}` : '—'}
                                                 </div>
-                                                <div>
-                                                    {a.duration ? `${a.duration.toFixed(1)} с` : ''}
-                                                </div>
+                                                <div>{a.duration ? `${a.duration.toFixed(1)} с` : ''}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -130,5 +119,5 @@ export default function StorePanel() {
 
             <AddFromStoreModal show={modal} onHide={() => setModal(false)} asset={selected}/>
         </div>
-    );
+    )
 }

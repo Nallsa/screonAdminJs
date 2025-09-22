@@ -86,30 +86,32 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate, 
                 opacity: isDragging ? 0.9 : 1,
             }
         } className="card shadow-sm" {...attributes}>
-            <button
-                {...listeners}
-                title="Drag to reorder"
-                style={{
-                    position: 'absolute',
-                    top: 4,
-                    right: 4,
-                    width: 30,
-                    height: 30,
-                    cursor: 'grab',
-                    fontSize: 18,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: '#cccccc',
-                    borderRadius: 4,
-                    zIndex: 10,
-                    userSelect: 'none',
-                    border: 'none',
-                    padding: 0,
-                }}
-            >
-                ⠿
-            </button>
+            {isPlaylist && (
+                <button
+                    {...listeners}
+                    title="Drag to reorder"
+                    style={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        width: 30,
+                        height: 30,
+                        cursor: 'grab',
+                        fontSize: 18,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: '#cccccc',
+                        borderRadius: 4,
+                        zIndex: 10,
+                        userSelect: 'none',
+                        border: 'none',
+                        padding: 0,
+                    }}
+                >
+                    ⠿
+                </button>
+            )}
 
             <PreviewImage id={item.fileId} name={item.name} fill aspectRatio={16 / 9}/>
 
