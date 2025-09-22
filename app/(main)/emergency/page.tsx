@@ -17,10 +17,11 @@ import {WarningModal} from "@/app/components/Common/WarningModal";
 import ErrorModal from "@/app/components/Common/ErrorModal";
 import {EmergencyCreateModal} from "@/app/components/Emergency/EmergencyCreateModal";
 import {ScenarioCreateModal} from "@/app/components/Emergency/ScenarioCreateModal";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 export default function EmergencyPage() {
     const router = useRouter()
-    const orgId = useSettingsStore(s => s.organizationId) || ''
+    const orgId = useOrganizationStore(s => s.organizationInfo?.id) || ''
 
     const {playlistItems} = usePlaylistStore()
     const {allScreens, groups} = useScreensStore()
