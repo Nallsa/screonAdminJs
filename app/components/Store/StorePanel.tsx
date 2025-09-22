@@ -62,7 +62,7 @@ export default function StorePanel() {
 
                 {!loading && !error && (
                     <div
-                        className="d-flex flex-wrap gap-3 pb-4"
+                        className="d-flex flex-wrap gap-3 pb-4 pt-2"
                         style={{maxHeight: 720, overflowY: 'auto'}}
                     >
                         <AnimatePresence initial={false}>
@@ -74,7 +74,7 @@ export default function StorePanel() {
                                     exit={{opacity: 0, y: -12}}
                                 >
                                     <div
-                                        className="card shadow-sm  border-0 overflow-hidden"
+                                        className="card border-0 overflow-hidden hover-lift"
                                         style={{width: 300, borderRadius: 16, cursor: 'pointer'}}
                                         onClick={() => {
                                             setSelected(a);
@@ -118,6 +118,23 @@ export default function StorePanel() {
             </div>
 
             <AddFromStoreModal show={modal} onHide={() => setModal(false)} asset={selected}/>
+
+            <style jsx>{`
+                .hover-lift {
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
+                    transition: transform .18s ease, box-shadow .18s ease;
+                    will-change: transform, box-shadow;
+                }
+
+                .hover-lift:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, .12);
+                }
+            `}</style>
         </div>
+
+
     )
+
+
 }
