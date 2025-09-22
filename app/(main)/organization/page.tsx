@@ -5,13 +5,14 @@
 
 'use client'
 
-import {Key, useEffect, useState} from 'react';
+import {useEffect} from 'react';
 import {useRouter} from 'next/navigation'
 import {useOrganizationStore} from "@/app/store/organizationStore";
 import {BranchDto} from "@/public/types/interfaces";
 import {InitialsAvatar} from "@/app/components/Organization/Organization";
 import {Button} from "react-bootstrap";
 import {useAuthStore} from "@/app/store/authStore";
+import {LICENSE, licenseControl} from "@/app/store/settingsStore";
 
 export default function OrganizationPage() {
     const router = useRouter();
@@ -41,37 +42,9 @@ export default function OrganizationPage() {
         router.push('/auth/login')
     }
 
-    // Temporary mock data for testing since backend is not working
-    const mockOrganizationInfo = {
-        id: 'mock-org-1',
-        name: 'Тестовая Организация',
-        branches: [
-            {
-                id: 'branch-1',
-                name: 'Филиал Центр',
-                logoUrl: 'https://via.placeholder.com/150?text=Logo1', // Random placeholder image
-                description: 'Описание филиала Центр'
-            },
-            {
-                id: 'branch-2',
-                name: 'Филиал Север',
-                logoUrl: 'https://via.placeholder.com/150?text=Logo2', // Random placeholder image
-                description: 'Описание филиала Север'
-            },
-            {
-                id: 'branch-3',
-                name: 'Филиал Юг',
-                logoUrl: null,
-                description: 'Описание филиала Юг'
-            }
-        ],
-        photoUrl: 'https://via.placeholder.com/96?text=OrgLogo', // Random placeholder for org photo
-        role: 'admin'
-    };
 
-    // Use mock if organizationInfo is null (for testing)
-    const orgInfo = organizationInfo || mockOrganizationInfo;
-    const branches = (orgBranches as BranchDto[] | null) ?? orgInfo.branches ?? [];
+    const orgInfo = organizationInfo
+    const branches = (orgBranches as BranchDto[] | null) ?? orgInfo?.branches ?? [];
 
     if (!orgInfo) {
         return (
@@ -111,15 +84,19 @@ export default function OrganizationPage() {
                         </div>
 
                         {/* Branches section */}
+
+
                         <div className="d-flex justify-content-between align-items-center mb-3 px-2">
                             <h5 className="mb-0">Филиалы</h5>
-                            <button
-                                className="btn btn-primary rounded-pill px-3 py-1"
-                                onClick={() => router.push('/organization/createOrgElements?isBranch=true')} // Adjust route; assuming separate route for branch creation
-                            >
-                                <i className="bi bi-plus fs-5"></i> Создать филиал
-                            </button>
+                            {licenseControl([LICENSE.ULTIMATE]) &&
+                                <button
+                                    className="btn btn-primary rounded-pill px-3 py-1"
+                                    onClick={() => router.push('/organization/createOrgElements?isBranch=true')} // Adjust route; assuming separate route for branch creation
+                                >
+                                    <i className="bi bi-plus fs-5"></i> Создать филиал
+                                </button>}
                         </div>
+
 
                         {branches.length === 0 ? (
                             <p className="text-muted px-2">Пока филиалов нет</p>

@@ -11,6 +11,7 @@ import {InitialsAvatar} from "@/app/components/Organization/Organization";
 import {useOrganizationStore} from '@/app/store/organizationStore';
 import {useEffect, useState} from "react";
 import {BranchDto} from "@/public/types/interfaces";
+import {LICENSE, licenseControl} from "@/app/store/settingsStore";
 
 
 export default function OrgBranchPage() {
@@ -38,7 +39,7 @@ export default function OrgBranchPage() {
         setShowDeleteDialog(false);
     };
 
-    console.log(branch)
+    const branchesCount = organizationInfo?.branches?.length ?? 0;
 
     return (
         <div className="container py-4">
@@ -83,12 +84,17 @@ export default function OrgBranchPage() {
                     )}
 
                     {/* Delete Button */}
-                    <button className="btn btn-danger w-100 mb-3" onClick={() => setShowDeleteDialog(true)}>
-                        <i className="bi bi-trash me-2"></i> Удалить филиал
-                    </button>
+
+
+                    {branchesCount < 1 && (
+                        <button className="btn btn-danger w-100 mb-3" onClick={() => setShowDeleteDialog(true)}>
+                            <i className="bi bi-trash me-2"></i> Удалить филиал
+                        </button>
+                    )}
 
                     {/* Invite Code Generator */}
-                    <InviteCodeGenerator branchId={branch.id}/>
+                    {licenseControl([LICENSE.ADVANCED, LICENSE.ULTIMATE]) &&
+                        <InviteCodeGenerator branchId={branch.id}/>}
 
                     {/* Participants */}
                     {/*<ParticipantsSection participants={fakeParticipants()} />*/}

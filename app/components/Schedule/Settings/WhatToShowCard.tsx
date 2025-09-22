@@ -10,6 +10,7 @@ import {usePlaylistStore} from '@/app/store/playlistStore'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import PlaylistSelect from "@/app/components/Schedule/Settings/Playlist/PlaylistSelect";
 import PrioritySelect from "@/app/components/Schedule/Settings/Playlist/PrioritySelect";
+import {LICENSE, licenseControl} from "@/app/store/settingsStore";
 
 type Props = {
     onNoPlaylistsClick: (e: React.MouseEvent) => void
@@ -24,9 +25,12 @@ export default function WhatToShowCard({onNoPlaylistsClick}: Props) {
                 <PlaylistSelect onEmptyClick={onNoPlaylistsClick}/>
             </Col>
 
-            <Col xs="auto" className="d-flex flex-column justify-content-center align-items-center text-center">
-                <PrioritySelect/>
-            </Col>
+
+            {licenseControl([LICENSE.ADVANCED, LICENSE.ULTIMATE]) &&
+                <Col xs="auto" className="d-flex flex-column justify-content-center align-items-center text-center">
+                    <PrioritySelect/>
+                </Col>}
+
         </div>
     )
 }

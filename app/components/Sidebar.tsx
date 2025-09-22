@@ -26,7 +26,7 @@ const navItems = [
     {href: "/schedule", label: "Расписание", icon: "bi bi-calendar-week"},
     {href: "/emergency", label: "Сценарии", icon: "bi bi-lightning-charge"},
     {href: "/organization", label: "Организация", icon: "bi bi-building-fill-gear"},
-    // {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
+    {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
 
 ];
 export default function Sidebar({collapsed, onToggle, className = ''}: Props) {

@@ -1,212 +1,86 @@
-/*
- * Copyright (c) LLC "Centr Distribyucii"
- * All rights reserved.
- */
+// store/settings.ts
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import {getValueInStorage} from "@/app/API/localStorage";
 
-// stores/useSettingsStore.ts
-import {create} from 'zustand'
-import axios from 'axios'
-
-interface SettingsState {
-    organizationId: string | null
-    userId: string | null
-    accessToken: string | null
-
-    inviteCode: string | null
-    isGenerating: boolean
-
-    isCheckingOrg: boolean
-    hasOrg: boolean
-
-    errorMessage: string | null
-    successMessage: string | null
-
-    setOrganizationId: (id: string) => void
-    setUserId: (id: string) => void
-    setAccessToken: (token: string) => void
-
-    createOrganization: (name: string) => Promise<string | null>
-    generateInviteCode: () => Promise<void>
-    clearInviteCode: () => void
-
-    checkOrg: () => Promise<void>
-
-    setError: (msg: string | null) => void
-    setSuccess: (msg: string | null) => void
+export enum LICENSE {
+    BASE = 'BASE',
+    ADVANCED = 'ADVANCED',
+    ULTIMATE = 'ULTIMATE',
 }
 
-const getLocal = (key: string) => {
-    if (typeof window === 'undefined') return null
-    return localStorage.getItem(key)?.trim() || null
+type SettingsState = {
+    licenseKey: string
+    isApplying: boolean
+    error: string | null
+    applied: boolean
+    license: LICENSE
+
+    onLicenseChange: (value: string) => void
+    applyLicense: () => Promise<void>
+    clearKey: () => void
+    setLicense: (lic: LICENSE) => void
 }
 
-export const useSettingsStore = create<SettingsState>((set, get) => ({
-    organizationId: getLocal('organizationId'),
-    userId: getLocal('userId'),
-    accessToken: getLocal('accessToken'),
 
-    inviteCode: null,
-    isGenerating: false,
+export const useSettingsStore = create<SettingsState>()(
+    persist(
+        (set, get) => ({
+            licenseKey: getValueInStorage('licenseKey') ?? '',
+            isApplying: false,
+            error: null,
+            applied: getValueInStorage('licenseKey') ? !!getValueInStorage('licenseKey') : false,
+            license: LICENSE.BASE,
 
-    isCheckingOrg: false,
-    hasOrg: false,
+            onLicenseChange: (value) => set({ licenseKey: value, error: null, applied: false }),
 
-    errorMessage: null,
-    successMessage: null,
+            clearKey: () => set({ licenseKey: '', error: null, applied: false }),
 
-    setOrganizationId: (id) => {
-        if (typeof window !== 'undefined') localStorage.setItem('organizationId', id)
-        set({organizationId: id, hasOrg: true})
-    },
-    setUserId: (id) => {
-        if (typeof window !== 'undefined') localStorage.setItem('userId', id)
-        set({userId: id})
-    },
-    setAccessToken: (token) => {
-        if (typeof window !== 'undefined') localStorage.setItem('accessToken', token)
-        set({accessToken: token})
-    },
+            setLicense: (lic) => set({ license: lic }),
 
-    clearInviteCode: () => set({inviteCode: null}),
+            applyLicense: async () => {
+                const key = get().licenseKey.trim()
 
-    setError: (msg) => set({errorMessage: msg}),
-    setSuccess: (msg) => set({successMessage: msg}),
-
-    createOrganization: async (name: string): Promise<string | null> => {
-        const {userId, accessToken} = get()
-        if (!userId || !accessToken) {
-            set({errorMessage: 'Нет userId или accessToken.'})
-            return null
-        }
-
-        set({errorMessage: null, successMessage: null})
-
-        try {
-            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-            const res = await axios.post(
-                `${SERVER}organizations`,
-                {
-                    name,
-                    creatorUserId: userId,
-                },
-                {
-                    headers: {Authorization: `Bearer ${accessToken}`},
+                // сохраняем ключ локально (аналог addValueInStorage)
+                if (typeof window !== 'undefined') {
+                    window.localStorage.setItem('licenseKey', key)
                 }
-            )
 
-            if (res.status === 200) {
-                const orgId = res.data?.id || res.data?.organizationId
-                if (orgId) {
-                    if (typeof window !== 'undefined') localStorage.setItem('organizationId', orgId)
+                // валидация один-в-один с Kotlin
+                if (key.length === 0) {
+                    set({ error: 'Ключ не может быть пустым' })
+                    return
+                }
+                if (key.length < 10) {
+                    set({ error: 'Слишком короткий ключ' })
+                    return
+                }
+
+                set({ isApplying: true, error: null, applied: false })
+                try {
+                    // TODO: вызов вашего API/репозитория (repository.activateLicense(key))
+                    await new Promise((res) => setTimeout(res, 800)) // имитация delay(800)
+
+                    set({ isApplying: false, applied: true })
+                    // по желанию можно определить уровень лицензии:
+                    // set({ license: LICENSE.ADVANCED })
+                } catch (e: any) {
                     set({
-                        organizationId: orgId,
-                        hasOrg: true,
-                        successMessage: 'Организация создана.',
+                        isApplying: false,
+                        error: e?.message ?? 'Не удалось применить лицензию',
                     })
-                    return orgId
-                } else {
-                    set({errorMessage: 'Не удалось получить id созданной организации.'})
-                    return null
                 }
-            } else {
-                set({errorMessage: 'Неожиданный ответ при создании организации.'})
-                return null
-            }
-        } catch (e: any) {
-            console.error('Ошибка создания организации:', e)
-            if (e.response?.data?.message) {
-                set({errorMessage: e.response.data.message})
-            } else {
-                set({errorMessage: e.message || 'Ошибка при создании организации.'})
-            }
-            return null
+            },
+        }),
+        {
+            name: 'license-store',
+            partialize: (s) => ({ licenseKey: s.licenseKey, license: s.license }),
         }
-    },
+    )
+)
 
-
-    generateInviteCode: async () => {
-        const {organizationId, userId, accessToken} = get()
-        if (!organizationId || !userId || !accessToken) {
-            set({errorMessage: 'Не хватает данных: organizationId, userId или accessToken.'})
-            return
-        }
-
-        set({isGenerating: true, errorMessage: null, successMessage: null})
-
-        try {
-            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-            console.log(userId, "sdfsdfsdfewfewsfsdfsefsefsd")
-            const url = `${SERVER}organizations/${organizationId}/invite-code?userId=${userId}`
-
-            const res = await axios.post(
-                url,
-                null, // тело пустое, userId в query
-                {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                }
-            )
-
-            if (res.status === 200 && res.data) {
-                // судя по тому, что сервер возвращает просто строку — присвоим её напрямую
-                const code = typeof res.data === 'string' ? res.data : res.data.code
-                if (code) {
-                    set({inviteCode: code, successMessage: 'Код успешно сгенерирован.'})
-                } else {
-                    set({errorMessage: 'Не удалось получить код из ответа.'})
-                }
-            } else {
-                set({errorMessage: 'Неожиданный ответ от сервера при генерации кода.'})
-            }
-        } catch (e: any) {
-            console.error('Ошибка генерации invite code:', e)
-            if (e.response?.status === 401) {
-                set({errorMessage: 'Неавторизован. Токен либо просрочен, либо отсутствует.'})
-            } else {
-                set({
-                    errorMessage: e?.response?.data?.message || e.message || 'Ошибка при запросе.',
-                })
-            }
-        } finally {
-            set({isGenerating: false})
-        }
-    },
-
-
-    checkOrg: async () => {
-        set({isCheckingOrg: true, errorMessage: null})
-        const {organizationId, userId, accessToken} = get()
-
-        if (organizationId) {
-            set({hasOrg: true, isCheckingOrg: false})
-            return
-        }
-        if (!userId || !accessToken) {
-            set({hasOrg: false, isCheckingOrg: false})
-            return
-        }
-
-        try {
-            const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
-            const res = await axios.get(`${SERVER}organizations/organization`, {
-                headers: {Authorization: `Bearer ${accessToken}`},
-            })
-
-            if (res.status === 200 && res.data?.id) {
-                if (typeof window !== 'undefined') localStorage.setItem('organizationId', res.data.id)
-                set({organizationId: res.data.id, hasOrg: true})
-            } else {
-                set({hasOrg: false})
-            }
-        } catch (e) {
-            console.error('Ошибка при получении организации:', e)
-            set({hasOrg: false})
-        } finally {
-            set({isCheckingOrg: false})
-        }
-    },
-
-
-
-}))
+// Аналог функции licenseControl из Kotlin:
+export const licenseControl = (licenses: LICENSE[]) => {
+    const { license } = useSettingsStore.getState()
+    return licenses.includes(license)
+}

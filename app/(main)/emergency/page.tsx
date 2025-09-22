@@ -12,7 +12,7 @@ import {useRouter} from 'next/navigation'
 import {usePlaylistStore} from '@/app/store/playlistStore'
 import {useScreensStore} from '@/app/store/screensStore'
 import {useScheduleStore} from '@/app/store/scheduleStore'
-import {useSettingsStore} from '@/app/store/settingsStore'
+import {LICENSE, licenseControl, useSettingsStore} from '@/app/store/settingsStore'
 import {WarningModal} from "@/app/components/Common/WarningModal";
 import ErrorModal from "@/app/components/Common/ErrorModal";
 import {EmergencyCreateModal} from "@/app/components/Emergency/EmergencyCreateModal";
@@ -220,6 +220,13 @@ export default function EmergencyPage() {
                 show={showEmergencyModal}
                 onHide={() => setShowEmergencyModal(false)}
                 onSubmit={() => {
+
+
+                    if(!licenseControl([LICENSE.ADVANCED, LICENSE.ULTIMATE])) {
+                        setError('Нет прав');
+                        setShowEmergencyModal(false);
+                        return
+                    }
                     const selectedPlaylistObj = playlistItems.find(p => p.id === selectedPlaylist) || null
                     const screensToUse = selectedGroup
                         ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
@@ -269,6 +276,13 @@ export default function EmergencyPage() {
                 show={showScenarioModal}
                 onHide={() => setShowScenarioModal(false)}
                 onSubmit={async (name, recurring, groups) => {
+
+                    if(!licenseControl([LICENSE.ADVANCED, LICENSE.ULTIMATE])) {
+                        setError('Нет прав');
+                        setShowScenarioModal(false)
+                        return
+                    }
+
                     if (!orgId) {
                         setError('Не выбрана организация');
                         return
