@@ -42,7 +42,7 @@ export default function AddFromStoreModal({show, onHide, asset}: Props) {
         <Modal show={show} onHide={onHide} size="lg" centered>
             <Modal.Header closeButton>
                 <Modal.Title className="d-flex gap-2 align-items-center">
-                    {asset.originalName}
+                    {asset.title}
                     <Badge bg="secondary" className="text-uppercase">
                         {asset.contentType.split('/')[0]}
                     </Badge>
@@ -57,11 +57,11 @@ export default function AddFromStoreModal({show, onHide, asset}: Props) {
                             className="ratio ratio-9x16 rounded-3 overflow-hidden bg-light border"
                         >
                             {/* превью: если видео — картинка-превью; если картинка — просто её */}
-                            {asset.previewPath ? (
+                            {asset.fileId ? (
                                 // через обычный <img>, т.к. это presigned URL
                                 <PreviewImage
-                                    id={asset.previewPath}
-                                    name={asset.originalName}
+                                    id={asset.fileId}
+                                    name={asset.title}
                                     fill
                                     aspectRatio={16 / 9}
                                 />
@@ -71,8 +71,8 @@ export default function AddFromStoreModal({show, onHide, asset}: Props) {
                                 </div>
                             ) : (
                                 <PreviewImage
-                                    id={asset.previewPath}
-                                    name={asset.originalName}
+                                    id={asset.fileId}
+                                    name={asset.title}
                                     fill
                                     aspectRatio={16 / 9}
                                 />
@@ -97,8 +97,7 @@ export default function AddFromStoreModal({show, onHide, asset}: Props) {
                             <div className="mt-3">
                                 <div className="fw-semibold">Описание</div>
                                 <div className="text-muted small">
-                                    {asset.originalName} — медиа из каталога. Нажмите «Добавить», чтобы сохранить в
-                                    вашей библиотеке.
+                                    {asset.title} — {asset.description}
                                 </div>
                             </div>
                         </div>

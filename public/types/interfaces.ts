@@ -12,23 +12,32 @@ export interface PlaylistItem {
 
 
 export interface FileItem {
-    id: string;
-    fileId: string;
-    file?: File | null;
-    name: string;
-    type: string;
-    size: number;
-    duration: number;
-    previewUrl: string;
+    id: string
+    fileId: string
+    file?: File | null
+    name: string
+    type: string
+    size: number
+    duration?: number | null
+    width?: number | null
+    height?: number | null
+    sha256?: string
+    createdAt?: string
+    uploadedBy?: string
+    organizationId?: string
+    branchId?: string
+    hasPreview: boolean
+    previewUrl?: string
+    downloadUrl?: string
     orderIndex: number
 }
 
 export interface CatalogAsset {
     id: string;
-    bucket: string;
-    path: string;
+    fileId: string;
     previewPath: string;
     contentType: string;
+    title: string,
     size: number;
     sha256: string;
     width?: number;
@@ -36,22 +45,8 @@ export interface CatalogAsset {
     duration?: number;
     originalName: string;
     createdAt?: string;
-    isMain?: boolean;
-}
-
-export interface AddToLibraryReq {
-    userId: string;
-    organizationId: string;
-    bucket: string;
-    path: string;
-    previewPath?: string;
-    contentType: string;
-    size: number;
-    sha256: string;
-    width?: number;
-    height?: number;
-    duration?: number;
-    originalName: string;
+    hasPreview: boolean;
+    description: string;
 }
 
 export enum DeviceStatus {
