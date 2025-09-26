@@ -64,7 +64,8 @@ export default function UploadZone() {
                             size: file.size,
                             duration,
                             previewUrl: URL.createObjectURL(file),
-                            orderIndex: 0
+                            orderIndex: 0,
+                            hasPreview: true,
                         }
                         addLibraryItem(newItem)
                         await uploadFileMetaData(newItem)
