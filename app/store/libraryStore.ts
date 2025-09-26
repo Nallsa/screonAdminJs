@@ -60,16 +60,6 @@ export const useLibraryStore = create<LibraryStore>()(
             });
         },
 
-
-        // updateLibraryItem: (updatedItem: FileItem) => {
-        //     set((state) => {
-        //         const index = state.libraryItems.findIndex((i: { id: string; }) => i.id === updatedItem.fileId);
-        //         if (index !== -1) {
-        //             state.libraryItems[index] = updatedItem;
-        //         }
-        //     });
-        // },
-
         updateLibraryItem: (updated) => {
             set(state => {
                 const idx = state.libraryItems.findIndex(i =>
@@ -252,16 +242,35 @@ export const useLibraryStore = create<LibraryStore>()(
         },
 
 
-        delFileById: async (id) => {
+        delFileById: async (fileId) => {
             set(state => {
                 state.errorMessage = null
             })
             try {
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+                const accessToken = getValueInStorage("accessToken");
+                const {activeBranches} = useOrganizationStore.getState?.() || {};
+                const branchId = activeBranches?.[0]?.id;
 
-                const response = await axios.delete(`${SERVER_URL}files/${id}`);
+                if (!accessToken) throw new Error('Нет accessToken');
+                if (!branchId) throw new Error('Не выбран активный филиал');
 
-                return response.status === 204
+                // В axios для DELETE тело передаётся через { data: ... }
+                const response = await axios.delete(`${SERVER_URL}library/remove`, {
+                    headers: {Authorization: `Bearer ${accessToken}`},
+                    data: {
+                        branchId,
+                        fileId, // именно fileId, как требует контракт
+                    },
+                });
+
+                // считаем успехом 200/204/true
+                const ok =
+                    response.status === 204 ||
+                    response.status === 200 ||
+                    response.data === true;
+
+                return ok;
             } catch (err: any) {
                 console.error('delFileById error:', err)
                 get().setError(
@@ -271,7 +280,7 @@ export const useLibraryStore = create<LibraryStore>()(
                 )
                 return false
             }
-        }
+        },
 
 
     }))

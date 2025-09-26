@@ -31,6 +31,7 @@ export const useCatalogStore = create<CatalogState>()(
     immer((set, get) => ({
         assets: [],
         loading: false,
+        success: null,
         error: null,
         setError: (msg) => set(s => {
             s.error = msg;
@@ -87,8 +88,7 @@ export const useCatalogStore = create<CatalogState>()(
                 if (!activeBranches) {
                     throw new Error('Не выбран активный филиал');
                 }
-
-                // Новый эндпоинт и новый контракт
+                
                 const {data} = await axios.post(
                     `${SERVER_URL}library/items/from-catalog`,
                     {
@@ -99,16 +99,17 @@ export const useCatalogStore = create<CatalogState>()(
                     },
                     {headers: {Authorization: `Bearer ${accessToken}`}}
                 );
-                // data: { id: string }
 
-                // Т.к. сервер возвращает только id, просто обновляем библиотеку целиком
                 await useLibraryStore.getState().getFilesInLibrary();
+                set(s => {
+                    s.error = null;
+                    s.success = 'Добавлено из магазина в библиотеку';
+                });
             } catch (e: any) {
                 set(s => {
                     s.error = e?.response?.data?.message || e.message || 'Не удалось добавить в библиотеку';
                 });
-                // опционально пробрасываем, если наверху ловите
-                // throw e;
+
             }
         },
     }))

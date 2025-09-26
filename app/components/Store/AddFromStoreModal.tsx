@@ -2,17 +2,14 @@
  * Copyright (c) LLC "Centr Distribyucii"
  * All rights reserved.
  */
-
-// app/components/Store/AssetModal.tsx
 'use client';
-
-import Image from 'next/image';
 import {Modal, Button, Badge} from 'react-bootstrap';
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {motion} from 'framer-motion';
 import {useCatalogStore} from '@/app/store/catalogStore';
 import {CatalogAsset} from "@/public/types/interfaces";
 import PreviewImage from "@/app/components/Common/PreviewImage";
+import {useLibraryStore} from "@/app/store/libraryStore";
 
 type Props = {
     show: boolean;
@@ -23,6 +20,19 @@ type Props = {
 export default function AddFromStoreModal({show, onHide, asset}: Props) {
     const [submitting, setSubmitting] = useState(false);
     const addFromCatalog = useCatalogStore((s) => s.addFromCatalog);
+    const libraryItems = useLibraryStore((s) => s.libraryItems);
+
+
+    const fileId = asset?.fileId;
+    const sha256 = asset?.sha256;
+
+    const alreadyAdded = useMemo(() => {
+        if (!fileId && !sha256) return false;
+        return libraryItems.some(it =>
+            (fileId && it.fileId === fileId) ||
+            (sha256 && it.sha256 && it.sha256 === sha256)
+        );
+    }, [libraryItems, fileId, sha256]);
 
     if (!asset) return null;
 
@@ -107,8 +117,15 @@ export default function AddFromStoreModal({show, onHide, asset}: Props) {
 
             <Modal.Footer className="d-flex ">
                 <div className="d-flex gap-2 justify-content-end">
-                    <Button className="ms-auto" onClick={handleAdd} disabled={submitting}>
-                        {submitting ? 'Добавляем…' : 'Добавить в библиотеку'}
+                    <Button
+                        className="ms-auto"
+                        onClick={handleAdd}
+                        disabled={submitting || alreadyAdded}
+                        variant={alreadyAdded ? 'success' : 'primary'}
+                    >
+                        {alreadyAdded
+                            ? 'Уже добавлено ✓'
+                            : (submitting ? 'Добавляем…' : 'Добавить в библиотеку')}
                     </Button>
                 </div>
             </Modal.Footer>
