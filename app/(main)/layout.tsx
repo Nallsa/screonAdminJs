@@ -40,6 +40,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     useEffect(() => {
         async function fetchOrg() {
             const success = await getInfoOrg();
+
             if (!success) {
                 router.push('/organization/createOrgElements?isBranch=false');
             } else {
@@ -48,7 +49,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
         }
 
         fetchOrg();
-    }, [getInfoOrg, router]);
+    }, []);
 
     useEffect(() => {
 
@@ -61,7 +62,6 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
             const resCheck = await checkToken();
 
             if (!resCheck) {
-
                 router.push("/auth/login")
                 return
             }

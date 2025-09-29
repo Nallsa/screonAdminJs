@@ -44,6 +44,7 @@ interface OrganizationState {
     successMessage: string | null;
     orgBranches: BranchDto[] | null;
     activeBranches: BranchDto[]; // New: array of active branches
+    selectBranch: BranchDto | null; // New: array of active branches
 
     setHasOrg: (value: boolean) => void;
     clearInviteCode: () => void;
@@ -54,6 +55,8 @@ interface OrganizationState {
     createBranch: (branchName: string, description: string | null, onResult: (id: string | null, error: string | null) => void) => void;
     generateInviteCode: (branchId: string) => void;
     getInfoOrg: () => Promise<boolean>;
+    setSelectBranch: (value: BranchDto) => void;
+
 
     joinOrganizationByCode: (referralCode: string) => Promise<boolean>
     toggleActiveBranch: (branch: BranchDto) => void; // New: toggle active branch
@@ -69,6 +72,7 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
     successMessage: null,
     orgBranches: null,
     activeBranches: [], // New: initial empty array
+    selectBranch: null, // New: initial empty array
 
     setHasOrg: (value) => set({hasOrg: value}),
 
@@ -315,8 +319,9 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
             return false
         }
     },
-
-
+    setSelectBranch: (branch: BranchDto) => {
+        set({selectBranch: branch});
+    },
     toggleActiveBranch: (branch) =>
         set((state) => {
             const isActive = state.activeBranches.some((b) => b.id === branch.id);

@@ -88,6 +88,20 @@ export interface ScheduledBlock {
 }
 
 
+export interface MemberDto {
+    id: string;
+    username: string;
+    email: string;
+}
+
+export interface BranchDto {
+    id: string;
+    name: string;
+    logoUrl?: string | null;
+    description?: string | null;
+    members: MemberDto[];
+}
+
 export interface OrganizationDto {
     id: string;
     name: string;
@@ -96,12 +110,6 @@ export interface OrganizationDto {
     role?: string | null;
 }
 
-export interface BranchDto {
-    id: string;
-    name: string;
-    logoUrl?: string | null;
-    description?: string | null;
-}
 
 export type UpdateInfoDto = {
     id: string

@@ -60,14 +60,6 @@ export default function OrganizationPage() {
 
     return (
         <>
-            {/* Кнопка выхода в правом верхнем углу экрана */}
-            <Button
-                variant="outline-danger"
-                className="position-fixed top-0 end-0 m-3 z-3 px-4"
-                onClick={handleLogout}
-            >
-                Выйти
-            </Button>
             <div className="container py-4">
                 <div className="row justify-content-center">
                     <div className="col-md-8 col-lg-6">
@@ -123,19 +115,14 @@ export default function OrganizationPage() {
 
 function BranchCard({branch, onClick, isActive}: { branch: BranchDto; onClick: () => void; isActive: boolean }) { // Updated: accept isActive prop
     const router = useRouter();
+    const {setSelectBranch} = useOrganizationStore()
 
     const handleNavigate = (e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent triggering the card's onClick
 
-        const queryParams = new URLSearchParams({
-            id: branch.id,
-            name: branch.name,
-            description: branch.description || '',
-            logoUrl: branch.logoUrl || '',
-        }).toString();
-
+        setSelectBranch(branch);
         // Переходим на маршрут
-        router.push(`/organization/orgBranch?${queryParams}`);
+        router.push(`/organization/orgBranch`);
     };
 
     return (

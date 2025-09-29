@@ -10,24 +10,15 @@ import Image from 'next/image';
 import {InitialsAvatar} from "@/app/components/Organization/Organization";
 import {useOrganizationStore} from '@/app/store/organizationStore';
 import {useEffect, useState} from "react";
-import {BranchDto} from "@/public/types/interfaces";
+import {BranchDto, MemberDto} from "@/public/types/interfaces";
 import {LICENSE, licenseControl} from "@/app/store/settingsStore";
 
 
 export default function OrgBranchPage() {
     const params = useParams();
     const router = useRouter();
-    const {organizationInfo, getInfoOrg} = useOrganizationStore();
+    const {organizationInfo, getInfoOrg, selectBranch} = useOrganizationStore();
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-    const searchParams = useSearchParams();
-
-    const branch: BranchDto = {
-        id: searchParams.get('id') || '',
-        name: searchParams.get('name') || '',
-        logoUrl: searchParams.get('logoUrl') || null,
-        description: searchParams.get('description') || null,
-    };
 
     useEffect(() => {
         getInfoOrg(); // Fetch org info if needed
@@ -41,6 +32,10 @@ export default function OrgBranchPage() {
 
     const branchesCount = organizationInfo?.branches?.length ?? 0;
 
+    if (!selectBranch) {
+        return router.push('/organization');
+    }
+
     return (
         <div className="container py-4">
             <div className="row justify-content-center">
@@ -50,17 +45,17 @@ export default function OrgBranchPage() {
                         <button className="btn btn-outline-secondary me-2" onClick={() => router.push('/organization')}>
                             Назад
                         </button>
-                        <h4 className="mb-0">{branch.name}</h4>
+                        <h4 className="mb-0">{selectBranch.name}</h4>
                     </div>
 
                     {/* Logo */}
                     <div className="bg-light rounded-3 d-flex align-items-center justify-content-center mb-4"
                          style={{height: '180px'}}>
-                        {branch.logoUrl ? (
-                            <Image src={branch.logoUrl} alt="Логотип филиала" width={96} height={96}
+                        {selectBranch.logoUrl ? (
+                            <Image src={selectBranch.logoUrl} alt="Логотип филиала" width={96} height={96}
                                    className="rounded-circle"/>
                         ) : (
-                            <InitialsAvatar text={branch.name} size={96}/>
+                            <InitialsAvatar text={selectBranch.name} size={96}/>
                         )}
                     </div>
 
@@ -69,21 +64,19 @@ export default function OrgBranchPage() {
                         <div className="card-body">
                             <h5 className="card-title fw-semibold">Общая информация</h5>
                             <p>Организация: {organizationInfo?.name || 'Примерная Организация'}</p>
-                            <p>Филиал: {branch.name}</p>
+                            <p>Филиал: {selectBranch.name}</p>
                         </div>
                     </div>
 
                     {/* Description Card */}
-                    {branch.description && (
+                    {selectBranch.description && (
                         <div className="card shadow-sm mb-3">
                             <div className="card-body">
                                 <h5 className="card-title fw-semibold">Описание</h5>
-                                <p>{branch.description}</p>
+                                <p>{selectBranch.description}</p>
                             </div>
                         </div>
                     )}
-
-                    {/* Delete Button */}
 
 
                     {branchesCount < 1 && (
@@ -94,10 +87,10 @@ export default function OrgBranchPage() {
 
                     {/* Invite Code Generator */}
                     {licenseControl([LICENSE.ADVANCED, LICENSE.ULTIMATE]) &&
-                        <InviteCodeGenerator branchId={branch.id}/>}
+                        <InviteCodeGenerator branchId={selectBranch.id}/>}
 
                     {/* Participants */}
-                    {/*<ParticipantsSection participants={fakeParticipants()} />*/}
+                    <ParticipantsSection participants={selectBranch.members}/>
 
                     {/* Delete Dialog (Modal) */}
                     {showDeleteDialog && (
@@ -111,7 +104,8 @@ export default function OrgBranchPage() {
                                                 onClick={() => setShowDeleteDialog(false)}></button>
                                     </div>
                                     <div className="modal-body">
-                                        <p>Вы уверены, что хотите удалить филиал {branch.name}? Это действие нельзя
+                                        <p>Вы уверены, что хотите удалить филиал {selectBranch.name}? Это действие
+                                            нельзя
                                             отменить.</p>
                                     </div>
                                     <div className="modal-footer">
@@ -133,26 +127,17 @@ export default function OrgBranchPage() {
 }
 
 
-// Mock participants
-const fakeParticipants = () => [
-    {id: '1', name: 'Андрей Смирнов', role: 'Администратор'},
-    {id: '2', name: 'Ирина Коваль', role: 'Модератор'},
-    {id: '3', name: 'Павел Орлов', role: 'Сотрудник'},
-    {id: '4', name: 'Елена Руднева', role: 'Сотрудник'},
-];
-
-
-function ParticipantsSection({participants}: { participants: any[] }) {
+function ParticipantsSection({participants}: { participants: MemberDto[] }) {
     return (
-        <div className="card shadow-sm">
+        <div className="card shadow-sm mt-4">
             <div className="card-body">
                 <h5 className="card-title fw-semibold mb-3">Участники</h5>
                 {participants.map((p) => (
                     <div key={p.id} className="d-flex align-items-center bg-light rounded p-2 mb-2">
-                        <InitialsAvatar text={p.name} size={40}/>
+                        <InitialsAvatar text={p.username} size={40}/>
                         <div className="ms-3">
-                            <p className="mb-0 fw-medium">{p.name}</p>
-                            <small className="text-muted">{p.role}</small>
+                            <p className="mb-0 fw-medium">{p.username}</p>
+                            <small className="text-muted">{p.email}</small>
                         </div>
                     </div>
                 ))}

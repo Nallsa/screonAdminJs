@@ -22,12 +22,12 @@ export default function LoginPage() {
     const [passError, setPassError] = useState<string | null>(null)
 
 
-    useEffect(() => {
-        if (isAuthenticated) {
-            console.log("asdddadasadsadsasd")
-            router.push('/screens')
-        }
-    }, [isAuthenticated, router])
+    // useEffect(() => {
+    //     if (isAuthenticated) {
+    //         console.log("asdddadasadsadsasd")
+    //         router.push('/screens')
+    //     }
+    // }, [isAuthenticated, router])
 
     const validate = () => {
         let ok = true

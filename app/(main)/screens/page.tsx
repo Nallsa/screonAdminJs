@@ -206,7 +206,7 @@ export default function ScreensPage() {
                 </Modal.Header>
 
                 <Modal.Body className="d-flex flex-column align-items-center">
-                    <Form.Group controlId="screenCode" className="w-50 mb-3">
+                    <Form.Group controlId="screenCode" className="w-50">
                         <Form.Label>Код экрана</Form.Label>
                         <Form.Control
                             maxLength={8}
@@ -224,22 +224,22 @@ export default function ScreensPage() {
                         />
                     </Form.Group>
 
-                    <Form.Group controlId="certificateCode" className="w-50">
-                        <Form.Label>Код сертификата</Form.Label>
-                        <Form.Control
-                            className="mb-2"
-                            size="sm"
-                            type="text"
-                            inputMode="text"
-                            pattern="[A-Z0-9]*"
-                            placeholder="XYZ789"
-                            value={certificateCode}
-                            onChange={(e) => {
-                                const upper = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                                setCertificateCode(upper);
-                            }}
-                        />
-                    </Form.Group>
+                    {/*<Form.Group controlId="certificateCode" className="w-50">*/}
+                    {/*    <Form.Label>Код сертификата</Form.Label>*/}
+                    {/*    <Form.Control*/}
+                    {/*        className="mb-2"*/}
+                    {/*        size="sm"*/}
+                    {/*        type="text"*/}
+                    {/*        inputMode="text"*/}
+                    {/*        pattern="[A-Z0-9]*"*/}
+                    {/*        placeholder="XYZ789"*/}
+                    {/*        value={certificateCode}*/}
+                    {/*        onChange={(e) => {*/}
+                    {/*            const upper = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');*/}
+                    {/*            setCertificateCode(upper);*/}
+                    {/*        }}*/}
+                    {/*    />*/}
+                    {/*</Form.Group>*/}
                 </Modal.Body>
 
                 <Modal.Footer className="border-0 justify-content-center">

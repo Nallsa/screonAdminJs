@@ -30,7 +30,7 @@ export const useSettingsStore = create<SettingsState>()(
             isApplying: false,
             error: null,
             applied: getValueInStorage('licenseKey') ? !!getValueInStorage('licenseKey') : false,
-            license: LICENSE.BASE,
+            license: LICENSE.ULTIMATE,
 
             onLicenseChange: (value) => set({ licenseKey: value, error: null, applied: false }),
 
