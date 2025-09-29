@@ -45,7 +45,7 @@ const formatDuration = (sec: number) => {
     const s = Math.floor(sec % 60);
     return m > 0
         ? `${m}:${s.toString().padStart(2, '0')}`
-        : `${s}s`;
+        : `${s}с`;
 };
 
 export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate, canEdit = true}: Props) {
@@ -89,7 +89,7 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate, 
             {isPlaylist && (
                 <button
                     {...listeners}
-                    title="Drag to reorder"
+                    title="Перетащите, чтобы изменить порядок"
                     style={{
                         position: 'absolute',
                         top: 4,
@@ -135,6 +135,7 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate, 
                             <Form.Control
                                 size="sm"
                                 type="number"
+                                min={1}
                                 value={editDur}
                                 onChange={(e) => setEditDur(+e.target.value)}
                             />
@@ -142,7 +143,7 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate, 
                         <div className="d-flex justify-content-end gap-1 mt-2">
                             <Button size="sm" variant="primary" onPointerDown={(e) => e.stopPropagation()}
                                     onClick={applyEdit}>
-                                Save
+                                Сохранить
                             </Button>
                             <Button
                                 size="sm"
@@ -154,7 +155,7 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate, 
                                     setEditDur(item.duration ?? DEFAULT_IMAGE_DURATION)
                                 }}
                             >
-                                Cancel
+                                Отмена
                             </Button>
                         </div>
                     </>

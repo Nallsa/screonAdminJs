@@ -52,9 +52,12 @@ interface usePlaylistState {
 
 
 function calcTotalSeconds(childFiles: FileItem[]): number {
-    // duration уже в секундах (float), суммируем и округляем вверх
-    const total = childFiles.reduce((sum, f) => sum + f.duration, 0)
-    return Math.ceil(total)
+    // duration может быть undefined|null — берём 0 по умолчанию
+    const total = childFiles.reduce<number>(
+        (sum, f) => sum + (f?.duration ?? 0),
+        0
+    );
+    return Math.ceil(total);
 }
 
 export const usePlaylistStore = create<usePlaylistState>()(

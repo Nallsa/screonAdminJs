@@ -11,22 +11,36 @@ import axios from 'axios';
 import {getValueInStorage} from '@/app/API/localStorage';
 import {useLibraryStore} from '@/app/store/libraryStore';
 import {CatalogAsset} from "@/public/types/interfaces";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 interface CatalogState {
     assets: CatalogAsset[];
-    loading: boolean;
-    error: string | null;
-    fetchAssets: () => Promise<void>;
+
+    getAssets: () => Promise<void>;
     addFromCatalog: (asset: CatalogAsset) => Promise<void>;
+
+    loading: boolean;
+
+    error: string | null;
+    success: string | null;
+    setError: (msg: string | null) => void;
+    setSuccess: (msg: string | null) => void;
 }
 
 export const useCatalogStore = create<CatalogState>()(
     immer((set, get) => ({
         assets: [],
         loading: false,
+        success: null,
         error: null,
+        setError: (msg) => set(s => {
+            s.error = msg;
+        }),
+        setSuccess: (msg) => set(s => {
+            s.success = msg;
+        }),
 
-        fetchAssets: async () => {
+        getAssets: async () => {
             try {
                 set((s) => {
                     s.loading = true;
@@ -59,47 +73,44 @@ export const useCatalogStore = create<CatalogState>()(
         },
 
         addFromCatalog: async (asset) => {
-            const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
-            const accessToken = getValueInStorage('accessToken');
-            const userId = getValueInStorage('userId');
-            const organizationId = getValueInStorage('organizationId');
+            try {
+                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+                const accessToken = getValueInStorage('accessToken');
+                const userId = getValueInStorage('userId');
+                const organizationId = getValueInStorage('organizationId');
 
-            const body = {
-                userId,
-                organizationId,
-                bucket: asset.bucket,
-                path: asset.path,
-                previewPath: asset.previewPath,
-                contentType: asset.contentType,
-                size: asset.size,
-                sha256: asset.sha256,
-                width: asset.width,
-                height: asset.height,
-                duration: asset.duration,
-                originalName: asset.originalName,
-            };
-
-            const {data} = await axios.post(
-                `${SERVER_URL}files/library/add`,
-                body,
-                {headers: {Authorization: `Bearer ${accessToken}`}}
-            );
+                const {activeBranches} = useOrganizationStore.getState?.();
 
 
-            const added = {
-                id: data.fileId,
-                fileId: data.fileId,
-                name: data.name,
-                type: data.contentType,
-                size: data.size,
-                duration: data.duration,
-                previewUrl: data.previewUrl,
-                orderIndex: 0,
-                file: null,
-            };
+                if (!accessToken || !userId || !organizationId) {
+                    throw new Error('Не хватает данных: accessToken / userId / organizationId');
+                }
+                if (!activeBranches) {
+                    throw new Error('Не выбран активный филиал');
+                }
+                
+                const {data} = await axios.post(
+                    `${SERVER_URL}library/items/from-catalog`,
+                    {
+                        assetId: asset.id,
+                        userId,
+                        organizationId,
+                        branchIds: activeBranches.map(b => b.id),
+                    },
+                    {headers: {Authorization: `Bearer ${accessToken}`}}
+                );
 
+                await useLibraryStore.getState().getFilesInLibrary();
+                set(s => {
+                    s.error = null;
+                    s.success = 'Добавлено из магазина в библиотеку';
+                });
+            } catch (e: any) {
+                set(s => {
+                    s.error = e?.response?.data?.message || e.message || 'Не удалось добавить в библиотеку';
+                });
 
-            useLibraryStore.getState().addLibraryItem(added);
+            }
         },
     }))
 );

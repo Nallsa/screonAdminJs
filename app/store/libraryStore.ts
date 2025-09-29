@@ -60,24 +60,22 @@ export const useLibraryStore = create<LibraryStore>()(
             });
         },
 
-
-        updateLibraryItem: (updatedItem: FileItem) => {
-            set((state) => {
-                const index = state.libraryItems.findIndex((i: { id: string; }) => i.id === updatedItem.fileId);
-                if (index !== -1) {
-                    state.libraryItems[index] = updatedItem;
+        updateLibraryItem: (updated) => {
+            set(state => {
+                const idx = state.libraryItems.findIndex(i =>
+                    i.fileId === updated.fileId || i.id === updated.id
+                )
+                if (idx !== -1) {
+                    state.libraryItems[idx] = {...state.libraryItems[idx], ...updated}
                 }
-            });
+            })
         },
 
-        deleteLibraryItem: (id: string) => {
-            set((state) => {
-                state.libraryItems = state.libraryItems.filter(i => i.id !== id)
-                state.libraryItems = state.libraryItems.filter(i => i.fileId !== id)
-
-            });
+        deleteLibraryItem: (id) => {
+            set(state => {
+                state.libraryItems = state.libraryItems.filter(i => i.id !== id && i.fileId !== id)
+            })
         },
-
         uploadFileMetaData: async (item: FileItem): Promise<void> => {
             set(state => {
                 state.isUploadingMetadata = true
@@ -93,7 +91,7 @@ export const useLibraryStore = create<LibraryStore>()(
                 const activeBranches = useOrganizationStore.getState().activeBranches; // Access active branches from the other store
 
                 if (userId?.trim() && organizationId?.trim()) {
-                    const response = await axios.post(`${SERVER_URL}files/assign-metadata`, {
+                    const response = await axios.post(`${SERVER_URL}library/assign-metadata`, {
                             fileId: item.fileId,
                             uploadedBy: getValueInStorage('userId'),
                             organizationId: getValueInStorage('organizationId'),
@@ -133,7 +131,7 @@ export const useLibraryStore = create<LibraryStore>()(
 
                 const activeBranches = useOrganizationStore.getState?.().activeBranches; // Access active branches from the other store
 
-                const response = await axios.post(`${SERVER_URL}files/user-files`, {
+                const response = await axios.post(`${SERVER_URL}library/user-files`, {
                         userId: getValueInStorage('userId'),
                         organizationId: getValueInStorage('organizationId'),
                         branchIds: activeBranches.map(b => b.id), // Send IDs of active branches
@@ -141,7 +139,7 @@ export const useLibraryStore = create<LibraryStore>()(
                     {headers: {Authorization: `Bearer ${accessToken}`}}
                 );
 
-                const filesFromBackend = (response.data as any[]).map(raw => {
+                const filesFromBackend: FileItem[] = (response.data as any[]).map(raw => {
                     const {
                         id,
                         fileId = raw.id,
@@ -149,8 +147,17 @@ export const useLibraryStore = create<LibraryStore>()(
                         contentType,
                         size,
                         duration,
+                        width,
+                        height,
+                        sha256,
+                        createdAt,
+                        uploadedBy,
+                        organizationId,
+                        branchId,
+                        hasPreview,
+                        downloadUrl,
                         previewUrl,
-                        orderIndex = 0
+                        orderIndex = 0,
                     } = raw
 
                     return {
@@ -160,10 +167,20 @@ export const useLibraryStore = create<LibraryStore>()(
                         name,
                         type: contentType,
                         size,
-                        duration,
+                        duration: duration ?? null,
+                        width: width ?? null,
+                        height: height ?? null,
+                        sha256,
+                        createdAt,
+                        uploadedBy,
+                        organizationId,
+                        branchId,
+                        hasPreview: !!hasPreview,
                         previewUrl,
+                        downloadUrl,
+
                         orderIndex,
-                    } as FileItem
+                    } satisfies FileItem
                 })
                 console.log("getFilesInLibrary", filesFromBackend)
 
@@ -225,16 +242,35 @@ export const useLibraryStore = create<LibraryStore>()(
         },
 
 
-        delFileById: async (id) => {
+        delFileById: async (fileId) => {
             set(state => {
                 state.errorMessage = null
             })
             try {
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
+                const accessToken = getValueInStorage("accessToken");
+                const {activeBranches} = useOrganizationStore.getState?.() || {};
+                const branchId = activeBranches?.[0]?.id;
 
-                const response = await axios.delete(`${SERVER_URL}files/${id}`);
+                if (!accessToken) throw new Error('Нет accessToken');
+                if (!branchId) throw new Error('Не выбран активный филиал');
 
-                return response.status === 204
+                // В axios для DELETE тело передаётся через { data: ... }
+                const response = await axios.delete(`${SERVER_URL}library/remove`, {
+                    headers: {Authorization: `Bearer ${accessToken}`},
+                    data: {
+                        branchId,
+                        fileId, // именно fileId, как требует контракт
+                    },
+                });
+
+                // считаем успехом 200/204/true
+                const ok =
+                    response.status === 204 ||
+                    response.status === 200 ||
+                    response.data === true;
+
+                return ok;
             } catch (err: any) {
                 console.error('delFileById error:', err)
                 get().setError(
@@ -244,7 +280,7 @@ export const useLibraryStore = create<LibraryStore>()(
                 )
                 return false
             }
-        }
+        },
 
 
     }))

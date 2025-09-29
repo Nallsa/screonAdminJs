@@ -12,24 +12,26 @@ import {useCatalogStore} from '@/app/store/catalogStore';
 import {CatalogAsset} from "@/public/types/interfaces";
 import AddFromStoreModal from "@/app/components/Store/AddFromStoreModal";
 import PreviewImage from "@/app/components/Common/PreviewImage";
+import ErrorModal from "@/app/components/Common/ErrorModal";
+import {WarningModal} from "@/app/components/Common/WarningModal";
 
 
 export default function StorePanel() {
-    const {assets, loading, error, fetchAssets} = useCatalogStore();
+    const {assets, loading, error, setError, success, setSuccess, getAssets} = useCatalogStore();
     const [q, setQ] = useState('');
     const [selected, setSelected] = useState<CatalogAsset | null>(null);
     const [modal, setModal] = useState(false);
 
     useEffect(() => {
-        fetchAssets();
-    }, [fetchAssets]);
+        getAssets();
+    }, [getAssets]);
 
     const filtered = useMemo(() => {
         const qq = q.trim().toLowerCase();
         if (!qq) return assets;
         return assets.filter(
             (a) =>
-                a.originalName.toLowerCase().includes(qq) ||
+                a.title.toLowerCase().includes(qq) ||
                 a.contentType.toLowerCase().includes(qq)
         );
     }, [assets, q]);
@@ -62,7 +64,7 @@ export default function StorePanel() {
 
                 {!loading && !error && (
                     <div
-                        className="d-flex flex-wrap gap-3 pb-4"
+                        className="d-flex flex-wrap gap-3 pb-4 pt-2"
                         style={{maxHeight: 720, overflowY: 'auto'}}
                     >
                         <AnimatePresence initial={false}>
@@ -74,7 +76,7 @@ export default function StorePanel() {
                                     exit={{opacity: 0, y: -12}}
                                 >
                                     <div
-                                        className="card shadow-sm  border-0 overflow-hidden"
+                                        className="card border-0 overflow-hidden hover-lift"
                                         style={{width: 300, borderRadius: 16, cursor: 'pointer'}}
                                         onClick={() => {
                                             setSelected(a);
@@ -85,8 +87,8 @@ export default function StorePanel() {
                                             <PreviewImage
                                                 fill
                                                 aspectRatio={16 / 9}
-                                                id={a.previewPath}
-                                                name={a.originalName}
+                                                id={a.fileId}
+                                                name={a.title}
                                             />
                                             <div
                                                 className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-end"
@@ -96,7 +98,7 @@ export default function StorePanel() {
                                                 }}
                                             >
                                                 <div className="text-white fw-semibold text-truncate">
-                                                    {a.originalName}
+                                                    {a.title}
                                                 </div>
                                             </div>
                                         </div>
@@ -118,6 +120,26 @@ export default function StorePanel() {
             </div>
 
             <AddFromStoreModal show={modal} onHide={() => setModal(false)} asset={selected}/>
+            <ErrorModal show={!!error} message={error || ''} onClose={() => setError(null)}/>
+            <WarningModal show={!!success} title="Готово" message={success || ''} buttonText="Ок"
+                          onClose={() => setSuccess(null)}/>
+
+            <style jsx>{`
+                .hover-lift {
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
+                    transition: transform .18s ease, box-shadow .18s ease;
+                    will-change: transform, box-shadow;
+                }
+
+                .hover-lift:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, .12);
+                }
+            `}</style>
         </div>
+
+
     )
+
+
 }

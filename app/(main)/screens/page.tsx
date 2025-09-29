@@ -67,10 +67,10 @@ export default function ScreensPage() {
             alert('Пожалуйста, введите код экрана')
             return
         }
-        if (!certificateCode) {
-            alert('Пожалуйста, введите сертификат')
-            return
-        }
+        // if (!certificateCode) {
+        //     alert('Пожалуйста, введите сертификат')
+        //     return
+        // }
 
         addPairingConfirm(screenCode).then(r => setShowAddModal(false))
     }
@@ -246,7 +246,9 @@ export default function ScreensPage() {
                     <Button
                         variant="success"
                         onClick={() => handleConfirmAdd()}
-                        disabled={screenCode.length !== 8 || certificateCode.length !== 8}
+                        disabled={screenCode.length !== 8
+                            // || certificateCode.length !== 8
+                        }
                     >
                         Добавить экран
                     </Button>

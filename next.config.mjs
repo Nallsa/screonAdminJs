@@ -10,6 +10,10 @@ const nextConfig = {
             },
         ],
     },
+    compiler: {
+        // вырезать все console.* в production-сборке
+        removeConsole: process.env.NODE_ENV === 'production',
+    },
 };
 
 export default nextConfig;

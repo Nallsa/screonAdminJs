@@ -114,7 +114,7 @@ export default function LibraryPage() {
                 justify
                 className="mb-3 mb-md-4"
             >
-                <Tab eventKey="library" title="Загруженные">
+                <Tab eventKey="library" title="Библиотека">
                     {/* Панель управления */}
                     <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
                         <div className="d-flex align-items-center gap-2">
