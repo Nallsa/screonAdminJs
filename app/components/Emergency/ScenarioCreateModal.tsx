@@ -13,6 +13,7 @@ import {useScheduleStore} from '@/app/store/scheduleStore'
 import WhereToShowCard from '@/app/components/Schedule/Settings/WhereToShowCard'
 import PlaylistSelect from '@/app/components/Schedule/Settings/Playlist/PlaylistSelect'
 import {useSettingsStore} from "@/app/store/settingsStore";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 export function ScenarioCreateModal({
                                         show,
@@ -24,7 +25,7 @@ export function ScenarioCreateModal({
     onSubmit?: (name: string, recurring: boolean, groups: { playlistId: string; screens: string[] }[]) => void
 }) {
     const router = useRouter()
-    const orgId = useSettingsStore(s => s.organizationId) || ''
+    const orgId = useOrganizationStore(s => s.organizationInfo?.id) || ''
 
     const {playlistItems} = usePlaylistStore()
     const {allScreens} = useScreensStore()
