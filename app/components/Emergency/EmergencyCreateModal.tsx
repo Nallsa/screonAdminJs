@@ -12,6 +12,7 @@ import {useSettingsStore} from "@/app/store/settingsStore";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScreensStore} from "@/app/store/screensStore";
 import {useScheduleStore} from "@/app/store/scheduleStore";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 export function EmergencyCreateModal({
                                          show,
@@ -23,7 +24,7 @@ export function EmergencyCreateModal({
     onSubmit?: () => void
 }) {
     const router = useRouter()
-    const orgId = useSettingsStore(s => s.organizationId) || ''
+    const orgId = useOrganizationStore(s => s.organizationInfo?.id) || ''
 
     const {playlistItems} = usePlaylistStore()
     const {allScreens} = useScreensStore()
