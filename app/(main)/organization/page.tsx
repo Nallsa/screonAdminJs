@@ -5,7 +5,7 @@
 
 'use client'
 
-import {useEffect} from 'react';
+import React, {useEffect} from 'react';
 import {useRouter} from 'next/navigation'
 import {useOrganizationStore} from "@/app/store/organizationStore";
 import {BranchDto} from "@/public/types/interfaces";
@@ -13,6 +13,8 @@ import {InitialsAvatar} from "@/app/components/Organization/Organization";
 import {Button} from "react-bootstrap";
 import {useAuthStore} from "@/app/store/authStore";
 import {LICENSE, licenseControl} from "@/app/store/settingsStore";
+import {WarningModal} from "@/app/components/Common/WarningModal";
+import ErrorModal from "@/app/components/Common/ErrorModal";
 
 export default function OrganizationPage() {
     const router = useRouter();
@@ -22,6 +24,10 @@ export default function OrganizationPage() {
         getInfoOrg,
         activeBranches, // New: pull activeBranches from store
         toggleActiveBranch, // New: pull toggle function from store
+        successMessage,
+        errorMessage,
+        setError,
+        setSuccess,
     } = useOrganizationStore();
 
     useEffect(() => {
@@ -107,6 +113,10 @@ export default function OrganizationPage() {
                         )}
                     </div>
                 </div>
+
+                <WarningModal show={!!successMessage} title="Готово" message={successMessage || ''} buttonText="Ок"
+                              onClose={() => setSuccess(null)}/>
+                <ErrorModal show={!!errorMessage} message={errorMessage || ''} onClose={() => setError(null)}/>
             </div>
         </>
     );

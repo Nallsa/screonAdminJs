@@ -5,16 +5,26 @@
 
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'; // Ensure this import
+import {useRouter, useSearchParams} from 'next/navigation'; // Ensure this import
 import {useOrganizationStore} from "@/app/store/organizationStore";
-import {useState} from "react";
+import React, {useState} from "react";
+import {WarningModal} from "@/app/components/Common/WarningModal";
+import ErrorModal from "@/app/components/Common/ErrorModal";
 
 export default function CreateOrgElementsPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const initialIsBranch = searchParams.get('isBranch') === 'true';
 
-    const { createOrganization, createBranch, joinOrganizationByCode, setError, setSuccess } = useOrganizationStore(); // Добавил joinBranch; если его нет в store, реализуйте
+    const {
+        createOrganization,
+        createBranch,
+        joinOrganizationByCode,
+        setError,
+        setSuccess,
+        successMessage,
+        errorMessage
+    } = useOrganizationStore(); // Добавил joinBranch; если его нет в store, реализуйте
 
     const [mode, setMode] = useState<'create-org' | 'create-branch' | 'join-branch'>(initialIsBranch ? 'create-branch' : 'create-org');
     const [name, setName] = useState(''); // for organization
@@ -84,6 +94,7 @@ export default function CreateOrgElementsPage() {
                 if (success) {
                     setSuccess(`Успешно подключены к филиалу по коду «${branchCode}»`);
                     // Редирект выполняется в useEffect, когда successMessage обновится
+                    router.push("/organization")
                 }
             } catch (e: any) {
                 setIsSubmitting(false);
@@ -92,6 +103,8 @@ export default function CreateOrgElementsPage() {
                 setError(msg);
             }
         }
+
+
     };
 
     const handleReset = () => {
@@ -109,8 +122,10 @@ export default function CreateOrgElementsPage() {
     };
 
     return (
-        <div className="container d-flex justify-content-center align-items-center vh-100" style={{ backgroundColor: '#FFFFFF' }}>
-            <div className="card w-100 shadow" style={{ maxWidth: '400px', backgroundColor: '#F5F5F5', borderRadius: '20px' }}>
+        <div className="container d-flex justify-content-center align-items-center vh-100"
+             style={{backgroundColor: '#FFFFFF'}}>
+            <div className="card w-100 shadow"
+                 style={{maxWidth: '400px', backgroundColor: '#F5F5F5', borderRadius: '20px'}}>
                 <div className="card-body p-4">
                     <h5 className="text-center fw-semibold mb-2">{title}</h5>
                     <p className="text-center text-muted mb-4">{subtitle}</p>
@@ -129,7 +144,8 @@ export default function CreateOrgElementsPage() {
                                     if (localError) setLocalError(null);
                                 }}
                             />
-                            {localError && !name.trim() && <div className="invalid-feedback">Введите название организации</div>}
+                            {localError && !name.trim() &&
+                                <div className="invalid-feedback">Введите название организации</div>}
                         </div>
                     ) : mode === 'create-branch' ? (
                         <>
@@ -146,7 +162,8 @@ export default function CreateOrgElementsPage() {
                                         if (localError) setLocalError(null);
                                     }}
                                 />
-                                {localError && !branchName.trim() && <div className="invalid-feedback">Введите название филиала</div>}
+                                {localError && !branchName.trim() &&
+                                    <div className="invalid-feedback">Введите название филиала</div>}
                             </div>
                             <div className="mb-3">
                                 <label htmlFor="branchDescription" className="form-label">Описание</label>
@@ -174,7 +191,8 @@ export default function CreateOrgElementsPage() {
                                     if (localError) setLocalError(null);
                                 }}
                             />
-                            {localError && !branchCode.trim() && <div className="invalid-feedback">Введите код филиала</div>}
+                            {localError && !branchCode.trim() &&
+                                <div className="invalid-feedback">Введите код филиала</div>}
                         </div>
                     )}
 
@@ -182,7 +200,7 @@ export default function CreateOrgElementsPage() {
                         className="btn btn-primary w-100 mb-2"
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        style={{ height: '52px', borderRadius: '16px' }}
+                        style={{height: '52px', borderRadius: '16px'}}
                     >
                         {isSubmitting ? (
                             <div className="spinner-border spinner-border-sm text-light" role="status">
@@ -213,6 +231,10 @@ export default function CreateOrgElementsPage() {
                     </button>
                 </div>
             </div>
+
+            <WarningModal show={!!successMessage} title="Готово" message={successMessage || ''} buttonText="Ок"
+                          onClose={() => setSuccess(null)}/>
+            <ErrorModal show={!!errorMessage} message={errorMessage || ''} onClose={() => setError(null)}/>
         </div>
     );
 }

@@ -13,9 +13,15 @@ import {connectWebSocket} from "@/app/API/ws";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 import ErrorModal from "@/app/components/Common/ErrorModal";
 import {WarningModal} from "@/app/components/Common/WarningModal";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 export default function SchedulePage() {
-    const {errorMessage, setError, successMessage, setSuccess} = useScheduleStore()
+    const {errorMessage, setError, successMessage, setSuccess, getSchedule} = useScheduleStore()
+    const activeBranches = useOrganizationStore(state => state.activeBranches)
+
+    useEffect(() => {
+        getSchedule()
+    }, [activeBranches.length])
 
     return (
         <div style={{padding: 16, display: 'flex', flexDirection: 'column', gap: 24}}>

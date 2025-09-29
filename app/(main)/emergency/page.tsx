@@ -183,7 +183,8 @@ export default function EmergencyPage() {
                                                         size="sm"
                                                         className="w-100 w-sm-auto"
                                                         variant="success"
-                                                        onClick={() => { /* ваша логика */
+                                                        onClick={() => {
+                                                            startScenario(item.emergencyId)
                                                         }}
                                                         disabled={item.status === 'ACTIVE'}
                                                     >
@@ -223,7 +224,7 @@ export default function EmergencyPage() {
                 onSubmit={() => {
 
 
-                    if(!licenseControl([LICENSE.ADVANCED, LICENSE.ULTIMATE])) {
+                    if (!licenseControl([LICENSE.ADVANCED, LICENSE.ULTIMATE])) {
                         setError('Нет прав');
                         setShowEmergencyModal(false);
                         return
@@ -278,7 +279,7 @@ export default function EmergencyPage() {
                 onHide={() => setShowScenarioModal(false)}
                 onSubmit={async (name, recurring, groups) => {
 
-                    if(!licenseControl([LICENSE.ADVANCED, LICENSE.ULTIMATE])) {
+                    if (!licenseControl([LICENSE.ADVANCED, LICENSE.ULTIMATE])) {
                         setError('Нет прав');
                         setShowScenarioModal(false)
                         return
