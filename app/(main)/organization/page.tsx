@@ -8,7 +8,7 @@
 import React, {useEffect} from 'react';
 import {useRouter} from 'next/navigation'
 import {useOrganizationStore} from "@/app/store/organizationStore";
-import {BranchDto} from "@/public/types/interfaces";
+import {BranchDto, UserRole} from "@/public/types/interfaces";
 import {InitialsAvatar} from "@/app/components/Organization/Organization";
 import {Button} from "react-bootstrap";
 import {useAuthStore} from "@/app/store/authStore";
@@ -28,6 +28,7 @@ export default function OrganizationPage() {
         errorMessage,
         setError,
         setSuccess,
+        role
     } = useOrganizationStore();
 
     useEffect(() => {
@@ -63,7 +64,6 @@ export default function OrganizationPage() {
             </div>
         );
     }
-
     return (
         <>
             <div className="container py-4">
@@ -86,7 +86,7 @@ export default function OrganizationPage() {
 
                         <div className="d-flex justify-content-between align-items-center mb-3 px-2">
                             <h5 className="mb-0">Филиалы</h5>
-                            {licenseControl([LICENSE.ULTIMATE]) &&
+                            {licenseControl([LICENSE.ULTIMATE]) && UserRole.OWNER == role &&
                                 <button
                                     className="btn btn-primary rounded-pill px-3 py-1"
                                     onClick={() => router.push('/organization/createOrgElements?isBranch=true')} // Adjust route; assuming separate route for branch creation

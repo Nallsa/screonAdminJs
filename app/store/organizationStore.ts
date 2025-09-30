@@ -5,37 +5,70 @@
 
 import {create} from 'zustand';
 import {SERVER_URL} from "@/app/API/api";
-import {BranchDto, OrganizationDto} from "@/public/types/interfaces";
+import {BranchDto, OrganizationDto, UserRole} from "@/public/types/interfaces";
 import {addValueInStorage, getValueInStorage} from "@/app/API/localStorage";
 import {useAuthStore} from "@/app/store/authStore";
 import axios from "axios";
 
 const baseUrl = SERVER_URL // Or whatever the actual base is
+type ApiOk = string; // если сервер отдаёт JSON — можно сменить на unknown/any и парсить
+
 const api = {
-    get: async (url: string, isNotNeedToken = false) => {
+    get: async (url: string, isNotNeedToken = false): Promise<ApiOk | null> => {
         const headers: HeadersInit = {'Content-Type': 'application/json'};
         if (!isNotNeedToken) {
-            const token = getValueInStorage('accessToken'); // Assuming token storage
+            const token = getValueInStorage('accessToken');
             if (token) headers['Authorization'] = `Bearer ${token}`;
         }
-        const response = await fetch(`${baseUrl}${url}`, {method: 'GET', headers});
-        if (!response.ok) return null;
-        return await response.text();
+        try {
+            const response = await fetch(`${baseUrl}${url}`, {method: 'GET', headers});
+            if (!response.ok) return null;
+            // если сервер может вернуть пустой ответ
+            if (response.status === 204) return '';
+            return await response.text();
+        } catch {
+            return null;
+        }
     },
-    post: async (url: string, data: string, isNotNeedToken = false) => {
+
+    post: async (url: string, data: string, isNotNeedToken = false): Promise<ApiOk | null> => {
         const headers: HeadersInit = {'Content-Type': 'application/json'};
         if (!isNotNeedToken) {
-            const token = getValueInStorage('accessToken'); // Assuming token storage
+            const token = getValueInStorage('accessToken');
             if (token) headers['Authorization'] = `Bearer ${token}`;
         }
-        const response = await fetch(`${baseUrl}${url}`, {method: 'POST', headers, body: data});
-        if (!response.ok) return null;
-        return await response.text();
+        try {
+            const response = await fetch(`${baseUrl}${url}`, {method: 'POST', headers, body: data});
+            if (!response.ok) return null;
+            if (response.status === 204) return '';
+            return await response.text();
+        } catch {
+            return null;
+        }
+    },
+
+    // 👇 добавлен метод удаления
+    del: async (url: string, isNotNeedToken = false): Promise<ApiOk | null> => {
+        const headers: HeadersInit = {'Content-Type': 'application/json'};
+        if (!isNotNeedToken) {
+            const token = getValueInStorage('accessToken');
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+        }
+        try {
+            const response = await fetch(`${baseUrl}${url}`, {method: 'DELETE', headers});
+            if (!response.ok) return null;
+            if (response.status === 204) return ''; // no content — считаем успехом
+            return await response.text();
+        } catch {
+            return null;
+        }
     },
 };
 
+
 interface OrganizationState {
     organizationInfo: OrganizationDto | null;
+    role: UserRole | null;
     inviteCode: string | null;
     isGenerating: boolean;
     isCheckingOrg: boolean;
@@ -54,16 +87,21 @@ interface OrganizationState {
     addAdmin: (branchId: string) => Promise<string | null>;
     createBranch: (branchName: string, description: string | null, onResult: (id: string | null, error: string | null) => void) => void;
     generateInviteCode: (branchId: string) => void;
-    getInfoOrg: () => Promise<boolean>;
     setSelectBranch: (value: BranchDto) => void;
 
 
     joinOrganizationByCode: (referralCode: string) => Promise<boolean>
     toggleActiveBranch: (branch: BranchDto) => void; // New: toggle active branch
+
+
+    getInfoOrg: () => Promise<boolean>;
+    delOrganization: (id: string) => Promise<boolean>;
+
 }
 
 export const useOrganizationStore = create<OrganizationState>((set, get) => ({
     organizationInfo: null,
+    role: null,
     inviteCode: null,
     isGenerating: false,
     isCheckingOrg: false,
@@ -267,7 +305,7 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
                     newActiveBranches = [orgInfo.branches[0]]
                 }
 
-                set({organizationInfo: orgInfo, hasOrg: true, activeBranches: newActiveBranches});
+                set({organizationInfo: orgInfo, hasOrg: true, activeBranches: newActiveBranches, role: orgInfo.role});
 
                 return true;
             } catch (e) {
@@ -278,6 +316,24 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
             console.log('Не удалось получить данные организации');
             return false;
         }
+    },
+
+
+    delOrganization: async (id: string) => {
+        // аккуратная подстановка параметров
+        const url = `organizations/branches/${id}/owner/${getValueInStorage("userId")}`;
+
+        const result = await api.del(url);
+
+        if (result) {
+
+            set((state) => {
+                state.getInfoOrg()
+                return state;
+            })
+        }
+
+        return result !== null;
     },
 
 

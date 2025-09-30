@@ -141,7 +141,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             addValueInStorage('accessToken', accessToken)
             addValueInStorage('refreshToken', refreshToken)
-            addValueInStorage('userId', userId)
+            addValueInStorage('getValueInStorage', userId)
 
             console.log("ok", ok)
             if(ok == 200) set({isAuthenticated: true})

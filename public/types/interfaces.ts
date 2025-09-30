@@ -107,7 +107,12 @@ export interface OrganizationDto {
     name: string;
     branches: BranchDto[];
     photoUrl?: string | null;
-    role?: string | null;
+    role?: UserRole | null;
+}
+
+export enum UserRole {
+    OWNER = "OWNER",
+    ADMIN = "ADMIN",
 }
 
 

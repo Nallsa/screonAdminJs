@@ -10,14 +10,14 @@ import Image from 'next/image';
 import {InitialsAvatar} from "@/app/components/Organization/Organization";
 import {useOrganizationStore} from '@/app/store/organizationStore';
 import {useEffect, useState} from "react";
-import {BranchDto, MemberDto} from "@/public/types/interfaces";
+import {BranchDto, MemberDto, UserRole} from "@/public/types/interfaces";
 import {LICENSE, licenseControl} from "@/app/store/settingsStore";
 
 
 export default function OrgBranchPage() {
     const params = useParams();
     const router = useRouter();
-    const {organizationInfo, getInfoOrg, selectBranch} = useOrganizationStore();
+    const {organizationInfo, getInfoOrg, selectBranch, role ,delOrganization} = useOrganizationStore();
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     useEffect(() => {
@@ -25,9 +25,13 @@ export default function OrgBranchPage() {
     }, [getInfoOrg]);
 
     const handleDelete = () => {
-        // TODO: organizationViewModel.deleteBranch(branch.id)
-        router.push('/organization');
-        setShowDeleteDialog(false);
+        if(!selectBranch?.id) return
+
+        delOrganization(selectBranch?.id).then(r => {
+            router.push('/organization');
+            setShowDeleteDialog(false);
+        })
+
     };
 
     const branchesCount = organizationInfo?.branches?.length ?? 0;
@@ -79,7 +83,7 @@ export default function OrgBranchPage() {
                     )}
 
 
-                    {branchesCount < 1 && (
+                    {licenseControl([LICENSE.ULTIMATE, LICENSE.ADVANCED,]) && UserRole.OWNER == role && branchesCount > 1 && (
                         <button className="btn btn-danger w-100 mb-3" onClick={() => setShowDeleteDialog(true)}>
                             <i className="bi bi-trash me-2"></i> Удалить филиал
                         </button>
