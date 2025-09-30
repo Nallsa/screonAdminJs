@@ -195,11 +195,25 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             s.successMessage = msg
         }),
 
-        startCreateGroup: () => set(s => {
-            s.isCreatingGroup = true
-            s.newGroupName = ''
-            s.selectedForNewGroup = []
-        }),
+        startCreateGroup: () => {
+            const {activeBranches} = useOrganizationStore.getState?.() ?? {
+                activeBranches: [] as Array<{
+                    id: string
+                }>
+            }
+
+            if (activeBranches.length > 1) {
+                get().setError("Чтобы создать группу, выберите один филиал в настройках организации")
+                return
+            }
+
+            set(s => {
+                s.isCreatingGroup = true
+                s.newGroupName = ''
+                s.selectedForNewGroup = []
+            })
+        }
+        ,
 
         cancelCreateGroup: () => set(s => {
             s.isCreatingGroup = false
@@ -252,15 +266,15 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 const userId = getValueInStorage("userId")
                 const accessToken = getValueInStorage("accessToken")
 
-                if (!userId || !accessToken) {
-                    get().setError("Не хватает данных для загрузки экранов. Пожалуйста, войдите в систему заново.")
-                    return
-                }
-
                 const {activeBranches} = useOrganizationStore.getState?.() ?? {
                     activeBranches: [] as Array<{
                         id: string
                     }>
+                }
+
+                if (!userId || !accessToken) {
+                    get().setError("Не хватает данных для загрузки экранов. Пожалуйста, войдите в систему заново.")
+                    return
                 }
 
                 if (activeBranches.length < 1) {
@@ -378,7 +392,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 set(s => {
                     const scr = s.allScreens.find(x => x.id === screenId)
                     if (scr) scr.groupId = groupId
-                    s.successMessage = 'Группа экрана обновлена';
+                    s.successMessage = 'Информация об экране обновлена';
                     s.errorMessage = null;
                 })
                 get().filterScreens(get().currentQuery, get().currentGroupFilter)

@@ -7,7 +7,7 @@
 import React, {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import type {ShowMode} from '@/app/store/scheduleStore'
 import {useScheduleStore} from '@/app/store/scheduleStore'
-import {generateTimeSlots, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
+import {dateToIsoLocal, generateTimeSlots, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
 import {ScheduledBlock, TypeMode} from "@/public/types/interfaces";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScreensStore} from "@/app/store/screensStore";
@@ -41,13 +41,21 @@ export default function EditableScheduleTable() {
     const {allScreens} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
 
+    const screenBranchById = useMemo(() => {
+        const map = new Map<string, string>();
+        allScreens.forEach(s => map.set(s.id, s.branchId));
+        return map;
+    }, [allScreens]);
+
+    const getBranchOf = (screenId: string) => screenBranchById.get(screenId);
+
     const times = generateTimeSlots('00:00', '23:30', 30)
 
     const allMeta: Meta[] = useMemo(() => {
         const stepLocal = 30; // локальная константа, не конфликтует
         const list: Meta[] = [];
 
-        const weekDates = currentWeek.map(d => d.toISOString().slice(0, 10));
+        const weekDates = currentWeek.map(d => dateToIsoLocal(d));
         const screens = selectedGroup
             ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
             : selectedScreens;
@@ -60,8 +68,7 @@ export default function EditableScheduleTable() {
             for (const b of blocks) {
                 const dayIndex = isFixedSchedule
                     ? WEEK_DAYS.indexOf(b.dayOfWeek)
-                    : currentWeek.findIndex(d => d.toISOString().slice(0, 10) === b.startDate);
-
+                    : currentWeek.findIndex(d => dateToIsoLocal(d) === b.startDate);
                 if (dayIndex < 0) continue;
 
                 const [h0, m0] = b.startTime.split(':').map(Number);
@@ -254,6 +261,21 @@ export default function EditableScheduleTable() {
     // валидация
     const validateAndSetError = (): boolean => {
         setError(null);
+
+        const candidateBranchId =
+            editingMeta?.block.branchId
+            ?? getBranchOf(editScreens[0]);
+
+        if (!candidateBranchId) {
+            setError('Не удалось определить филиал для слота');
+            return false;
+        }
+        const bad = editScreens.find(id => getBranchOf(id) !== candidateBranchId);
+        if (bad) {
+            setError('Нельзя смешивать экраны из разных филиалов. Выберите экраны одного филиала.');
+            return false;
+        }
+
         if (!editingMeta) {
             setError('Нечего сохранять');
             return false;
@@ -296,7 +318,8 @@ export default function EditableScheduleTable() {
                     !(candidateEnd <= timeToMinutes(b.startTime) ||
                         timeToMinutes(b.endTime) <= candidateStart) &&
                     // совпадение приоритета
-                    b.priority === editPriority
+                    b.priority === editPriority &&
+                    b.branchId === candidateBranchId
                 );
                 if (conflict) {
                     setError(
@@ -335,6 +358,7 @@ export default function EditableScheduleTable() {
                         ? b.dayOfWeek === editingMeta!.block.dayOfWeek
                         : b.startDate === editingMeta!.block.startDate
                     if (!sameDay) return false
+                    if (b.branchId !== candidateBranchId) return false;
                     const s = timeToMinutes(b.startTime)
                     const e = timeToMinutes(b.endTime)
                     // проверка пересечения [candidateStart,candidateEnd) с [s,e)
@@ -364,14 +388,13 @@ export default function EditableScheduleTable() {
         editScreens.forEach(screenId =>
             addEditedBlock(screenId, {
                 ...editingMeta!.block,
-                // ПЕРЕОПРЕДЕЛЯЕМ type И isRecurring
                 type: editTypeMode,
                 isRecurring: editTypeMode === 'PLAYLIST' && editShowMode === 'cycle',
-
                 startTime: editStart + ':00',
                 endTime: editEnd + ':00',
                 playlistId: editPlaylist,
                 priority: editPriority,
+                branchId: editingMeta!.block.branchId,
             })
         )
         setEditingMeta(null)
