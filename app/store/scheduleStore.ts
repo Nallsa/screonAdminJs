@@ -437,7 +437,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         break
                     }
                     set(s => {
-                        s.successMessage = 'Показ завершён'
+                        s.successMessage = 'Экстренный показ завершён'
                     })
 
                     const emgId = p.emergencyId

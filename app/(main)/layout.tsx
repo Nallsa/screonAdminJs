@@ -9,7 +9,7 @@
 import BootstrapClient from "@/app/components/BootstrapClient";
 import Sidebar from "@/app/components/Sidebar";
 import Footer from "@/app/components/Footer";
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useMemo, useRef, useState} from "react";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 import {useLibraryStore} from "@/app/store/libraryStore";
@@ -30,8 +30,8 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
         requestStatusesForAll,
         startAutoStatusPolling
     } = useScreensStore(state => state)
-    const {getSchedule, scheduledFixedMap, scheduledCalendarMap} = useScheduleStore();
-    const {getInfoOrg} = useOrganizationStore();
+    const {getSchedule, scheduledCalendarMap} = useScheduleStore();
+    const {getInfoOrg, activeBranches} = useOrganizationStore();
     const [showOrgModal, setShowOrgModal] = useState(false);
 
     const [collapsed, setCollapsed] = useState(true);
@@ -86,7 +86,6 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
                 }
 
                 const isScheduleEmpty =
-                    Object.keys(scheduledFixedMap).length === 0 &&
                     Object.keys(scheduledCalendarMap).length === 0;
 
                 if (isScheduleEmpty) {
@@ -101,6 +100,43 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
 
         init()
     }, [])
+
+    const branchesKey = useMemo(
+        () => (activeBranches || []).map(b => b.id).sort().join(","),
+        [activeBranches]
+    );
+
+
+    const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+    useEffect(() => {
+        if (!activeBranches) return;
+
+        if (refetchTimerRef.current !== undefined) {
+            window.clearTimeout(refetchTimerRef.current);
+            refetchTimerRef.current = undefined;
+        }
+
+        refetchTimerRef.current = window.setTimeout(async () => {
+            try {
+                await getScreens();
+                await getGroups();
+                await getPlaylists?.();
+                await getFilesInLibrary?.();
+                await requestStatusesForAll?.();
+                startAutoStatusPolling?.();
+            } catch (e) {
+                console.warn("Refetch on branches change failed:", e);
+            }
+        }, 1000);
+
+        return () => {
+            if (refetchTimerRef.current !== undefined) {
+                window.clearTimeout(refetchTimerRef.current);
+                refetchTimerRef.current = undefined;
+            }
+        };
+    }, [branchesKey]);
 
 
     if (loading || !isAuthenticated) {

@@ -53,9 +53,9 @@ export default function LibraryPage() {
     const [isAscending, setIsAscending] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
 
-    useEffect(() => {
-        getFilesInLibrary()
-    }, [activeBranches, getFilesInLibrary])
+    // useEffect(() => {
+    //     getFilesInLibrary()
+    // }, [activeBranches, getFilesInLibrary])
 
     // корректная русская сортировка по имени
     const ruCollator = useMemo(() => new Intl.Collator('ru', {sensitivity: 'base'}), [])

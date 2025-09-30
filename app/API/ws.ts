@@ -112,11 +112,16 @@ function scheduleReconnect(channel: WSChannel, onMessage: (a: string, p: any) =>
 }
 
 
-export function sendConfirmPairing(code: string, userId: string | null) {
+export function sendConfirmPairing(code: string, userId: string | null, branchId: string | null) {
     const ws = sockets.pairing;
     if (userId && ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({action: 'CONFIRM_PAIRING', payload: {code, userId}}));
+        ws.send(
+            JSON.stringify({
+                action: "CONFIRM_PAIRING",
+                payload: {code, userId, branchId},
+            })
+        );
     } else {
-        console.warn('WS[pairing] not connected');
+        console.warn("WS[pairing] not connected");
     }
 }
