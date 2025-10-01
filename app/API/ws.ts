@@ -17,10 +17,16 @@ const heartbeatIds: Record<WSChannel, number | null> = {pairing: null, schedule:
 
 
 const URLS: Record<WSChannel, string> = {
-    schedule: 'wss://dev1.videotrade.ru/ws/schedule',
-    pairing: 'wss://dev1.videotrade.ru/ws-pairing',
-    status: 'wss://dev1.videotrade.ru/ws-status',
+    schedule: 'wss://admin.screon.ru/ws/schedule',
+    pairing: 'wss://admin.screon.ru/ws-pairing',
+    status: 'wss://admin.screon.ru/ws-status',
 };
+
+// const URLS: Record<WSChannel, string> = {
+//     schedule: 'wss://dev1.videotrade.ru/ws/schedule',
+//     pairing: 'wss://dev1.videotrade.ru/ws-pairing',
+//     status: 'wss://dev1.videotrade.ru/ws-status',
+// };
 
 
 function buildUrl(channel: WSChannel): string {

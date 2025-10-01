@@ -4,7 +4,7 @@ const nextConfig = {
         remotePatterns: [
             {
                 protocol: 'https',
-                hostname: 'dev1.videotrade.ru',
+                hostname: 'admin.screon.ru',
                 port: '',
                 pathname: '/api/files/**',
             },
