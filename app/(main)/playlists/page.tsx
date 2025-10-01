@@ -29,9 +29,9 @@ export default function PlaylistsPage() {
     const activeBranches = useOrganizationStore(state => state.activeBranches)
 
 
-    useEffect(() => {
-        getPlaylists()
-    }, [activeBranches.length])
+    // useEffect(() => {
+    //     getPlaylists()
+    // }, [activeBranches.length])
 
 
     const handleNewPlaylist = () => {

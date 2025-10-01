@@ -15,6 +15,8 @@ import {log} from "node:util";
 import {useAuthStore} from "@/app/store/authStore";
 import {connectWebSocket} from "@/app/API/ws";
 import ErrorModal from "@/app/components/Common/ErrorModal";
+import {useOrganizationStore} from "@/app/store/organizationStore";
+import {WarningModal} from "@/app/components/Common/WarningModal";
 
 export default function ScreensPage() {
     const {
@@ -34,7 +36,9 @@ export default function ScreensPage() {
         getScreens,
         connectWsForScreen,
         errorMessage,
-        setError
+        setError,
+        successMessage,
+        setSuccess
     } = useScreensStore()
 
 
@@ -45,6 +49,11 @@ export default function ScreensPage() {
     const [showAddModal, setShowAddModal] = useState(false)
     const [screenCode, setScreenCode] = useState('')
     const [certificateCode, setCertificateCode] = useState('')
+
+    const {organizationInfo} = useOrganizationStore();
+    const branches = organizationInfo?.branches ?? [];
+    const [selectedBranchId, setSelectedBranchId] = useState<string>("");
+
 
     useEffect(() => {
         const initialize = async () => {
@@ -57,6 +66,9 @@ export default function ScreensPage() {
 
     const handleOpenAddModal = () => {
         setScreenCode('')
+        if (!selectedBranchId && branches.length > 0) {
+            setSelectedBranchId(branches[0].id);
+        }
         setShowAddModal(true)
     }
     const handleCloseAddModal = () => {
@@ -72,12 +84,13 @@ export default function ScreensPage() {
         //     return
         // }
 
-        addPairingConfirm(screenCode).then(r => setShowAddModal(false))
-    }
+        if (!selectedBranchId) {
+            alert("Пожалуйста, выберите филиал");
+            return;
+        }
 
-    useEffect(() => {
-        getScreens().then(r => console.log(""))
-    }, [getScreens]);
+        addPairingConfirm(screenCode, selectedBranchId).then(r => setShowAddModal(false))
+    }
 
     // первичный фильтр
     useEffect(() => {
@@ -171,15 +184,22 @@ export default function ScreensPage() {
 
             {/* Список экранов */}
             <div className="d-flex flex-wrap gap-3">
-                {filteredScreens.map(screen => (
-                    <ScreenCard
-                        key={screen.id}
-                        screen={screen}
-                        isCreatingGroup={isCreatingGroup}
-                        isSelected={selectedForNewGroup.includes(screen.id)}
-                        onSelect={() => toggleNewGroupScreen(screen.id)}
-                    />
-                ))}
+                {filteredScreens.length > 0 ? (
+                        filteredScreens.map(screen => (
+                            <ScreenCard
+                                key={screen.id}
+                                screen={screen}
+                                isCreatingGroup={isCreatingGroup}
+                                isSelected={selectedForNewGroup.includes(screen.id)}
+                                onSelect={() => toggleNewGroupScreen(screen.id)}
+                            />
+                        ))
+                    ) :
+                    (<span style={{textAlign: 'center'}}>У вас пока нет экранов
+                    <br/>
+                       Нажмите кнопку Добавить экран, чтобы продолжить
+                    </span>)
+                }
             </div>
 
 
@@ -240,6 +260,21 @@ export default function ScreensPage() {
                     {/*        }}*/}
                     {/*    />*/}
                     {/*</Form.Group>*/}
+
+                    <Form.Group controlId="branchSelect" className="w-50 mt-3">
+                        <Form.Label>Филиал</Form.Label>
+                        <Form.Select
+                            size="sm"
+                            value={selectedBranchId}
+                            onChange={(e) => setSelectedBranchId(e.target.value)}
+                        >
+                            {branches.map((b) => (
+                                <option key={b.id} value={b.id}>
+                                    {b.name}
+                                </option>
+                            ))}
+                        </Form.Select>
+                    </Form.Group>
                 </Modal.Body>
 
                 <Modal.Footer className="border-0 justify-content-center">
@@ -247,6 +282,7 @@ export default function ScreensPage() {
                         variant="success"
                         onClick={() => handleConfirmAdd()}
                         disabled={screenCode.length !== 8
+                            || !selectedBranchId
                             // || certificateCode.length !== 8
                         }
                     >
@@ -255,6 +291,9 @@ export default function ScreensPage() {
                 </Modal.Footer>
             </Modal>
 
+
+            <WarningModal show={!!successMessage} title="Готово" message={successMessage || ''} buttonText="Ок"
+                          onClose={() => setSuccess(null)}/>
             <ErrorModal
                 show={!!errorMessage}
                 message={errorMessage || ''}

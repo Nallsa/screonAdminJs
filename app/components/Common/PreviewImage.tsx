@@ -31,7 +31,6 @@ export default function PreviewImage({
         ? fallbackSrc
         : `${SERVER_URL}files/${id}/preview`
 
-    console.log(`${src}    ${name}`)
     if (fill) {
         const paddingTop = 100 / aspectRatio
         return (

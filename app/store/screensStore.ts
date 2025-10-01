@@ -12,6 +12,7 @@ import {connectWebSocket, sendConfirmPairing} from '../API/ws'
 import {StateCreator} from 'zustand'
 import axios from "axios";
 import {useScheduleStore} from "@/app/store/scheduleStore";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 
 export type LiveStatus = {
@@ -62,7 +63,7 @@ interface ScreensState {
 
     // WS pairing
     connectWsForScreen: () => Promise<void>
-    addPairingConfirm: (code: string) => Promise<void>
+    addPairingConfirm: (code: string, branchId?: string) => Promise<void>
 
     //Status
     statusByScreen: Record<string, StatusEntry>;
@@ -87,6 +88,9 @@ interface ScreensState {
     //errors
     errorMessage: string | null
     setError: (msg: string | null) => void
+
+    successMessage: string | null,
+    setSuccess: (msg: string | null) => void,
 }
 
 const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]], [], ScreensState> = (set, get) => {
@@ -181,17 +185,35 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
         statusByScreen: {},
 
         errorMessage: null,
+        successMessage: null,
 
 
         setError: msg => set(s => {
             s.errorMessage = msg
         }),
-
-        startCreateGroup: () => set(s => {
-            s.isCreatingGroup = true
-            s.newGroupName = ''
-            s.selectedForNewGroup = []
+        setSuccess: msg => set(s => {
+            s.successMessage = msg
         }),
+
+        startCreateGroup: () => {
+            const {activeBranches} = useOrganizationStore.getState?.() ?? {
+                activeBranches: [] as Array<{
+                    id: string
+                }>
+            }
+
+            if (activeBranches.length > 1) {
+                get().setError("Чтобы создать группу, выберите один филиал в настройках организации")
+                return
+            }
+
+            set(s => {
+                s.isCreatingGroup = true
+                s.newGroupName = ''
+                s.selectedForNewGroup = []
+            })
+        }
+        ,
 
         cancelCreateGroup: () => set(s => {
             s.isCreatingGroup = false
@@ -244,13 +266,27 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 const userId = getValueInStorage("userId")
                 const accessToken = getValueInStorage("accessToken")
 
+                const {activeBranches} = useOrganizationStore.getState?.() ?? {
+                    activeBranches: [] as Array<{
+                        id: string
+                    }>
+                }
+
                 if (!userId || !accessToken) {
                     get().setError("Не хватает данных для загрузки экранов. Пожалуйста, войдите в систему заново.")
                     return
                 }
 
-                const res = await axios.get(`${SERVER}screens/owned`,
-                    {headers: {Authorization: `Bearer ${accessToken}`}}
+                if (activeBranches.length < 1) {
+                    get().setError("У вас не выбран(ы) филиал(ы)")
+                }
+
+                const branchIds = Array.isArray(activeBranches) ? activeBranches.map(b => b.id) : []
+
+                const res = await axios.post(
+                    `${SERVER}screens/owned`,
+                    {branchIds},
+                    {headers: {Authorization: `Bearer ${accessToken}`}},
                 )
 
                 const screens: ScreenData[] = res.data
@@ -325,6 +361,8 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     set(state => {
                         state.allScreens = state.allScreens.filter(screen => screen.id !== screenId);
                         state.filteredScreens = state.filteredScreens.filter(screen => screen.id !== screenId);
+                        state.successMessage = 'Экран удалён';
+                        state.errorMessage = null;
                     });
                     await useScheduleStore.getState().getSchedule()
 
@@ -354,6 +392,8 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 set(s => {
                     const scr = s.allScreens.find(x => x.id === screenId)
                     if (scr) scr.groupId = groupId
+                    s.successMessage = 'Информация об экране обновлена';
+                    s.errorMessage = null;
                 })
                 get().filterScreens(get().currentQuery, get().currentGroupFilter)
 
@@ -422,6 +462,8 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     s.isCreatingGroup = false
                     s.newGroupName = ''
                     s.selectedForNewGroup = []
+                    s.successMessage = 'Группа создана';
+                    s.errorMessage = null;
                 })
                 // пересчитать фильтр
                 get().filterScreens(get().currentQuery, get().currentGroupFilter)
@@ -434,16 +476,15 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
         // ==== WS PAIRING ====
 
-        addPairingConfirm: async (code) => {
+        addPairingConfirm: async (code, branchId) => {
             try {
                 const userId = getValueInStorage("userId")
-
                 if (!userId) {
                     get().setError("Пользователь не авторизован. Пожалуйста, войдите в систему.")
                     return
                 }
-
-                sendConfirmPairing(code, userId)
+                // прокидываем branchId
+                sendConfirmPairing(code, userId, branchId || null)
             } catch (error: any) {
                 console.error("Ошибка при подтверждении пары:", error)
                 get().setError(error?.message || "Не удалось подтвердить код экрана")
@@ -468,6 +509,8 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                                 state.allScreens.push(screen);
 
                                 state.filteredScreens.push(screen);
+                                state.successMessage = 'Экран успешно добавлен';
+                                state.errorMessage = null;
                             });
                             break;
                     }

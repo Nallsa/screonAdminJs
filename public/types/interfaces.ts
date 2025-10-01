@@ -64,6 +64,7 @@ export interface ScreenData {
     os: string;
     status: DeviceStatus;
     locationId: string;
+    branchId: string;
 }
 
 export interface GroupData {
@@ -85,6 +86,7 @@ export interface ScheduledBlock {
     type: TypeMode,
     isRecurring: boolean,
     screenId: string,
+    branchId: string,
 }
 
 

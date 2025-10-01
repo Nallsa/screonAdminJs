@@ -10,7 +10,7 @@ import {immer} from 'zustand/middleware/immer'
 import {
     getCurrentWeekByDate,
     parseDayToDate,
-    normalizeTime, RU_DAYS, WEEK_DAYS
+    normalizeTime, RU_DAYS, WEEK_DAYS, dateToIsoLocal
 } from '@/app/lib/scheduleUtils'
 import {PlaylistItem, ScheduledBlock, ScreenData, TypeMode} from "@/public/types/interfaces";
 import axios from "axios";
@@ -19,6 +19,7 @@ import {getValueInStorage} from "@/app/API/localStorage";
 import {connectWebSocket} from "@/app/API/ws";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useOrganizationStore} from "@/app/store/organizationStore";
+import {useScreensStore} from "@/app/store/screensStore";
 
 
 // типы
@@ -247,7 +248,12 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             typeof rawSlots === 'string' ? JSON.parse(rawSlots) :
                                 Array.isArray(rawSlots) ? rawSlots : [];
 
+                        const byId = new Map(useScreensStore.getState().allScreens.map(s => [s.id, s]));
+
                         for (const slot of arr) {
+                            const screenId = slot.screenId as string;
+                            const branchId = slot.branchId ?? byId.get(screenId)?.branchId ?? '';
+
                             normalizedAll.push({
                                 dayOfWeek: slot.dayOfWeek,
                                 startDate: slot.startDate ?? null,
@@ -259,6 +265,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 priority: Number(slot.priority ?? 1),
                                 type: slot.type,
                                 screenId: slot.screenId,
+                                branchId,
                             });
                         }
                     }
@@ -279,12 +286,15 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                             const exists = s[mapKey][slot.screenId].some((b: ScheduledBlock) =>
                                 b.dayOfWeek === slot.dayOfWeek &&
+                                (b.startDate ?? null) === (slot.startDate ?? null) &&
+                                (b.endDate ?? null) === (slot.endDate ?? null) &&
                                 b.startTime === slot.startTime &&
                                 b.endTime === slot.endTime &&
                                 b.playlistId === slot.playlistId &&
                                 b.priority === slot.priority &&
                                 b.type === slot.type &&
-                                b.isRecurring === slot.isRecurring
+                                b.isRecurring === slot.isRecurring &&
+                                b.branchId === slot.branchId
                             );
                             if (!exists) s[mapKey][slot.screenId].push(slot);
                         }
@@ -437,7 +447,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         break
                     }
                     set(s => {
-                        s.successMessage = 'Показ завершён'
+                        s.successMessage = 'Экстренный показ завершён'
                     })
 
                     const emgId = p.emergencyId
@@ -518,6 +528,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
             addBlock: (overrideScreens) => {
                 const playlistItems = usePlaylistStore.getState().playlistItems
+                const screensStore = useScreensStore.getState();
+                const byId = new Map(screensStore.allScreens.map(s => [s.id, s]));
 
                 const {
                     selectedScreens,
@@ -571,6 +583,12 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     startMin: number,
                     endMin: number
                 ) {
+
+                    const screen = byId.get(screenId);
+                    if (!screen?.branchId) {
+                        throw new Error(`У экрана ${screenId} нет branchId`);
+                    }
+
                     const block: ScheduledBlock = {
                         screenId,
                         dayOfWeek: dow,
@@ -582,6 +600,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         type: typeMode,
                         isRecurring: typeMode === 'PLAYLIST' && showMode === 'cycle',
                         priority: typeMode === 'ADVERTISEMENT' ? 100 : get().priority,
+                        branchId: screen.branchId,
                     };
                     if (!newBlocksByScreen[screenId]) newBlocksByScreen[screenId] = [];
                     newBlocksByScreen[screenId].push(block);
@@ -675,7 +694,11 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         b.dayOfWeek === block.dayOfWeek &&
                         b.startTime === block.startTime &&
                         b.endTime === block.endTime &&
-                        b.playlistId === block.playlistId)
+                        b.playlistId === block.playlistId &&
+                        //  b.priority   === block.priority &&
+                        //   b.type       === block.type &&
+                        //   b.isRecurring=== block.isRecurring &&
+                        b.branchId === block.branchId)
                     if (idx >= 0) arr.splice(idx, 1)
                 })
 
@@ -733,6 +756,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         priority: b.priority,
                         screenId,
                         type: b.type,
+                        branchId: b.branchId,
                     }));
 
                 // собираем слоты по всем экранам из обеих карт
@@ -873,7 +897,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
             clearDaySlots: (day, screenIds) => {
                 set(s => {
-                    const iso = day.toISOString().slice(0, 10)
+                    const iso = dateToIsoLocal(day);
 
                     const DAY_ENUM = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const
                     const dowEnum = DAY_ENUM[day.getDay()] as ScheduledBlock['dayOfWeek']
