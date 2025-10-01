@@ -184,15 +184,22 @@ export default function ScreensPage() {
 
             {/* Список экранов */}
             <div className="d-flex flex-wrap gap-3">
-                {filteredScreens.map(screen => (
-                    <ScreenCard
-                        key={screen.id}
-                        screen={screen}
-                        isCreatingGroup={isCreatingGroup}
-                        isSelected={selectedForNewGroup.includes(screen.id)}
-                        onSelect={() => toggleNewGroupScreen(screen.id)}
-                    />
-                ))}
+                {filteredScreens.length > 0 ? (
+                        filteredScreens.map(screen => (
+                            <ScreenCard
+                                key={screen.id}
+                                screen={screen}
+                                isCreatingGroup={isCreatingGroup}
+                                isSelected={selectedForNewGroup.includes(screen.id)}
+                                onSelect={() => toggleNewGroupScreen(screen.id)}
+                            />
+                        ))
+                    ) :
+                    (<span style={{textAlign: 'center'}}>У вас пока нет экранов
+                    <br/>
+                       Нажмите кнопку Добавить экран, чтобы продолжить
+                    </span>)
+                }
             </div>
 
 
