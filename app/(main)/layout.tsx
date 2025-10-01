@@ -107,14 +107,14 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     );
 
 
-    const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const refetchTimerRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (!activeBranches) return;
 
-        if (refetchTimerRef.current !== undefined) {
+        if (refetchTimerRef.current !== null) {
             window.clearTimeout(refetchTimerRef.current);
-            refetchTimerRef.current = undefined;
+            refetchTimerRef.current = null;
         }
 
         refetchTimerRef.current = window.setTimeout(async () => {
@@ -131,9 +131,9 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
         }, 1000);
 
         return () => {
-            if (refetchTimerRef.current !== undefined) {
+            if (refetchTimerRef.current !== null) {
                 window.clearTimeout(refetchTimerRef.current);
-                refetchTimerRef.current = undefined;
+                refetchTimerRef.current = null;
             }
         };
     }, [branchesKey]);
