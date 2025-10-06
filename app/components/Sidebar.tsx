@@ -5,13 +5,14 @@
 
 'use client';
 import Link from "next/link";
-import {usePathname} from 'next/navigation';
+import {usePathname, useRouter} from 'next/navigation';
 import {getValueInStorage} from "@/app/API/localStorage";
 // import {FaBars} from "react-icons/fa";
 import {useSettingsStore} from "@/app/store/settingsStore";
 import {FaBars} from "react-icons/fa";
 import {useOrganizationStore} from "@/app/store/organizationStore";
 import {Grade, useLicenseStore} from "@/app/store/licenseStore";
+import React, {useCallback, useEffect, useMemo} from "react";
 
 interface Props {
     collapsed: boolean
@@ -30,8 +31,6 @@ const navItems = [
     {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
 
 ];
-
-
 
 function mapHrefToTab(href: string) {
     if (href.startsWith('/org')) return 'org'
@@ -64,17 +63,24 @@ function isTabEnabled(hasOrg: boolean, grade: Grade, href: string): boolean {
     }
 }
 
-
 export default function Sidebar({collapsed, onToggle, className = ''}: Props) {
     const pathname = usePathname();
     const hasOrg = useOrganizationStore(state => state.hasOrg);
-    const screenLicense = useLicenseStore(s => s.screenLicense)
+    const screenLicense = useLicenseStore(state => state.screenLicense);
 
     if (pathname.startsWith('/auth')) {
         return null;
     }
 
     const width = collapsed ? 46 : 220;
+
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const enabledFor = useCallback(
+        (href: string) => isTabEnabled(hasOrg, screenLicense, href),
+        [hasOrg, screenLicense]
+    );
+
 
     return (
         <div
@@ -123,17 +129,15 @@ export default function Sidebar({collapsed, onToggle, className = ''}: Props) {
                 </button>
             </div>
 
-            {navItems.map(({ href, label, icon }) => {
-                const enabled = isTabEnabled(hasOrg, screenLicense, href)
-                const active = enabled && (pathname === href)
-
+            {navItems.map(({href, label, icon}) => {
+                const enabled = enabledFor(href);
+                const active = enabled && (pathname === href);
                 return (
+                    // кнопки навигации
                     <Link
                         key={href}
                         href={href}
-                        onClick={(e) => {
-                            if (!enabled) e.preventDefault()
-                        }}
+                        onClick={(e) => { if (!enabled) e.preventDefault() }}
                         className={
                             'text-decoration-none d-flex align-items-center py-3 ' +
                             (active ? 'bg-light fw-bold text-dark' : 'text-secondary') +
@@ -161,11 +165,10 @@ export default function Sidebar({collapsed, onToggle, className = ''}: Props) {
                                 transition: 'width .3s ease-in-out, opacity .3s ease-in-out .1s'
                             }}
                         >
-        {label}
-      </span>
+              {label}
+            </span>
                     </Link>
                 )
-            })}
-        </div>
+            })}        </div>
     );
 };

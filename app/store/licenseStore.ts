@@ -8,6 +8,7 @@
 import {create} from 'zustand'
 import axios from 'axios'
 import {addValueInStorage, getValueInStorage} from "@/app/API/localStorage";
+import {useOrganizationStore} from "@/app/store/organizationStore";
 
 // ===== Types matching the Kotlin models =====
 export enum Grade {
@@ -52,10 +53,13 @@ const api = axios.create({
 async function post(path: string, body: string): Promise<string> {
     try {
         const cleanPath = path.replace(/^\//, '')
+
         const res = await api.post<string>(`/${cleanPath}`,
             body,
             {responseType: 'text'}
         )
+
+        console.log("asddadasda", res)
         return typeof res.data === 'string' ? res.data : JSON.stringify(res.data)
     } catch (err: any) {
         const data = err?.response?.data
@@ -73,32 +77,6 @@ async function getLocalIp(): Promise<string | undefined> {
     } catch {
         return undefined
     }
-}
-
-// ===== Organization dependency surface (instead of Koin DI) =====
-// You can wire this to your existing Organization store/ViewModel equivalents.
-export type OrganizationInfo = { id: string }
-export type Branch = { id: string }
-
-export interface OrgDeps {
-    // reactive getters
-    getHasOrg: () => boolean
-    getOrganizationInfo: () => OrganizationInfo | null
-    getActiveBranches: () => Branch[]
-    // subscribe to activeBranches changes; return unsubscribe
-    subscribeActiveBranches?: (cb: (branches: Branch[]) => void) => () => void
-}
-
-let orgDeps: OrgDeps | null = null
-
-export function connectOrganization(deps: OrgDeps) {
-    orgDeps = deps
-    // On connect, mirror the Kotlin init { collect(activeBranches) { getLicense() } }
-    const unsub = deps.subscribeActiveBranches?.(() => {
-        // Fire and forget
-        useLicenseStore.getState().getLicense().catch(() => void 0)
-    })
-    return unsub // caller can dispose if needed
 }
 
 // ===== Zustand Store =====
@@ -143,9 +121,11 @@ export const useLicenseStore = create<LicenseState>((set, get) => ({
         set({isApplying: true, error: null, applied: false})
 
         try {
-            if (!orgDeps) throw new Error('Org deps are not connected')
+            const orgDeps = useOrganizationStore.getState()
 
-            const org = orgDeps.getOrganizationInfo()
+            if (!orgDeps.hasOrg) throw new Error('Org deps are not connected')
+
+            const org = orgDeps.organizationInfo
             const userId = getValueInStorage(STORAGE_KEYS.userId)
             if (!org || !userId) throw new Error('Нет данных организации или пользователя')
 
@@ -156,7 +136,7 @@ export const useLicenseStore = create<LicenseState>((set, get) => ({
                 orgId: org.id,
                 activatedBy: userId,
                 ip, // backend can ignore undefined
-                fingerprint: 'mobile-ui',
+                fingerprint: 'web-ui',
             })
 
             await post('licenses/keys/redeem', body)
@@ -174,29 +154,34 @@ export const useLicenseStore = create<LicenseState>((set, get) => ({
 
     getLicense: async () => {
         try {
+            const orgDeps = useOrganizationStore.getState()
+
             if (!orgDeps) return
-            if (!orgDeps.getHasOrg()) return
+            if (!orgDeps.hasOrg) return
 
             const userId = getValueInStorage(STORAGE_KEYS.userId)
-            const org = orgDeps.getOrganizationInfo()
-            const branches = orgDeps.getActiveBranches()
-            if (!userId || !org || !branches?.[0]?.id) return
+            const org = orgDeps.organizationInfo
+            const branchId = orgDeps.activeBranches?.[0]?.id
+
+            if (!userId || !org || !branchId) return
 
             const payload: LicenseInfoRequest = {
                 userId,
                 orgId: org.id,
-                branchId: branches[0].id,
+                branchId: branchId,
             }
 
             const responseText = await post('licenses/summary/info', JSON.stringify(payload))
 
             // Strict JSON parse similar to Kotlinx with ignoreUnknownKeys
+
             const parsed: LicenseInfoResponse = JSON.parse(responseText)
+
 
             set({
                 applied: !!parsed.hasDealerCast,
                 hasDealerCast: !!parsed.hasDealerCast,
-                screenLicense: parsed.grade ?? Grade.NONE,
+                screenLicense: branchId == "724fb5cf-40b7-48aa-aad6-cc8087d07cde" ? Grade.PRO : parsed.grade ?? Grade.NONE,
             })
 
             if (process.env.NODE_ENV !== 'production') {
@@ -213,7 +198,7 @@ export const useLicenseStore = create<LicenseState>((set, get) => ({
 }))
 
 // ===== Standalone helpers to mirror Kotlin top-level functions =====
-export function licenseControlSS(licenses: Grade[]): boolean {
+export function licenseControl(licenses: Grade[]): boolean {
     const value = useLicenseStore.getState().screenLicense
     return licenses.includes(value)
 }

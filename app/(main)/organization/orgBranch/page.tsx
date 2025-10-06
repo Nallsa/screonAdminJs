@@ -11,22 +11,22 @@ import {InitialsAvatar} from "@/app/components/Organization/Organization";
 import {useOrganizationStore} from '@/app/store/organizationStore';
 import {useEffect, useState} from "react";
 import {BranchDto, MemberDto, UserRole} from "@/public/types/interfaces";
-import {LICENSE, licenseControl} from "@/app/store/settingsStore";
-import {dealerCastControl} from "@/app/store/licenseStore";
+import {dealerCastControl, useLicenseStore} from "@/app/store/licenseStore";
 
 
 export default function OrgBranchPage() {
     const params = useParams();
     const router = useRouter();
-    const {organizationInfo, getInfoOrg, selectBranch, role ,delOrganization} = useOrganizationStore();
+    const {organizationInfo, getInfoOrg, selectBranch, role, delOrganization} = useOrganizationStore();
+    const hasDealerCast = useLicenseStore(state => state.hasDealerCast)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-    useEffect(() => {
-        getInfoOrg(); // Fetch org info if needed
-    }, [getInfoOrg]);
+    // useEffect(() => {
+    //     getInfoOrg(); // Fetch org info if needed
+    // }, [getInfoOrg]);
 
     const handleDelete = () => {
-        if(!selectBranch?.id) return
+        if (!selectBranch?.id) return
 
         delOrganization(selectBranch?.id).then(r => {
             router.push('/organization');
@@ -84,14 +84,14 @@ export default function OrgBranchPage() {
                     )}
 
 
-                    {licenseControl([LICENSE.ULTIMATE, LICENSE.ADVANCED,]) && UserRole.OWNER == role && branchesCount > 1 && (
+                    {UserRole.OWNER == role && branchesCount > 1 && (
                         <button className="btn btn-danger w-100 mb-3" onClick={() => setShowDeleteDialog(true)}>
                             <i className="bi bi-trash me-2"></i> Удалить филиал
                         </button>
                     )}
 
                     {/* Invite Code Generator */}
-                    {dealerCastControl() &&
+                    {hasDealerCast &&
                         <InviteCodeGenerator branchId={selectBranch.id}/>}
 
                     {/* Participants */}

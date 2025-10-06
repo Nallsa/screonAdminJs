@@ -305,6 +305,8 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
                     newActiveBranches = [orgInfo.branches[0]]
                 }
 
+                console.log("newActiveBranches", newActiveBranches)
+
                 set({organizationInfo: orgInfo, hasOrg: true, activeBranches: newActiveBranches, role: orgInfo.role});
 
                 return true;
@@ -378,15 +380,33 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
     setSelectBranch: (branch: BranchDto) => {
         set({selectBranch: branch});
     },
+    // toggleActiveBranch: (branch) =>
+    //     set((state) => {
+    //         const isActive = state.activeBranches.some((b) => b.id === branch.id);
+    //         return {
+    //             activeBranches: isActive
+    //                 ? state.activeBranches.filter((b) => b.id !== branch.id)
+    //                 : [...state.activeBranches, branch],
+    //         };
+    //     }),
+
     toggleActiveBranch: (branch) =>
         set((state) => {
-            const isActive = state.activeBranches.some((b) => b.id === branch.id);
+            const current = state.activeBranches[0] ?? null
+            if (current?.id === branch.id) {
+                // Нельзя снять активный: оставляем как есть
+                return {
+                    activeBranches: [current],
+                    selectBranch: current,
+                }
+            }
+            // Переключаем на новый — всегда один активный
             return {
-                activeBranches: isActive
-                    ? state.activeBranches.filter((b) => b.id !== branch.id)
-                    : [...state.activeBranches, branch],
-            };
+                activeBranches: [branch],
+                selectBranch: branch,
+            }
         }),
+
 }));
 // Optional: Call getInfoOrg on init if needed, but typically call from component
 // useOrganizationStore.getState().getInfoOrg();

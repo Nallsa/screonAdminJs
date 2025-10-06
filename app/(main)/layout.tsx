@@ -18,6 +18,7 @@ import {usePathname, useRouter} from "next/navigation";
 import {useScreensStore} from "@/app/store/screensStore";
 import OrgCheckModal from "@/app/components/Common/OrgCheckModal";
 import {useOrganizationStore} from "@/app/store/organizationStore";
+import {useLicenseStore} from "@/app/store/licenseStore";
 
 export default function MainLayout({children}: { children: React.ReactNode }) {
     const {playlistItems, getPlaylists} = usePlaylistStore()
@@ -32,6 +33,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     } = useScreensStore(state => state)
     const {getSchedule, scheduledCalendarMap} = useScheduleStore();
     const {getInfoOrg, activeBranches} = useOrganizationStore();
+    const {getLicense} = useLicenseStore();
     const [showOrgModal, setShowOrgModal] = useState(false);
 
     const [collapsed, setCollapsed] = useState(true);
@@ -44,7 +46,6 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
         }
 
         async function init() {
-            console.log("dasdasdasasdasd")
             const resCheck = await checkToken();
 
             if (!resCheck) {
@@ -52,35 +53,11 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
                 return
             }
 
-
             const orgInfo = await getInfoOrg()
 
-            if (orgInfo) {
-                if (libraryItems.length == 0) {
-                    await getFilesInLibrary()
-                }
-
-                if (playlistItems.length === 0) {
-                    await getPlaylists()
-                }
-
-                if (allScreens.length == 0) {
-                    await getScreens()
-                    await getGroups()
-                    await requestStatusesForAll();
-                    startAutoStatusPolling()
-                }
-
-                const isScheduleEmpty =
-                    Object.keys(scheduledCalendarMap).length === 0;
-
-                if (isScheduleEmpty) {
-                    await getSchedule();
-                }
-            } else {
+            if (!orgInfo) {
                 router.push('/organization/createOrgElements?isBranch=false');
             }
-
         }
 
 
@@ -105,6 +82,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
 
         refetchTimerRef.current = window.setTimeout(async () => {
             try {
+                await getLicense()
                 await getScreens();
                 await getGroups();
                 await getPlaylists?.();

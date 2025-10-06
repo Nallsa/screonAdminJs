@@ -5,17 +5,16 @@
 
 'use client'
 
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation'
 import {useOrganizationStore} from "@/app/store/organizationStore";
 import {BranchDto, UserRole} from "@/public/types/interfaces";
 import {InitialsAvatar} from "@/app/components/Organization/Organization";
 import {Button} from "react-bootstrap";
 import {useAuthStore} from "@/app/store/authStore";
-import {LICENSE, licenseControl} from "@/app/store/settingsStore";
 import {WarningModal} from "@/app/components/Common/WarningModal";
 import ErrorModal from "@/app/components/Common/ErrorModal";
-import {dealerCastControl} from "@/app/store/licenseStore";
+import {dealerCastControl, useLicenseStore} from "@/app/store/licenseStore";
 
 export default function OrganizationPage() {
     const router = useRouter();
@@ -31,6 +30,8 @@ export default function OrganizationPage() {
         setSuccess,
         role
     } = useOrganizationStore();
+    const hasDealerCast = useLicenseStore(state => state.hasDealerCast)
+
 
     useEffect(() => {
         async function fetchOrg() {
@@ -90,7 +91,7 @@ export default function OrganizationPage() {
 
                         <div className="d-flex justify-content-between align-items-center mb-3 px-2">
                             <h5 className="mb-0">Филиалы</h5>
-                            {dealerCastControl() && UserRole.OWNER == role &&
+                            {hasDealerCast && UserRole.OWNER == role &&
                                 <button
                                     className="btn btn-primary rounded-pill px-3 py-1"
                                     onClick={() => router.push('/organization/createOrgElements?isBranch=true')} // Adjust route; assuming separate route for branch creation

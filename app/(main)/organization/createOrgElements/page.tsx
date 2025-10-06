@@ -10,6 +10,7 @@ import {useOrganizationStore} from "@/app/store/organizationStore";
 import React, {useState} from "react";
 import {WarningModal} from "@/app/components/Common/WarningModal";
 import ErrorModal from "@/app/components/Common/ErrorModal";
+import {UserRole} from "@/public/types/interfaces";
 
 export default function CreateOrgElementsPage() {
     const router = useRouter();
@@ -23,7 +24,7 @@ export default function CreateOrgElementsPage() {
         setError,
         setSuccess,
         successMessage,
-        errorMessage
+        errorMessage, role
     } = useOrganizationStore(); // Добавил joinBranch; если его нет в store, реализуйте
 
     const [mode, setMode] = useState<'create-org' | 'create-branch' | 'join-branch'>(initialIsBranch ? 'create-branch' : 'create-org');
@@ -210,17 +211,6 @@ export default function CreateOrgElementsPage() {
                             mode === 'create-branch' ? 'Создать филиал' : mode === 'join-branch' ? 'Подключиться' : 'Создать'
                         )}
                     </button>
-
-                    {/* Кнопка для переключения в режим подключения; показываем только если не в join-mode */}
-                    {mode !== 'join-branch' && (
-                        <button
-                            className="btn btn-outline-primary w-100 mb-2"
-                            onClick={handleSwitchToJoin}
-                            disabled={isSubmitting}
-                        >
-                            Или подключиться к филиалу по коду
-                        </button>
-                    )}
 
                     <button
                         className="btn btn-link w-100 text-muted"
