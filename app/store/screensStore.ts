@@ -63,7 +63,7 @@ interface ScreensState {
 
     // WS pairing
     connectWsForScreen: () => Promise<void>
-    addPairingConfirm: (code: string, branchId?: string) => Promise<void>
+    addPairingConfirm: (code: string, licenseKey: string, branchId?: string) => Promise<void>
 
     //Status
     statusByScreen: Record<string, StatusEntry>;
@@ -265,6 +265,8 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL
                 const userId = getValueInStorage("userId")
                 const accessToken = getValueInStorage("accessToken")
+
+                console.log(accessToken)
 
                 const {activeBranches} = useOrganizationStore.getState?.() ?? {
                     activeBranches: [] as Array<{
@@ -476,15 +478,15 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
         // ==== WS PAIRING ====
 
-        addPairingConfirm: async (code, branchId) => {
+        addPairingConfirm: async (code, licenseKey, branchId) => {
             try {
                 const userId = getValueInStorage("userId")
                 if (!userId) {
                     get().setError("Пользователь не авторизован. Пожалуйста, войдите в систему.")
                     return
                 }
-                // прокидываем branchId
-                sendConfirmPairing(code, userId, branchId || null)
+
+                sendConfirmPairing(code, licenseKey, userId, branchId || null)
             } catch (error: any) {
                 console.error("Ошибка при подтверждении пары:", error)
                 get().setError(error?.message || "Не удалось подтвердить код экрана")

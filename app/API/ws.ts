@@ -14,12 +14,12 @@ let sockets: Record<WSChannel, WebSocket | null> = {pairing: null, schedule: nul
 let reconnectAttempts: Record<WSChannel, number> = {pairing: 0, schedule: 0, status: 0};
 
 const heartbeatIds: Record<WSChannel, number | null> = {pairing: null, schedule: null, status: null};
-
+export const URL = process.env.NEXT_PUBLIC_WEB_SOCKETS_URL;
 
 const URLS: Record<WSChannel, string> = {
-    schedule: 'wss://admin.screon.ru/ws/schedule',
-    pairing: 'wss://admin.screon.ru/ws-pairing',
-    status: 'wss://admin.screon.ru/ws-status',
+    schedule: `wss://${URL}/ws/schedule`,
+    pairing: `wss://${URL}/ws-pairing`,
+    status: `wss://${URL}/ws-status`,
 };
 
 // const URLS: Record<WSChannel, string> = {
@@ -118,13 +118,13 @@ function scheduleReconnect(channel: WSChannel, onMessage: (a: string, p: any) =>
 }
 
 
-export function sendConfirmPairing(code: string, userId: string | null, branchId: string | null) {
+export function sendConfirmPairing(code: string, licenseKey: string, userId: string | null, branchId: string | null) {
     const ws = sockets.pairing;
     if (userId && ws?.readyState === WebSocket.OPEN) {
         ws.send(
             JSON.stringify({
                 action: "CONFIRM_PAIRING",
-                payload: {code, userId, branchId},
+                payload: {code, licenseKey, userId, branchId},
             })
         );
     } else {

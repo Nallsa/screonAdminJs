@@ -95,31 +95,41 @@ export default function PlaylistsPage() {
                 </div>
 
                 <div className="d-flex flex-wrap gap-3">
-                    {playlistItems.map((p) => (
+                    {playlistItems.length > 0 ? (
+                        playlistItems.map((p) => (
 
-                        <Link
-                            key={p.id}
-                            href={`/playlists/${p.id}`}
-                            onClick={() => handleEditPlaylist(p)}
-                            className="text-decoration-none"
-                        >
-                            <div
+                            <Link
                                 key={p.id}
-                                className="card shadow-sm"
-                                style={{width: 240, background: "white", borderRadius: 8, cursor: 'pointer',}}
+                                href={`/playlists/${p.id}`}
+                                onClick={() => handleEditPlaylist(p)}
+                                className="text-decoration-none"
                             >
+                                <div
+                                    key={p.id}
+                                    className="card shadow-sm"
+                                    style={{width: 240, background: "white", borderRadius: 8, cursor: 'pointer',}}
+                                >
 
-                                <PreviewImage id={p.filePreviewId as string} name={p.name} fill
-                                              aspectRatio={16 / 9}/>
+                                    <PreviewImage id={p.filePreviewId as string} name={p.name} fill
+                                                  aspectRatio={16 / 9}/>
 
 
-                                <div className="p-2">
-                                    <div style={{fontWeight: 500}}>{p.name}</div>
-                                    <div className="mt-1">🕒 {formatHMS(p.totalDurationSeconds)}</div>
+                                    <div className="p-2">
+                                        <div style={{fontWeight: 500}}>{p.name}</div>
+                                        <div className="mt-1">🕒 {formatHMS(p.totalDurationSeconds)}</div>
+                                    </div>
                                 </div>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        ))) : (
+                        <div className="w-100 d-flex justify-content-center py-5">
+      <span className="text-center">
+        У вас пока нет плейлистов
+        <br/>
+        Нажмите кнопку «Новый плейлист», чтобы продолжить
+      </span>
+                        </div>
+                    )}
+
                 </div>
             </div>
             <ErrorModal

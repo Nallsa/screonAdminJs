@@ -79,17 +79,17 @@ export default function ScreensPage() {
             alert('Пожалуйста, введите код экрана')
             return
         }
-        // if (!certificateCode) {
-        //     alert('Пожалуйста, введите сертификат')
-        //     return
-        // }
+        if (!certificateCode) {
+            alert('Пожалуйста, введите сертификат')
+            return
+        }
 
         if (!selectedBranchId) {
             alert("Пожалуйста, выберите филиал");
             return;
         }
 
-        addPairingConfirm(screenCode, selectedBranchId).then(r => setShowAddModal(false))
+        addPairingConfirm(screenCode, certificateCode, selectedBranchId).then(r => setShowAddModal(false))
     }
 
     // первичный фильтр
@@ -103,6 +103,16 @@ export default function ScreensPage() {
     }, [search, groupFilter, filterScreens])
 
 
+    const SCREEN_CODE_RE = /^[A-Z0-9]{8}$/;
+    const CERT_RE =
+        /^[A-Z0-9]{3}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{1,2}$/; // 3-4-4-4-(1|2)
+
+    const isScreenCodeValid = SCREEN_CODE_RE.test(screenCode);
+    const isBranchSelected = Boolean(selectedBranchId);
+    const isCertificateValid = CERT_RE.test(certificateCode);
+
+    const isFormValid = isScreenCodeValid && isBranchSelected && isCertificateValid;
+
     return (
         <div className="p-4">
             {/* Хедер */}
@@ -112,7 +122,6 @@ export default function ScreensPage() {
                         <h4 className="mb-0">Экраны</h4>
                     </div>
 
-                    {/* xs: col-12 на всю ширину; md+: auto и прижатие вправо */}
                     <div className="col-12 col-md-auto ms-md-auto d-grid d-sm-inline-flex gap-2">
                         <Button className="px-sm-4" variant="primary" onClick={handleOpenAddModal}>
                             Добавить экран
@@ -195,10 +204,14 @@ export default function ScreensPage() {
                             />
                         ))
                     ) :
-                    (<span style={{textAlign: 'center'}}>У вас пока нет экранов
-                    <br/>
-                       Нажмите кнопку Добавить экран, чтобы продолжить
-                    </span>)
+                    (<div className="w-100 d-flex justify-content-center py-5">
+      <span className="text-center">
+        У вас пока нет экранов
+        <br/>
+        Нажмите кнопку «Добавить экран», чтобы продолжить
+      </span>
+                        </div>
+                    )
                 }
             </div>
 
@@ -244,24 +257,37 @@ export default function ScreensPage() {
                         />
                     </Form.Group>
 
-                    {/*<Form.Group controlId="certificateCode" className="w-50">*/}
-                    {/*    <Form.Label>Код сертификата</Form.Label>*/}
-                    {/*    <Form.Control*/}
-                    {/*        className="mb-2"*/}
-                    {/*        size="sm"*/}
-                    {/*        type="text"*/}
-                    {/*        inputMode="text"*/}
-                    {/*        pattern="[A-Z0-9]*"*/}
-                    {/*        placeholder="XYZ789"*/}
-                    {/*        value={certificateCode}*/}
-                    {/*        onChange={(e) => {*/}
-                    {/*            const upper = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');*/}
-                    {/*            setCertificateCode(upper);*/}
-                    {/*        }}*/}
-                    {/*    />*/}
-                    {/*</Form.Group>*/}
+                    <Form.Group controlId="certificateCode" className="w-50">
+                        <Form.Label>Код сертификата</Form.Label>
+                        <Form.Control
+                            className="mb-2"
+                            size="sm"
+                            type="text"
+                            inputMode="text"
+                            placeholder="XXX-XXXX-XXXX-XXXX-XX"
+                            value={certificateCode}
+                            maxLength={21}
+                            pattern="^[A-Z0-9]{3}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{1,2}$"
+                            title="Формат: XXX-XXXX-XXXX-XXXX-X(…или XX)"
+                            onChange={(e) => {
+                                const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                                const parts = [3, 4, 4, 4, 2]; // последний блок — до 2 символов
+                                let i = 0, out = '', pos = 0;
 
-                    <Form.Group controlId="branchSelect" className="w-50 mt-3">
+                                while (i < parts.length && pos < raw.length) {
+                                    const take = raw.slice(pos, pos + parts[i]);
+                                    out += take;
+                                    pos += take.length;
+                                    if (take.length === parts[i] && i < parts.length - 1 && pos < raw.length) out += '-';
+                                    i++;
+                                }
+
+                                setCertificateCode(out);
+                            }}
+                        />
+                    </Form.Group>
+
+                    <Form.Group controlId="branchSelect" className="w-50">
                         <Form.Label>Филиал</Form.Label>
                         <Form.Select
                             size="sm"
@@ -277,14 +303,11 @@ export default function ScreensPage() {
                     </Form.Group>
                 </Modal.Body>
 
-                <Modal.Footer className="border-0 justify-content-center">
+                <Modal.Footer className="border-0 justify-content-center mt-2">
                     <Button
                         variant="success"
                         onClick={() => handleConfirmAdd()}
-                        disabled={screenCode.length !== 8
-                            || !selectedBranchId
-                            // || certificateCode.length !== 8
-                        }
+                        disabled={!isFormValid}
                     >
                         Добавить экран
                     </Button>

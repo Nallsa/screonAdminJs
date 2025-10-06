@@ -12,6 +12,7 @@ import {ScheduledBlock, TypeMode} from "@/public/types/interfaces";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScreensStore} from "@/app/store/screensStore";
 import {Button, Form, Modal} from "react-bootstrap";
+import {Grade, licenseControl} from "@/app/store/licenseStore";
 // подготавливаем метаданные для позиционирования
 type Meta = {
     screenId: string
@@ -648,18 +649,23 @@ export default function EditableScheduleTable() {
                                     ))}
                                 </Form.Select>
                             </Form.Group>
-                            {editTypeMode === 'PLAYLIST' ? (
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Приоритет</Form.Label>
-                                    <Form.Select value={editPriority} onChange={e => setEditPriority(+e.target.value)}>
-                                        {Array.from({length: 10}, (_, i) => i + 1).map(n => (
-                                            <option key={n} value={n}>{n}</option>
-                                        ))}
-                                    </Form.Select>
-                                </Form.Group>
-                            ) : (
-                                <div className="mb-3">Высокий приоритет у рекламы</div>
-                            )}
+                            {licenseControl([Grade.PRO]) &&
+                                (
+                                    editTypeMode === 'PLAYLIST' ? (
+                                        <Form.Group className="mb-3">
+                                            <Form.Label>Приоритет</Form.Label>
+                                            <Form.Select value={editPriority}
+                                                         onChange={e => setEditPriority(+e.target.value)}>
+                                                {Array.from({length: 10}, (_, i) => i + 1).map(n => (
+                                                    <option key={n} value={n}>{n}</option>
+                                                ))}
+                                            </Form.Select>
+                                        </Form.Group>
+                                    ) : (
+                                        <div className="mb-3">Высокий приоритет у рекламы</div>
+                                    )
+                                )
+                            }
                         </Form>
                     </Modal.Body>
                     <Modal.Footer className="justify-content-center gap-3 border-0">
