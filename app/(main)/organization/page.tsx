@@ -15,6 +15,7 @@ import {useAuthStore} from "@/app/store/authStore";
 import {LICENSE, licenseControl} from "@/app/store/settingsStore";
 import {WarningModal} from "@/app/components/Common/WarningModal";
 import ErrorModal from "@/app/components/Common/ErrorModal";
+import {dealerCastControl} from "@/app/store/licenseStore";
 
 export default function OrganizationPage() {
     const router = useRouter();
@@ -39,7 +40,10 @@ export default function OrganizationPage() {
             }
         }
 
-        fetchOrg();
+
+        if(!organizationInfo) {
+            fetchOrg();
+        }
     }, [getInfoOrg, router]);
 
     const signOut = useAuthStore(s => s.signOut)
@@ -86,7 +90,7 @@ export default function OrganizationPage() {
 
                         <div className="d-flex justify-content-between align-items-center mb-3 px-2">
                             <h5 className="mb-0">Филиалы</h5>
-                            {licenseControl([LICENSE.ULTIMATE]) && UserRole.OWNER == role &&
+                            {dealerCastControl() && UserRole.OWNER == role &&
                                 <button
                                     className="btn btn-primary rounded-pill px-3 py-1"
                                     onClick={() => router.push('/organization/createOrgElements?isBranch=true')} // Adjust route; assuming separate route for branch creation

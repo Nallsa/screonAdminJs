@@ -38,20 +38,6 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const router = useRouter()
 
     useEffect(() => {
-        async function fetchOrg() {
-            const success = await getInfoOrg();
-
-            if (!success) {
-                router.push('/organization/createOrgElements?isBranch=false');
-            } else {
-                router.push('/screens'); // редиректим
-            }
-        }
-
-        fetchOrg();
-    }, []);
-
-    useEffect(() => {
 
         if (typeof window !== 'undefined' && window.matchMedia('(min-width: 992px)').matches) {
             setCollapsed(false);

@@ -11,6 +11,7 @@ import {getValueInStorage} from "@/app/API/localStorage";
 import {useSettingsStore} from "@/app/store/settingsStore";
 import {FaBars} from "react-icons/fa";
 import {useOrganizationStore} from "@/app/store/organizationStore";
+import {Grade, useLicenseStore} from "@/app/store/licenseStore";
 
 interface Props {
     collapsed: boolean
@@ -29,9 +30,45 @@ const navItems = [
     {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
 
 ];
+
+
+
+function mapHrefToTab(href: string) {
+    if (href.startsWith('/org')) return 'org'
+    if (href.startsWith('/settings')) return 'settings'
+    if (href.startsWith('/screens')) return 'screens'
+    if (href.startsWith('/emergency')) return 'emergency'
+    return 'other'
+}
+
+function isTabEnabled(hasOrg: boolean, grade: Grade, href: string): boolean {
+    const tab = mapHrefToTab(href)
+    const isOrgTab = tab === 'org'
+    const isSettingsTab = tab === 'settings'
+    const isScreensTab = tab === 'screens'
+    const isEmergencyTab = tab === 'emergency'
+
+    // 1) Нет организации — только "Организации"
+    if (!hasOrg) return isOrgTab
+
+    // 2) Правила по грейдам
+    switch (grade) {
+        case Grade.NONE:
+            return isOrgTab || isSettingsTab || isScreensTab
+        case Grade.BASE:
+            return !isEmergencyTab
+        case Grade.PRO:
+            return true
+        default:
+            return false
+    }
+}
+
+
 export default function Sidebar({collapsed, onToggle, className = ''}: Props) {
     const pathname = usePathname();
     const hasOrg = useOrganizationStore(state => state.hasOrg);
+    const screenLicense = useLicenseStore(s => s.screenLicense)
 
     if (pathname.startsWith('/auth')) {
         return null;
@@ -86,31 +123,29 @@ export default function Sidebar({collapsed, onToggle, className = ''}: Props) {
                 </button>
             </div>
 
-            {navItems.map(({href, label, icon}) => {
-                const active = pathname === href;
+            {navItems.map(({ href, label, icon }) => {
+                const enabled = isTabEnabled(hasOrg, screenLicense, href)
+                const active = enabled && (pathname === href)
 
                 return (
-                    // кнопки навигации
                     <Link
                         key={href}
                         href={href}
                         onClick={(e) => {
-                            if (!hasOrg) {
-                                e.preventDefault(); // Prevent navigation if hasOrg is false
-                            }
+                            if (!enabled) e.preventDefault()
                         }}
                         className={
                             'text-decoration-none d-flex align-items-center py-3 ' +
-                            (active && hasOrg ? 'bg-light fw-bold text-dark' : 'text-secondary') +
-                            (!hasOrg ? ' disabled' : '')
+                            (active ? 'bg-light fw-bold text-dark' : 'text-secondary') +
+                            (!enabled ? ' disabled' : '')
                         }
                         style={{
                             textDecoration: 'none',
                             paddingLeft: collapsed ? '0.75rem' : '1.2rem',
                             paddingRight: collapsed ? '0.75rem' : '1.2rem',
                             transition: 'padding 0.3s ease-in-out',
-                            pointerEvents: hasOrg ? 'auto' : 'none', // Disable pointer events if hasOrg is false
-                            opacity: hasOrg ? 1 : 0.5, // Visual cue for disabled state
+                            pointerEvents: enabled ? 'auto' : 'none',
+                            opacity: enabled ? 1 : 0.5,
                         }}
                     >
                         <i className={`${icon} fs-5`}></i>
@@ -123,15 +158,13 @@ export default function Sidebar({collapsed, onToggle, className = ''}: Props) {
                                 overflow: 'hidden',
                                 whiteSpace: 'nowrap',
                                 opacity: collapsed ? 0 : 1,
-                                transition:
-                                    'width .3s ease-in-out, ' +
-                                    'opacity .3s ease-in-out .1s'
+                                transition: 'width .3s ease-in-out, opacity .3s ease-in-out .1s'
                             }}
                         >
-                            {label}
-                        </span>
+        {label}
+      </span>
                     </Link>
-                );
+                )
             })}
         </div>
     );

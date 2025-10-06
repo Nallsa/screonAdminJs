@@ -12,6 +12,7 @@ import {useOrganizationStore} from '@/app/store/organizationStore';
 import {useEffect, useState} from "react";
 import {BranchDto, MemberDto, UserRole} from "@/public/types/interfaces";
 import {LICENSE, licenseControl} from "@/app/store/settingsStore";
+import {dealerCastControl} from "@/app/store/licenseStore";
 
 
 export default function OrgBranchPage() {
@@ -90,7 +91,7 @@ export default function OrgBranchPage() {
                     )}
 
                     {/* Invite Code Generator */}
-                    {licenseControl([LICENSE.ADVANCED, LICENSE.ULTIMATE]) &&
+                    {dealerCastControl() &&
                         <InviteCodeGenerator branchId={selectBranch.id}/>}
 
                     {/* Participants */}
