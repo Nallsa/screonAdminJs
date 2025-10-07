@@ -7,7 +7,7 @@
 import React, {useEffect} from 'react'
 import ScheduleHeader from '@/app/components/Schedule/ScheduleHeader'
 import ScheduleSettingsPanel from '@/app/components/Schedule/Settings/ScheduleSettingsPanel'
-import EditableScheduleTable from '@/app/components/Schedule/EditableScheduleTable'
+import EditableScheduleTable from '@/app/components/Schedule/Table/EditableScheduleTable'
 import {useAuthStore} from "@/app/store/authStore";
 import {connectWebSocket} from "@/app/API/ws";
 import {useScheduleStore} from "@/app/store/scheduleStore";

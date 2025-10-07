@@ -214,7 +214,8 @@ export default function EditableScheduleTable() {
         if (!editingMeta) return
         const b = editingMeta.block
         setEditStart(b.startTime.slice(0, 5))
-        setEditEnd(b.endTime.slice(0, 5))
+        const end5 = b.endTime.slice(0, 5)
+        setEditEnd(end5 === '24:00' ? '00:00' : end5)
         setEditPlaylist(b.playlistId)
         setEditPriority(b.priority)
         setEditScreens([editingMeta.screenId])
@@ -250,7 +251,10 @@ export default function EditableScheduleTable() {
     const canSave = () => {
         if (!editingMeta) return false
         if (!editStart || !editEnd) return false
-        if (editTypeMode === 'PLAYLIST' && editShowMode === 'cycle') {
+        const isFullDay = editTypeMode === 'PLAYLIST' && editShowMode === 'cycle'
+            && editStart === '00:00' && editEnd === '00:00'
+
+        if (editTypeMode === 'PLAYLIST' && editShowMode === 'cycle' && !isFullDay) {
             if (editStart >= editEnd) return false
         }
         if (!playlistItems.some(p => p.id === editPlaylist)) return false
@@ -385,14 +389,20 @@ export default function EditableScheduleTable() {
     const onSave = () => {
         if (!validateAndSetError()) return
 
+        const isFullDay = editTypeMode === 'PLAYLIST' && editShowMode === 'cycle'
+            && editStart === '00:00' && editEnd === '00:00'
+
+        const startStr = `${editStart}:00`
+        const endStr = isFullDay ? '24:00:00' : `${editEnd}:00`
+
         removeBlock(editingMeta!.screenId, editingMeta!.block)
         editScreens.forEach(screenId =>
             addEditedBlock(screenId, {
                 ...editingMeta!.block,
                 type: editTypeMode,
                 isRecurring: editTypeMode === 'PLAYLIST' && editShowMode === 'cycle',
-                startTime: editStart + ':00',
-                endTime: editEnd + ':00',
+                startTime: startStr,
+                endTime: endStr,
                 playlistId: editPlaylist,
                 priority: editPriority,
                 branchId: editingMeta!.block.branchId,

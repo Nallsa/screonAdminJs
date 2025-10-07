@@ -497,6 +497,12 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             try {
                 connectWebSocket(`pairing`, (action, payload) => {
 
+                    const getMsg = () =>
+                        payload?.message ??
+                        payload?.error ??
+                        payload?.reason ??
+                        (typeof payload === 'string' ? payload : null);
+
                     switch (action) {
                         case 'PAIRING_CONFIRMED':
 
@@ -515,6 +521,13 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                                 state.errorMessage = null;
                             });
                             break;
+
+                        case 'ERROR': {
+                            const msg = getMsg() ?? 'Не удалось добавить экран';
+                            get().setError(msg);
+                            break;
+                        }
+
                     }
                 });
 

@@ -607,7 +607,11 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 }
 
                 const startMin = hhmmToMinutes(playlistStart)
-                const endMin = hhmmToMinutes(playlistEnd)
+                let endMin = hhmmToMinutes(playlistEnd)
+
+
+                const isFullDay = showMode === 'cycle' && playlistStart === '00:00' && playlistEnd === '00:00'
+                if (isFullDay) endMin = 24 * 60
 
 
                 for (const screenId of screens) {
@@ -738,6 +742,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         ...Object.keys(scheduledCalendarMap || {}),
                     ])
                 );
+                const toHHmm = (t: string) => t.startsWith('24:00') ? '23:59' : t.slice(0, 5)
 
                 // нормализация тайм-слотов для отправки
                 const toSlots = (
@@ -749,8 +754,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         dayOfWeek: b.dayOfWeek,
                         startDate: fixed ? null : b.startDate,
                         endDate: fixed ? null : b.endDate,
-                        startTime: (b.startTime ?? '').slice(0, 5), // "HH:mm"
-                        endTime: (b.endTime ?? '').slice(0, 5),
+                        startTime: toHHmm(b.startTime),
+                        endTime: toHHmm(b.endTime),
                         playlistId: b.playlistId,
                         isRecurring: b.isRecurring,
                         priority: b.priority,
