@@ -48,7 +48,7 @@ function isTabEnabled(hasOrg: boolean, grade: Grade, href: string): boolean {
     const isEmergencyTab = tab === 'emergency'
 
     // 1) Нет организации — только "Организации"
-    if (!hasOrg) return isOrgTab
+    if (!hasOrg) return  isOrgTab || isSettingsTab
 
     // 2) Правила по грейдам
     switch (grade) {

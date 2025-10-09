@@ -132,22 +132,25 @@ export default function CreateOrgElementsPage() {
                     <p className="text-center text-muted mb-4">{subtitle}</p>
 
                     {mode === 'create-org' ? (
-                        <div className="mb-3">
-                            <label htmlFor="orgName" className="form-label">Название организации</label>
-                            <input
-                                type="text"
-                                className={`form-control ${localError && !name.trim() ? 'is-invalid' : ''}`}
-                                id="orgName"
-                                placeholder="Например, Aurora Studio"
-                                value={name}
-                                onChange={(e) => {
-                                    setName(e.target.value);
-                                    if (localError) setLocalError(null);
-                                }}
-                            />
-                            {localError && !name.trim() &&
-                                <div className="invalid-feedback">Введите название организации</div>}
-                        </div>
+                        <>
+                            <div className="mb-3">
+                                <label htmlFor="orgName" className="form-label">Название организации</label>
+                                <input
+                                    type="text"
+                                    className={`form-control ${localError && !name.trim() ? 'is-invalid' : ''}`}
+                                    id="orgName"
+                                    placeholder="Например, Aurora Studio"
+                                    value={name}
+                                    onChange={(e) => {
+                                        setName(e.target.value);
+                                        if (localError) setLocalError(null);
+                                    }}
+                                />
+                                {localError && !name.trim() &&
+                                    <div className="invalid-feedback">Введите название организации</div>}
+                            </div>
+
+                        </>
                     ) : mode === 'create-branch' ? (
                         <>
                             <div className="mb-3">
@@ -211,6 +214,34 @@ export default function CreateOrgElementsPage() {
                             mode === 'create-branch' ? 'Создать филиал' : mode === 'join-branch' ? 'Подключиться' : 'Создать'
                         )}
                     </button>
+
+
+                    {mode === 'create-org' && (
+                        <button
+                            type="button"
+                            className="btn btn-outline-secondary w-100 mb-2"
+                            onClick={() => setMode('join-branch')}
+                            disabled={isSubmitting} // чтобы не переключали режим во время сабмита
+                            style={{height: '52px', borderRadius: '16px'}}
+                            aria-label="Перейти к подключению к филиалу"
+                        >
+                            Присоединиться к организации
+                        </button>
+                    )}
+
+                    {mode === 'join-branch' && (
+                        <button
+                            type="button"
+                            className="btn btn-outline-secondary w-100 mb-2"
+                            onClick={() => setMode('create-org')}
+                            disabled={isSubmitting} // чтобы не переключали режим во время сабмита
+                            style={{height: '52px', borderRadius: '16px'}}
+                            aria-label="Вернутся к созданию организцаии"
+                        >
+                            Вернутся к созданию организцаии
+                        </button>
+                    )}
+
 
                     <button
                         className="btn btn-link w-100 text-muted"

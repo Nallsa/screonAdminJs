@@ -163,8 +163,9 @@ export const useOrganizationStore = create<OrganizationState>((set, get) => ({
             const json: OrganizationDto = JSON.parse(responseText);
 
             addValueInStorage('organizationId', json.id);
-            set({hasOrg: true, organizationInfo: json}); // Update state directly
+            set({hasOrg: true, organizationInfo: json, activeBranches: [json.branches[0]]}); // Update state directly
 
+            
 
             const store = useAuthStore.getState(); // Access active branches from the other store
 

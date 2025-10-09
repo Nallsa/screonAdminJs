@@ -36,6 +36,7 @@ export default function OrganizationPage() {
     useEffect(() => {
         async function fetchOrg() {
             const success = await getInfoOrg();
+
             if (!success) {
                 router.push('/organization/createOrgElements?isBranch=false');
             }
@@ -69,6 +70,8 @@ export default function OrganizationPage() {
             </div>
         );
     }
+
+
     return (
         <>
             <div className="container py-4">
@@ -87,8 +90,6 @@ export default function OrganizationPage() {
                         </div>
 
                         {/* Branches section */}
-
-
                         <div className="d-flex justify-content-between align-items-center mb-3 px-2">
                             <h5 className="mb-0">Филиалы</h5>
                             {hasDealerCast && UserRole.OWNER == role &&

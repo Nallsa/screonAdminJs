@@ -21,6 +21,8 @@ import {useOrganizationStore} from "@/app/store/organizationStore";
 import {useLicenseStore} from "@/app/store/licenseStore";
 
 export default function MainLayout({children}: { children: React.ReactNode }) {
+    const pathname = usePathname();
+
     const {playlistItems, getPlaylists} = usePlaylistStore()
     const {checkToken, isAuthenticated, loading} = useAuthStore()
     const {libraryItems, getFilesInLibrary} = useLibraryStore(state => state)
@@ -53,16 +55,19 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
                 return
             }
 
-            const orgInfo = await getInfoOrg()
+            if(pathname.startsWith('/settings')) return
 
-            if (!orgInfo) {
-                router.push('/organization/createOrgElements?isBranch=false');
-            }
+            // const orgInfo = await getInfoOrg()
+            //
+            // if (!orgInfo) {
+            //     router.push('/organization/createOrgElements?isBranch=false');
+            // }
         }
 
 
         init()
     }, [])
+
 
     const branchesKey = useMemo(
         () => (activeBranches || []).map(b => b.id).sort().join(","),
@@ -73,7 +78,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const refetchTimerRef = useRef<number | null>(null);
 
     useEffect(() => {
-        if (!activeBranches) return;
+        if (activeBranches.length == 0) return;
 
         if (refetchTimerRef.current !== null) {
             window.clearTimeout(refetchTimerRef.current);
