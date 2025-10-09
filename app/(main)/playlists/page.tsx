@@ -168,7 +168,10 @@ export default function PlaylistsPage() {
             <ErrorModal
                 show={!!errorMessage || !!bgErrorMessage}
                 message={errorMessage || bgErrorMessage || ''}
-                onClose={() => setError(null) || setBgError(null)}
+                onClose={() => {
+                    setError(null);
+                    setBgError(null);
+                }}
             />
             {/*<WarningModal*/}
             {/*    show={!!bgSuccessMessage}*/}
