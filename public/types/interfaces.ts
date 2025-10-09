@@ -10,6 +10,10 @@ export interface PlaylistItem {
     totalDurationSeconds: number;
 }
 
+export type BackgroundInfo = {
+    playlistId: string | null
+    configured: boolean
+}
 
 export interface FileItem {
     id: string

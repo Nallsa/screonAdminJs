@@ -18,6 +18,10 @@ import {connectWebSocket} from "@/app/API/ws";
 import ErrorModal from "@/app/components/Common/ErrorModal";
 import PreviewImage from "@/app/components/Common/PreviewImage";
 import {useOrganizationStore} from "@/app/store/organizationStore";
+import BackgroundPickerButton from "@/app/components/Playlist/BackgroundPickerButton";
+import {useScreensStore} from "@/app/store/screensStore";
+import {useScheduleStore} from "@/app/store/scheduleStore";
+import {WarningModal} from "@/app/components/Common/WarningModal";
 
 
 export default function PlaylistsPage() {
@@ -25,14 +29,23 @@ export default function PlaylistsPage() {
         playlistItems, getPlaylists, addPlaylist, setPlaylistToEdit, setPlaylistToCreate, errorMessage,
         setError
     } = usePlaylistStore()
+    const {
+        bgErrorMessage,
+        bgSuccessMessage,
+        setBgError,
+        setBgSuccess
+    } = useScheduleStore()
     const router = useRouter()
-    const activeBranches = useOrganizationStore(state => state.activeBranches)
+    const branchId = useOrganizationStore(state => state.activeBranches[0]?.id)
 
+    const backgroundPlaylistId = useScheduleStore(
+        s => s.backgroundByBranch?.[branchId || '']?.playlistId ?? null
+    )
 
-    // useEffect(() => {
-    //     getPlaylists()
-    // }, [activeBranches.length])
-
+    const resolveBackgroundForBranch = useScheduleStore(s => s.resolveBackground)
+    useEffect(() => {
+        if (branchId) resolveBackgroundForBranch?.(branchId)
+    }, [branchId, resolveBackgroundForBranch])
 
     const handleNewPlaylist = () => {
         const userId = getValueInStorage('userId')!;
@@ -83,6 +96,7 @@ export default function PlaylistsPage() {
                         </div>
 
                         <div className="col-12 col-md-auto ms-md-auto d-grid d-sm-inline-flex gap-2">
+                            {branchId && <BackgroundPickerButton branchId={branchId}/>}
                             <Button
                                 className="px-sm-4 w-100 w-sm-auto"
                                 variant="primary"
@@ -105,17 +119,36 @@ export default function PlaylistsPage() {
                                 className="text-decoration-none"
                             >
                                 <div
-                                    key={p.id}
-                                    className="card shadow-sm"
-                                    style={{width: 240, background: "white", borderRadius: 8, cursor: 'pointer',}}
+                                    className="card shadow-sm position-relative" // ⬅️ позиционируем для бейджа
+                                    style={{width: 260, background: "white", borderRadius: 8, cursor: 'pointer'}}
                                 >
+                                    {/* Бейдж Фон */}
+                                    {backgroundPlaylistId === p.id && (
+                                        <Badge
+                                            bg="warning"
+                                            text="dark"
+                                            className="position-absolute"
+                                            style={{top: 8, left: 8, zIndex: 2}}
+                                        >
+                                            Фоновый
+                                        </Badge>
+                                    )}
 
                                     <PreviewImage id={p.filePreviewId as string} name={p.name} fill
                                                   aspectRatio={16 / 9}/>
 
-
                                     <div className="p-2">
-                                        <div style={{fontWeight: 500}}>{p.name}</div>
+                                        <div
+                                            style={{
+                                                fontWeight: 500,
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                maxWidth: '100%',
+                                            }}
+                                        >
+                                            {p.name}
+                                        </div>
                                         <div className="mt-1">🕒 {formatHMS(p.totalDurationSeconds)}</div>
                                     </div>
                                 </div>
@@ -133,10 +166,17 @@ export default function PlaylistsPage() {
                 </div>
             </div>
             <ErrorModal
-                show={!!errorMessage}
-                message={errorMessage || ''}
-                onClose={() => setError(null)}
+                show={!!errorMessage || !!bgErrorMessage}
+                message={errorMessage || bgErrorMessage || ''}
+                onClose={() => setError(null) || setBgError(null)}
             />
+            {/*<WarningModal*/}
+            {/*    show={!!bgSuccessMessage}*/}
+            {/*    title="Готово"*/}
+            {/*    message={bgSuccessMessage || ''}*/}
+            {/*    buttonText="Ок"*/}
+            {/*    onClose={() => setBgSuccess(null)}*/}
+            {/*/>*/}
         </>
     )
 }

@@ -19,12 +19,17 @@ export default function WhenToShowCard() {
         toggleDay,
     } = useScheduleStore()
 
+    const setFullDay = () => {
+        setStartTime('00:00')
+        setEndTime('00:00')
+    }
+    const isFullDay = (startTime === '00:00' && endTime === '00:00')
+
     return (
         <Card>
             <Card.Header>Когда показывать</Card.Header>
             <Card.Body>
 
-                {/* xs: вертикально; sm+: как раньше, горизонтально через InputGroup */}
                 <div className="d-grid gap-2 d-sm-none mb-3">
                     <Form.Group>
                         <Form.Label className="mb-1">С</Form.Label>
@@ -53,33 +58,47 @@ export default function WhenToShowCard() {
                     </Form.Group>
                 </div>
 
-                <InputGroup className="d-none d-sm-flex mb-3" style={{maxWidth: 300}}>
-                    <InputGroup.Text>С</InputGroup.Text>
-                    <Form.Control
-                        type="time"
-                        value={startTime || ''}
-                        onChange={e => {
-                            const t = e.target.value
-                            setStartTime(t)
-                            if (endTime < t) setEndTime(t)
-                        }}
-                        max={endTime}
-                    />
-                    <InputGroup.Text>До</InputGroup.Text>
-                    <Form.Control
-                        type="time"
-                        value={endTime || ''}
-                        onChange={e => {
-                            const t = e.target.value
-                            if (t >= startTime) setEndTime(t)
-                        }}
-                        min={startTime}
-                    />
-                </InputGroup>
+                <div className="d-flex flex-row mb-2 justify-content-center">
+                    <InputGroup className="d-none d-sm-flex mb-3" style={{maxWidth: 350}}>
+                        <InputGroup.Text>С</InputGroup.Text>
+                        <Form.Control
+                            type="time"
+                            value={startTime || ''}
+                            onChange={e => {
+                                const t = e.target.value
+                                setStartTime(t)
+                                if (endTime < t) setEndTime(t)
+                            }}
+                            max={endTime}
+                        />
+                        <InputGroup.Text>До</InputGroup.Text>
+                        <Form.Control
+                            type="time"
+                            value={endTime || ''}
+                            onChange={e => {
+                                const t = e.target.value
+                                if (t >= startTime) setEndTime(t)
+                            }}
+                            min={startTime}
+                        />
+
+                    </InputGroup>
+
+
+                    <Button
+                        variant={isFullDay ? 'success' : 'outline-secondary'}
+                        onClick={setFullDay}
+                        className="text-nowrap w-auto flex-shrink-0"
+                        style={{whiteSpace: 'nowrap', height: 38, marginLeft: 12}}
+                    >
+                        Полный&nbsp;день {isFullDay ? '✓' : ''}
+                    </Button>
+                </div>
+
 
                 {/* Дни недели */}
                 <Col xs="auto">
-                    {/* xs: равные кнопки сеткой 4хN */}
+
                     <div
                         className="d-grid d-sm-none"
                         style={{gridTemplateColumns: 'repeat(4, 1fr)', gap: 8}}
@@ -96,8 +115,7 @@ export default function WhenToShowCard() {
                         ))}
                     </div>
 
-                    {/* sm+: как раньше — компактные кнопки, переносятся при нехватке места */}
-                    <div className="d-none d-sm-flex flex-wrap gap-2">
+                    <div className="d-none d-sm-flex flex-wrap gap-2 justify-content-center">
                         {RU_DAYS.map(d => (
                             <Button
                                 key={d}

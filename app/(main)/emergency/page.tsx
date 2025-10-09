@@ -31,10 +31,10 @@ export default function EmergencyPage() {
         start,
         cancel,
         getByOrganization,
-        successMessage,
-        errorMessage,
-        setSuccess,
-        setError,
+        emgErrorMessage,
+        emgSuccessMessage,
+        setEmgError,
+        setEmgSuccess,
         scenarios,
         createScenario,
         startScenario,
@@ -228,11 +228,11 @@ export default function EmergencyPage() {
 
                     // валидация
                     if (!selectedPlaylistObj) {
-                        setError('Выберите плейлист');
+                        setEmgError('Выберите плейлист');
                         return
                     }
                     if (screensToUse.length === 0 && !selectedGroup) {
-                        setError('Выберите экраны или группу');
+                        setEmgError('Выберите экраны или группу');
                         return
                     }
 
@@ -251,7 +251,7 @@ export default function EmergencyPage() {
                         const byId = new Map(allScreens.map(s => [s.id, s.name]))
                         const names = conflict.slice(0, 5).map(id => byId.get(id) || id).join(', ')
                         const more = conflict.length > 5 ? ` и ещё ${conflict.length - 5}` : ''
-                        setError(`Нельзя запустить экстренное. Уже заняты экраны: ${names}${more}.`)
+                        setEmgError(`Нельзя запустить экстренное. Уже заняты экраны: ${names}${more}.`)
                         return
                     }
 
@@ -271,15 +271,15 @@ export default function EmergencyPage() {
                 onHide={() => setShowScenarioModal(false)}
                 onSubmit={async (name, recurring, groups) => {
                     if (!orgId) {
-                        setError('Не выбрана организация');
+                        setEmgError('Не выбрана организация');
                         return
                     }
                     if (!name.trim()) {
-                        setError('Введите название сценария');
+                        setEmgError('Введите название сценария');
                         return
                     }
                     if (groups.length === 0) {
-                        setError('Добавьте хотя бы одну группу');
+                        setEmgError('Добавьте хотя бы одну группу');
                         return
                     }
 
@@ -288,7 +288,7 @@ export default function EmergencyPage() {
                     for (const g of groups) {
                         for (const id of g.screens) {
                             if (seen.has(id)) {
-                                setError('Экраны в группах сценария не должны пересекаться');
+                                setEmgError('Экраны в группах сценария не должны пересекаться');
                                 return
                             }
                             seen.add(id)
@@ -307,16 +307,16 @@ export default function EmergencyPage() {
 
             {/* уведомления */}
             <WarningModal
-                show={!!successMessage}
+                show={!!emgSuccessMessage}
                 title="Готово"
-                message={successMessage || ''}
+                message={emgSuccessMessage || ''}
                 buttonText="Ок"
-                onClose={() => setSuccess(null)}
+                onClose={() => setEmgSuccess(null)}
             />
             <ErrorModal
-                show={!!errorMessage}
-                message={errorMessage || ''}
-                onClose={() => setError(null)}
+                show={!!emgErrorMessage}
+                message={emgErrorMessage || ''}
+                onClose={() => setEmgError(null)}
             />
         </div>
     )

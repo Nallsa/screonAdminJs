@@ -12,7 +12,6 @@ import {useScreensStore} from '@/app/store/screensStore'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import WhereToShowCard from '@/app/components/Schedule/Settings/WhereToShowCard'
 import PlaylistSelect from '@/app/components/Schedule/Settings/Playlist/PlaylistSelect'
-import {useSettingsStore} from "@/app/store/settingsStore";
 import {useOrganizationStore} from "@/app/store/organizationStore";
 
 export function ScenarioCreateModal({
@@ -31,8 +30,8 @@ export function ScenarioCreateModal({
     const {allScreens} = useScreensStore()
     const {
         selectedScreens, selectedGroup, selectedPlaylist,
-        emergency, // активные экстренные
-        scenarios,  // список сценариев
+        emergency,
+        scenarios,
         createScenario,
     } = useScheduleStore()
 
@@ -48,7 +47,7 @@ export function ScenarioCreateModal({
         [allScreens, selectedGroup, selectedScreens]
     )
 
-    // Активное экстренное → запрет запуска сценария (точной инфы о пересечении может не быть)
+    // Активное экстренное
     const hasActiveEmergency = useMemo(() => emergency.length > 0, [emergency])
 
     const addCurrentSelection = () => {
@@ -227,18 +226,20 @@ export function ScenarioCreateModal({
                 </div>
             </Modal.Body>
             <Modal.Footer className="w-100">
-                {/* Мобилка: 100%-кнопки столбиком */}
+
                 <div className="d-grid gap-2 w-100 d-sm-none">
                     <Button className="w-100" variant="secondary" onClick={onHide}>Отмена</Button>
                     <Button className="w-100" variant="success" onClick={addCurrentSelection}>Добавить группу</Button>
-                    <Button className="w-100" variant="primary" onClick={handleSubmit}>Создать сценарий</Button>
+                    <Button disabled={groups.length < 1} className="w-100" variant="primary" onClick={handleSubmit}>Создать
+                        сценарий</Button>
                 </div>
 
-                {/* ≥ sm: в ряд справа */}
+
                 <div className="d-none d-sm-flex justify-content-sm-between w-100 gap-2 ms-sm-auto">
                     <Button variant="secondary" onClick={onHide}>Отмена</Button>
                     <Button variant="success" onClick={addCurrentSelection}>Добавить группу</Button>
-                    <Button variant="primary" onClick={handleSubmit}>Создать сценарий</Button>
+                    <Button disabled={groups.length < 1} variant="primary" onClick={handleSubmit}>Создать
+                        сценарий</Button>
                 </div>
             </Modal.Footer>
         </Modal>

@@ -12,7 +12,13 @@ import {
     parseDayToDate,
     normalizeTime, RU_DAYS, WEEK_DAYS, dateToIsoLocal
 } from '@/app/lib/scheduleUtils'
-import {PlaylistItem, ScheduledBlock, ScreenData, TypeMode} from "@/public/types/interfaces";
+import {
+    BackgroundInfo,
+    PlaylistItem,
+    ScheduledBlock,
+    ScreenData,
+    TypeMode
+} from "@/public/types/interfaces";
 import axios from "axios";
 import {SERVER_URL} from "@/app/API/api";
 import {getValueInStorage} from "@/app/API/localStorage";
@@ -126,10 +132,23 @@ interface ScheduleState {
     setStartTime: (t: string) => void
     setEndTime: (t: string) => void
 
-    successMessage: string | null,
-    setSuccess: (msg: string | null) => void,
+    // общие (для расписаний)
+    successMessage: string | null
+    setSuccess: (msg: string | null) => void
     errorMessage: string | null
     setError: (msg: string | null) => void
+
+    //  экстренные/сценарии
+    emgSuccessMessage: string | null
+    setEmgSuccess: (msg: string | null) => void
+    emgErrorMessage: string | null
+    setEmgError: (msg: string | null) => void
+
+    //  фон
+    bgSuccessMessage: string | null
+    setBgSuccess: (msg: string | null) => void
+    bgErrorMessage: string | null
+    setBgError: (msg: string | null) => void
 
     sendSchedule: () => Promise<void>
     getSchedule: () => Promise<void>
@@ -141,7 +160,6 @@ interface ScheduleState {
     // === emergency  ===
     emergency: Emergency[]
     currentScreenEmergency: EmergencyScreenState | null
-    error: string | null
 
     start: (
         args:
@@ -167,6 +185,16 @@ interface ScheduleState {
 
     canStartEmergencyOn: (ids: string[]) => [boolean, string?];
     canStartScenarioOn: (ids: string[]) => [boolean, string?];
+
+    // === background ===
+    backgroundByBranch: Record<string, BackgroundInfo>
+    resolveBackground: (branchId: string) => Promise<boolean>
+    setBackground: (args: {
+        branchId: string;
+        orgId: string;
+        playlistId: string,
+        screenIds: string[]
+    }) => Promise<boolean>
 }
 
 export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]>(
@@ -312,7 +340,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 case 'getEmergencyByOrganization': {
                     if (isErrorPayload(payload)) {
                         set(s => {
-                            s.errorMessage = payload?.message || 'Не удалось получить экстренные/сценарии'
+                            s.emgErrorMessage = (payload as any)?.message || 'Не удалось получить экстренные/сценарии'
                         })
                         break
                     }
@@ -378,7 +406,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     const p = (payload as any)?.payload ?? payload
                     if (!p) {
                         set(s => {
-                            s.errorMessage = (payload as any)?.message || 'Не удалось запустить экстренный показ'
+                            s.emgErrorMessage = (payload as any)?.message || 'Не удалось запустить экстренный показ'
                         })
                         break
                     }
@@ -395,11 +423,11 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 playlistId: p.playlistId,
                                 recurring: toBool(p.isRecurring ?? p.recurring),
                             }
-                            s.successMessage = 'Экстренный показ запущен'
+                            s.emgSuccessMessage = 'Экстренный показ запущен'
                         })
                     } else {
                         set(s => {
-                            s.successMessage = 'Экстренный показ запущен'
+                            s.emgSuccessMessage = 'Экстренный показ запущен'
                         })
                     }
 
@@ -412,7 +440,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     const p = (payload as any)?.payload ?? payload
                     if (!p) {
                         set(s => {
-                            s.errorMessage = (payload as any)?.message || 'Не удалось запустить'
+                            s.emgErrorMessage = (payload as any)?.message || 'Не удалось запустить'
                         })
                         break
                     }
@@ -425,11 +453,11 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 playlistId: p.playlistId,
                                 recurring: Boolean(p.isRecurring ?? p.recurring),
                             }
-                            s.successMessage = 'Запущено'
+                            s.emgSuccessMessage = 'Запущено'
                         })
                     } else {
                         set(s => {
-                            s.successMessage = 'Запущено'
+                            s.emgSuccessMessage = 'Запущено'
                         })
                     }
 
@@ -442,12 +470,12 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     const p = (payload as any)?.payload ?? payload
                     if (!p || p.status === 'error') {
                         set(s => {
-                            s.errorMessage = (payload as any)?.message || 'Не удалось отменить'
+                            s.emgErrorMessage = (payload as any)?.message || 'Не удалось отменить'
                         })
                         break
                     }
                     set(s => {
-                        s.successMessage = 'Экстренный показ завершён'
+                        s.emgSuccessMessage = 'Экстренный показ завершён'
                     })
 
                     const emgId = p.emergencyId
@@ -464,8 +492,53 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     break
                 }
 
+                // ===== background =====
+
+                case 'backgroundResolve': {
+                    const root = (payload as any) ?? {}
+                    const status = root.status ?? 'success'
+                    const p = root.payload ?? root
+                    const playlistId = p?.playlistId ?? null
+                    const branchId = p?.branchId ?? root.data?.branchId ?? null
+
+                    if (status === 'success' && branchId) {
+                        set(s => {
+                            s.backgroundByBranch ??= {}
+                            s.backgroundByBranch[branchId] = {playlistId, configured: !!playlistId}
+                            s.bgErrorMessage = null
+                        })
+                    } else {
+                        // set(s => {
+                        //     s.bgErrorMessage = root.message || 'Не удалось получить фоновый плейлист'
+                        // })
+                    }
+                    break
+                }
+
+                case 'backgroundSet': {
+                    const status = (payload as any)?.status ?? 'error'
+                    const p = (payload as any)?.payload ?? payload
+                    if (status !== 'success' || !p) {
+                        set(s => {
+                            s.errorMessage = (payload as any)?.message || 'Не удалось задать фоновый плейлист'
+                        })
+                        break
+                    }
+
+                    const branchId = p?.branchId
+                    const playlistId = p?.playlistId ?? null
+
+                    if (branchId) {
+                        set(s => {
+                            s.backgroundByBranch ??= {}
+                            s.backgroundByBranch[branchId] = {playlistId, configured: true}
+                            s.successMessage = 'Фоновый плейлист сохранён'
+                        })
+                    }
+                    break
+                }
             }
-        });
+        })
 
         return {
             scheduledFixedMap: {},
@@ -930,11 +1003,18 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             },
 
 
-// ===== emergency  =====
+// ============================ emergency =============================
             emergency: [],
             scenarios: [],
-            error: null,
 
+            emgSuccessMessage: null,
+            emgErrorMessage: null,
+            setEmgSuccess: msg => set(s => {
+                s.emgSuccessMessage = msg
+            }),
+            setEmgError: msg => set(s => {
+                s.emgErrorMessage = msg
+            }),
 
             start: (args) => {
                 const ts = new Date().toISOString()
@@ -944,8 +1024,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     return
                 }
                 set(s => {
-                    s.successMessage = null;
-                    s.errorMessage = null
+                    s.emgSuccessMessage = null;
+                    s.emgErrorMessage = null
                 })
 
 
@@ -979,8 +1059,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     return
                 }
                 set(s => {
-                    s.successMessage = null;
-                    s.errorMessage = null
+                    s.emgSuccessMessage = null;
+                    s.emgErrorMessage = null
                 })
                 ws.send(JSON.stringify({action: 'emergencyCancel', data: {emergencyId}}))
             },
@@ -1022,8 +1102,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     return
                 }
                 set(s => {
-                    s.successMessage = null;
-                    s.errorMessage = null
+                    s.emgSuccessMessage = null;
+                    s.emgErrorMessage = null
                 })
                 wsInst.send(JSON.stringify({action: 'emergencyStart', data: {scenarioId}}))
             },
@@ -1035,8 +1115,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     return
                 }
                 set(s => {
-                    s.successMessage = null;
-                    s.errorMessage = null
+                    s.emgSuccessMessage = null;
+                    s.emgErrorMessage = null
                 })
                 wsInst.send(JSON.stringify({action: 'emergencyCancel', data: {emergencyId: scenarioId}}))
             },
@@ -1087,6 +1167,137 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 if (ids.some(id => busyScn.has(id)))
                     return [false, 'Нельзя запустить сценарий — экраны заняты другим сценарием']
                 return [true]
+            },
+
+// ============================ background ==================================
+            backgroundByBranch: {},
+
+            bgSuccessMessage: null,
+            bgErrorMessage: null,
+            setBgSuccess: msg => set(s => {
+                s.bgSuccessMessage = msg
+            }),
+            setBgError: msg => set(s => {
+                s.bgErrorMessage = msg
+            }),
+
+            // получить актуальный фон для филиала
+            resolveBackground: async (branchId) => {
+
+                const wsInst = ws
+                if (!wsInst || wsInst.readyState !== WebSocket.OPEN) {
+                    console.warn('WS[schedule] not connected or not open')
+                    return false
+                }
+
+                return await new Promise<boolean>((resolve) => {
+                    let done = false
+                    const cleanup = () => {
+                        done = true;
+                        wsInst.removeEventListener('message', onMsg);
+                        clearTimeout(t)
+                    }
+
+                    const onMsg = (ev: MessageEvent) => {
+                        try {
+                            const root = JSON.parse(ev.data)
+                            if (root?.action !== 'backgroundResolve') return
+                            cleanup()
+
+                            const status = root?.status ?? 'success'
+                            const p = root?.payload ?? root
+                            const playlistId = p?.playlistId ?? null
+                            if (status === 'success') {
+                                set(s => {
+                                    s.backgroundByBranch ??= {}
+                                    s.backgroundByBranch[branchId] = {playlistId, configured: !!playlistId}
+                                    s.bgErrorMessage = null
+                                })
+                                resolve(true)
+                            } else {
+                                set(s => {
+                                    s.bgErrorMessage = root?.message || 'Не удалось получить фоновый плейлист'
+                                })
+                                resolve(false)
+                            }
+                        } catch {
+                        }
+                    }
+
+                    wsInst.addEventListener('message', onMsg)
+                    const t = setTimeout(() => {
+                        if (!done) {
+                            cleanup();
+                            resolve(false)
+                        }
+                    }, 10000)
+
+
+                    wsInst.send(JSON.stringify({action: 'backgroundResolve', data: {branchId}}))
+                })
+            },
+
+            // сохранить фон для филиала
+            setBackground: async ({branchId, orgId, playlistId, screenIds}) => {
+                const wsInst = ws
+                if (!wsInst || wsInst.readyState !== WebSocket.OPEN) {
+                    console.warn('WS[schedule] not connected or not open')
+                    return false
+                }
+
+                return await new Promise<boolean>((resolve) => {
+                    let done = false
+                    const cleanup = () => {
+                        done = true;
+                        wsInst.removeEventListener('message', onMsg);
+                        clearTimeout(t)
+                    }
+
+                    const onMsg = (ev: MessageEvent) => {
+                        try {
+                            const root = JSON.parse(ev.data)
+                            if (root?.action !== 'backgroundSet') return
+                            cleanup()
+
+                            const status = root?.status ?? 'error'
+                            const p = root?.payload ?? root
+                            if (status === 'success') {
+                                const bId = p?.branchId ?? branchId
+                                const plId = p?.playlistId ?? playlistId
+                                set(s => {
+                                    s.backgroundByBranch ??= {}
+                                    s.backgroundByBranch[bId] = {playlistId: plId, configured: true}
+                                    s.bgSuccessMessage = 'Фоновый плейлист сохранён'
+                                    s.bgErrorMessage = null
+                                })
+                                resolve(true)
+                            } else {
+                                set(s => {
+                                    s.bgErrorMessage = root?.message || 'Не удалось задать фоновый плейлист'
+                                })
+                                resolve(false)
+                            }
+                        } catch {
+                        }
+                    }
+
+                    wsInst.addEventListener('message', onMsg)
+                    const t = setTimeout(() => {
+                        if (!done) {
+                            cleanup();
+                            set(s => {
+                                s.errorMessage = 'Таймаут ответа backgroundSet'
+                            });
+                            resolve(false)
+                        }
+                    }, 10000)
+
+
+                    wsInst.send(JSON.stringify({
+                        action: 'backgroundSet',
+                        data: {playlistId, orgId, branchId, screenIds}
+                    }))
+                })
             },
 
         }

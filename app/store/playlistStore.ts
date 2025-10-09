@@ -52,7 +52,6 @@ interface usePlaylistState {
 
 
 function calcTotalSeconds(childFiles: FileItem[]): number {
-    // duration может быть undefined|null — берём 0 по умолчанию
     const total = childFiles.reduce<number>(
         (sum, f) => sum + (f?.duration ?? 0),
         0
@@ -84,19 +83,17 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
                 // Здесь получаем состояние из другого стора
                 const orgState = useOrganizationStore.getState?.();
-                const organizationId = orgState.organizationInfo?.id; // Пример: доступ к полю из useOrganizationStore
-                // Или любой другой нужный вам данные, например, activeBranches: orgState.activeBranches
+                const organizationId = orgState.organizationInfo?.id;
 
-                console.log('Organization ID из другого стора:', organizationId); // Для примера
 
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
-                const activeBranches = useOrganizationStore.getState?.().activeBranches; // Access active branches from the other store
+                const activeBranches = useOrganizationStore.getState?.().activeBranches;
                 const data = {
-                    branchIds: activeBranches.map(b => b.id), // Send IDs of active branches
+                    branchIds: activeBranches.map(b => b.id),
                 };
 
-                console.log('datadata:', data); // Для примера
+                console.log('datadata:', data);
 
                 const response = await axios.post(`${SERVER_URL}playlists/branches`, data,
                     {headers: {Authorization: `Bearer ${accessToken}`}}
@@ -118,10 +115,10 @@ export const usePlaylistStore = create<usePlaylistState>()(
                 const accessToken = getValueInStorage('accessToken')
 
                 const {addPlaylist} = get()
-                const activeBranches = useOrganizationStore.getState().activeBranches; // Access active branches from the other store
+                const activeBranches = useOrganizationStore.getState().activeBranches;
                 const data = {
                     playListName: name,
-                    branchIds: activeBranches.map(b => b.id), // Send IDs of active branches
+                    branchIds: activeBranches.map(b => b.id),
                     isPublic: true,
                     childFiles: playlistChildren.map(f => ({
                         fileId: f.fileId,
