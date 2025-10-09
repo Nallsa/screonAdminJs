@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) LLC "Centr Distribyucii"
+ * All rights reserved.
+ */
+
 // store/settings.ts
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
