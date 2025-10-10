@@ -1085,12 +1085,12 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                     const dto = await res.data
                     set(s => {
-                        s.successMessage = 'Сценарий создан'
+                        s.emgSuccessMessage = 'Сценарий создан'
                     })
                     if (organizationId) get().getByOrganization(organizationId)
                 } catch (e: any) {
                     set(s => {
-                        s.errorMessage = `Не удалось создать сценарий: ${e?.message ?? e}`
+                        s.emgErrorMessage = `Не удалось создать сценарий: ${e?.message ?? e}`
                     })
                 }
             },
