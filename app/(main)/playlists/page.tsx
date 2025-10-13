@@ -119,13 +119,13 @@ export default function PlaylistsPage() {
                                 className="text-decoration-none"
                             >
                                 <div
-                                    className="card shadow-sm position-relative" // ⬅️ позиционируем для бейджа
+                                    className="card shadow-sm position-relative"
                                     style={{width: 260, background: "white", borderRadius: 8, cursor: 'pointer'}}
                                 >
                                     {/* Бейдж Фон */}
                                     {backgroundPlaylistId === p.id && (
                                         <Badge
-                                            bg="warning"
+                                            bg="success"
                                             text="dark"
                                             className="position-absolute"
                                             style={{top: 8, left: 8, zIndex: 2}}

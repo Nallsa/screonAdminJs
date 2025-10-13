@@ -297,6 +297,8 @@ export default function ScreenCard({
                                 <Row label="Загрузка процессора:" value={fmtPct(live.cpuLoad)}/>
                                 <Row label="Температура процессора:" value={fmtC(live.temperature)}/>
                                 <Row label="Загрузка ОЗУ:" value={fmtPct(live.ramUsage)}/>
+                                <Row label="Ориентация экрана:"
+                                     value={live.orientation == 'horizontal' ? "Горизонтальная" : "Вертикальная"}/>
                                 <Row label="Версия плеера:" value={fmtVer(live.playerVersion)}/>
                                 <Row label="Последняя проверка:"
                                      value={statusEntry ? formatLastSeen(statusEntry.lastSeenAt) : '—'}/>
@@ -308,7 +310,7 @@ export default function ScreenCard({
                                 style={{
                                     position: 'absolute', inset: 0,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: 'rgba(255,255,255,0.6)',  // или var(--bs-body-bg) с opacity
+                                    background: 'rgba(255,255,255,0.6)',
                                     backdropFilter: 'blur(1px)'
                                 }}
                             >
