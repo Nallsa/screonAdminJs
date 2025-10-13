@@ -6,7 +6,7 @@
 'use client'
 import {create} from 'zustand'
 import {immer} from 'zustand/middleware/immer'
-import {FileItem, GroupData, ScreenData, UpdateInfoDto} from "@/public/types/interfaces"
+import {FileItem, GroupData, LiveStatus, ScreenData, UpdateInfoDto} from "@/public/types/interfaces"
 import {getValueInStorage} from "@/app/API/localStorage"
 import {connectWebSocket, sendConfirmPairing} from '../API/ws'
 import {StateCreator} from 'zustand'
@@ -14,15 +14,6 @@ import axios from "axios";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 import {useOrganizationStore} from "@/app/store/organizationStore";
 
-
-export type LiveStatus = {
-    status?: string;
-    temperature?: number;
-    cpuLoad?: number;
-    ramUsage?: number;
-    playerVersion?: string;
-    lastSeenAt?: string;
-};
 
 export type StatusEntry = LiveStatus & {
     screenId: string;
@@ -110,63 +101,21 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
     const statusWs = connectWebSocket('status', (actionIn, payloadIn) => {
         const raw = payloadIn;
         const payload = raw?.payload ?? raw;
-        let action = actionIn ?? raw?.action ?? 'UNKNOWN';
 
-        const looksLikeStatus = !!payload && (
-            'status' in payload ||
-            'cpuLoad' in payload || 'cpu_load' in payload ||
-            'temperature' in payload ||
-            'ramUsage' in payload || 'ram_usage' in payload ||
-            'playerVersion' in payload || 'player_version' in payload ||
-            'lastSeenAt' in payload || 'last_seen_at' in payload
-        );
+        if (!payload.screenId) return;
 
-        if (action === 'UNKNOWN' && looksLikeStatus) action = 'UPDATE_STATUS';
-        if (action === 'GET_STATUS_RESPONSE') action = 'UPDATE_STATUS';
+        const status = (payload.status ?? payload.networkState ?? payload.network_state)?.toLowerCase?.();
 
-        if (action === 'UPDATE_STATUS' || action === 'STATUS_UPDATE' || action === 'STATUS') {
-            let sid =
-                payload?.screenId ??
-                payload?.screen_id ??
-                payload?.screen?.id ??
-                payload?.id;
-
-            if (!sid) {
-                const now = Date.now();
-                const idx = pendingStatusReqs.findIndex(r => now - r.ts <= REPLY_WINDOW_MS);
-                if (idx !== -1) sid = pendingStatusReqs.splice(idx, 1)[0].screenId;
-            }
-
-            if (!sid) {
-                if (process.env.NODE_ENV !== 'production') {
-                    console.warn('WS[status] payload without screenId, ignored:', payload);
-                }
-                return;
-            }
-
-            const cpuLoad = payload.cpuLoad ?? payload.cpu_load;
-            const ramUsage = payload.ramUsage ?? payload.ram_usage;
-            const playerVersion = payload.playerVersion ?? payload.player_version;
-            const lastSeenAt = payload.lastSeenAt ?? payload.last_seen_at;
-            const statusRaw = payload.status ?? payload.networkState ?? payload.network_state;
-            const status = typeof statusRaw === 'string' ? statusRaw.toLowerCase() : statusRaw;
-
-            get().setStatusForScreen(String(sid), {
-                status,
-                temperature: payload.temperature,
-                cpuLoad: payload.cpuLoad ?? payload.cpu_load,
-                ramUsage: payload.ramUsage ?? payload.ram_usage,
-                playerVersion: payload.playerVersion ?? payload.player_version,
-                lastSeenAt: payload.lastSeenAt ?? payload.last_seen_at,
-            });
-
-            if (process.env.NODE_ENV !== 'production') {
-                console.log('WS[status] applied:', {action, cpuLoad, ramUsage, playerVersion, lastSeenAt});
-            }
-            return;
-        }
-
-
+        get().setStatusForScreen(String(payload.screenId), {
+            status,
+            temperature: payload.temperature,
+            cpuLoad: payload.cpuLoad ?? payload.cpu_load,
+            ramUsage: payload.ramUsage ?? payload.ram_usage,
+            playerVersion: payload.playerVersion ?? payload.player_version,
+            lastSeenAt: payload.lastSeenAt ?? payload.last_seen_at,
+            orientation: payload.orientation,
+            isRealTime: payload.isRealTime === true,
+        });
     });
 
 
