@@ -1,20 +1,17 @@
 "use client";
-"use client";
-import React, { useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Form, Button, Alert, Spinner, Card, InputGroup, ProgressBar } from "react-bootstrap";
+import React, {useMemo, useState} from "react";
+import {useRouter, useSearchParams} from "next/navigation";
+import {Form, Button, Alert, Spinner, Card, InputGroup, ProgressBar} from "react-bootstrap";
 import {useAuthStore} from "@/app/store/authStore";
 
 type Stage = "email" | "code" | "password" | "done";
 
 export default function RecoveryPage(): JSX.Element {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const state = useAuthStore((s) => s)
 
     // Токен из ссылки (если используешь такой сценарий)
-    const token = searchParams.get("token") || searchParams.get("oobCode");
-    const [stage, setStage] = useState<Stage>(token ? "password" : "email");
+    const [stage, setStage] = useState<Stage>("password");
 
     // Поля
     const [email, setEmail] = useState<string>("");
@@ -35,7 +32,7 @@ export default function RecoveryPage(): JSX.Element {
     // Валидации
     const emailValid = useMemo(() => /\S+@\S+\.\S+/.test(email), [email]);
     const codeValid = useMemo(() => /^\d{6}$/.test(code), [code]);
-    const { score, label } = useMemo(() => passwordStrength(password), [password]);
+    const {score, label} = useMemo(() => passwordStrength(password), [password]);
     const passwordsMatch = useMemo(() => password && password === confirm, [password, confirm]);
 
     const sendCodeFn = state?.requestPasswordResetCode ?? null;
@@ -71,7 +68,7 @@ export default function RecoveryPage(): JSX.Element {
                 if (typeof verifyCodeOnlyFn !== "function") {
                     throw new Error("Не найден метод верификации кода.");
                 }
-                const session = await verifyCodeOnlyFn({ email, code });
+                const session = await verifyCodeOnlyFn({email, code});
                 if (!session) throw new Error(error || "Не удалось подтвердить код");
                 setResetToken(session); // сохраним локально, пригодится на шаге 3
                 setMessage("Код подтверждён. Теперь задайте новый пароль.");
@@ -85,13 +82,13 @@ export default function RecoveryPage(): JSX.Element {
                 if (!passwordsMatch) throw new Error("Пароли не совпадают.");
 
                 // 3.1 Если есть токен из ссылки → подтверждаем по токену
-                if (token && typeof confirmWithTokenFn === "function") {
-                    const ok = await confirmWithTokenFn({ newPassword: password });
+                if (typeof confirmWithTokenFn === "function") {
+                    const ok = await confirmWithTokenFn({newPassword: password});
                     if (!ok) throw new Error(error || "Не удалось обновить пароль");
                 }
                 // 3.2 Иначе — финалим по resetSession (который пришёл на шаге 2)
                 else if (typeof confirmWithCodeFn === "function") {
-                    const ok = await confirmWithCodeFn({ newPassword: password, resetSession: resetToken || undefined });
+                    const ok = await confirmWithCodeFn({newPassword: password, resetSession: resetToken || undefined});
                     if (!ok) throw new Error(error || "Не удалось обновить пароль");
                 } else {
                     throw new Error("Не найден метод подтверждения сброса пароля.");
@@ -125,13 +122,12 @@ export default function RecoveryPage(): JSX.Element {
                 ? "Укажите e-mail — мы отправим на него 6-значный код."
                 : stage === "code"
                     ? "Введите код из письма."
-                    : token
-                        ? "Придумайте новый пароль и подтвердите его."
-                        : "Задайте новый пароль и подтвердите его.";
+                    : "Придумайте новый пароль и подтвердите его."
+
 
     return (
         <div className="d-flex align-items-center justify-content-center min-vh-100 p-3 bg-light">
-            <Card className="shadow-sm w-100" style={{ maxWidth: 480 }}>
+            <Card className="shadow-sm w-100" style={{maxWidth: 480}}>
                 <Card.Body className="p-4">
                     <h3 className="mb-1">{title}</h3>
                     <p className="text-muted mb-4">{subtitle}</p>
@@ -222,7 +218,7 @@ export default function RecoveryPage(): JSX.Element {
                                             </Button>
                                         </InputGroup>
                                         <div className="mt-2">
-                                            <ProgressBar now={score} animated={password.length > 0} />
+                                            <ProgressBar now={score} animated={password.length > 0}/>
                                             <small className="text-muted">Надёжность пароля: {label}</small>
                                         </div>
                                     </Form.Group>
@@ -275,7 +271,8 @@ export default function RecoveryPage(): JSX.Element {
                                     }
                                 >
                                     {loading && (
-                                        <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                                        <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true"
+                                                 className="me-2"/>
                                     )}
                                     {stage === "email"
                                         ? "Отправить код"
@@ -309,7 +306,7 @@ export default function RecoveryPage(): JSX.Element {
 // ───────────────────────────── helpers ─────────────────────────────
 function passwordStrength(pw: string) {
     let score = 0;
-    if (!pw) return { score, label: "нет" };
+    if (!pw) return {score, label: "нет"};
     const lengthScore = Math.min(6, Math.floor(pw.length / 2)); // 0..6
     const hasLower = /[a-zа-я]/.test(pw);
     const hasUpper = /[A-ZА-Я]/.test(pw);
@@ -321,7 +318,7 @@ function passwordStrength(pw: string) {
     let label = "слабый";
     if (score >= 80) label = "сильный";
     else if (score >= 50) label = "средний";
-    return { score, label };
+    return {score, label};
 }
 
 function maskEmail(v: string) {
