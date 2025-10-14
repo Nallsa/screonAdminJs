@@ -71,6 +71,17 @@ export interface ScreenData {
     branchId: string;
 }
 
+export type LiveStatus = {
+    status?: string;
+    temperature?: number;
+    cpuLoad?: number;
+    ramUsage?: number;
+    playerVersion?: string;
+    lastSeenAt?: string;
+    orientation?: 'vertical' | 'horizontal' | string;
+    isRealTime?: boolean;
+};
+
 export interface GroupData {
     id: string
     name: string
