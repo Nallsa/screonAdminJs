@@ -12,6 +12,7 @@ import {useOrganizationStore} from "@/app/store/organizationStore";
 import {useAuthStore} from "@/app/store/authStore";
 import {Button} from "react-bootstrap";
 import {useLicenseStore} from "@/app/store/licenseStore";
+import {UserRole} from "@/public/types/interfaces";
 
 export default function SettingsPage() {
     const router = useRouter()
@@ -27,6 +28,9 @@ export default function SettingsPage() {
     const applied = useLicenseStore((s) => s.applied)
     const onChangeKey = useLicenseStore((s) => s.onLicenseChange)
     const applyLicense = useLicenseStore((s) => s.applyLicense)
+    const {
+        role
+    } = useOrganizationStore();
 
     const isSuccess = applied && !error
 
@@ -48,7 +52,7 @@ export default function SettingsPage() {
     return (
         <div className="p-6 max-w-xl mx-auto space-y-6">
             {/* === Блок: Лицензия === */}
-            {hasOrg && (
+            {UserRole.OWNER == role && hasOrg && (
                 <section className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                     <div className="p-5 sm:p-6 space-y-5">
                         <div className="flex items-center justify-between">

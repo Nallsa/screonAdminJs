@@ -99,6 +99,10 @@ export default function LoginPage() {
             <div className="mt-3 text-center">
                 <a href="/auth/register">Регистрация</a>
             </div>
+
+            <div className="mt-3 text-center">
+                <a href="/auth/recoveryPassword">Забыли пароль?</a>
+            </div>
         </Form>
     )
 }
