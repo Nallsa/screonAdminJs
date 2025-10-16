@@ -8,6 +8,7 @@ export interface PlaylistItem {
     filePreviewId: string | null
     childFiles: FileItem[],
     totalDurationSeconds: number;
+    branchId: string | undefined,
 }
 
 export type BackgroundInfo = {

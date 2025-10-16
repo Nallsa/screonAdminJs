@@ -11,7 +11,7 @@ import Link from "next/link";
 
 import {useRouter} from 'next/navigation'
 import {usePlaylistStore} from "@/app/store/playlistStore";
-import {FileItem, PlaylistItem} from "@/public/types/interfaces";
+import {FileItem, PlaylistItem, UserRole} from "@/public/types/interfaces";
 import {getValueInStorage} from "@/app/API/localStorage";
 import {useAuthStore} from "@/app/store/authStore";
 import {connectWebSocket} from "@/app/API/ws";
@@ -33,10 +33,12 @@ export default function PlaylistsPage() {
         bgErrorMessage,
         bgSuccessMessage,
         setBgError,
-        setBgSuccess
+        setBgSuccess,
     } = useScheduleStore()
     const router = useRouter()
     const branchId = useOrganizationStore(state => state.activeBranches[0]?.id)
+    const {role} = useOrganizationStore();
+
 
     const backgroundPlaylistId = useScheduleStore(
         s => s.backgroundByBranch?.[branchId || '']?.playlistId ?? null
@@ -61,7 +63,7 @@ export default function PlaylistsPage() {
                 filePreviewId: null,
                 childFiles: [] as FileItem[],
                 totalDurationSeconds: 0,
-
+                branchId: branchId,
             });
             router.push(`/playlists/0`);
         } else {
@@ -69,9 +71,21 @@ export default function PlaylistsPage() {
         }
     };
 
-    const handleEditPlaylist = (playlist: PlaylistItem) => {
-        setPlaylistToEdit(playlist)
-    }
+    const handleEditPlaylist = (
+        e: React.MouseEvent<HTMLAnchorElement, MouseEvent>,
+        playlist: PlaylistItem
+    ) => {
+        const isAdmin = role === UserRole.ADMIN;
+        const belongsToActiveBranch = (branchId === playlist.branchId);
+
+        if (isAdmin && !belongsToActiveBranch) {
+            e.preventDefault();
+            setError("Этот плейлист принадлежит другому филиалу.");
+            return;
+        }
+
+        setPlaylistToEdit(playlist);
+    };
 
     const formatHMS = (sec: number) => {
         const h = Math.floor(sec / 3600)
@@ -115,7 +129,7 @@ export default function PlaylistsPage() {
                             <Link
                                 key={p.id}
                                 href={`/playlists/${p.id}`}
-                                onClick={() => handleEditPlaylist(p)}
+                                onClick={(e) => handleEditPlaylist(e, p)}
                                 className="text-decoration-none"
                             >
                                 <div

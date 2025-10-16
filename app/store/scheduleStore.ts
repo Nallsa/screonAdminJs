@@ -236,6 +236,9 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                     // payload может прийти как строка/объект/массив
                     const raw = (payload as any)?.payload ?? payload;
+
+                    console.log("Таймслоты: ", raw)
+
                     const inner = typeof raw === 'string' ? JSON.parse(raw) : raw;
                     const rules: any[] = Array.isArray(inner) ? inner : [inner];
 
