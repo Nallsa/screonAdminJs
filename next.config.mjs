@@ -4,7 +4,7 @@ const nextConfig = {
         remotePatterns: [
             {
                 protocol: 'https',
-                hostname: 'admin.screon.ru',
+                hostname: 'mincifri.screon.ru',
                 port: '',
                 pathname: '/api/files/**',
             },
