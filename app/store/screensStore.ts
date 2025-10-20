@@ -228,9 +228,9 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     return
                 }
 
-                if (activeBranches.length < 1) {
-                    get().setError("У вас не выбран(ы) филиал(ы)")
-                }
+                // if (activeBranches.length < 1) {
+                //     get().setError("У вас не выбран(ы) филиал(ы)")
+                // }
 
                 const branchIds = Array.isArray(activeBranches) ? activeBranches.map(b => b.id) : []
 
