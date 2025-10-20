@@ -109,7 +109,7 @@ export default function ScreensPage() {
 
     const isScreenCodeValid = SCREEN_CODE_RE.test(screenCode);
     const isBranchSelected = Boolean(selectedBranchId);
-    const isCertificateValid = CERT_RE.test(certificateCode);
+    const isCertificateValid = certificateCode.length >= 1;
 
     const isFormValid = isScreenCodeValid && isBranchSelected && isCertificateValid;
 

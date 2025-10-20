@@ -123,7 +123,7 @@ export function sendConfirmPairing(code: string, licenseKey: string, userId: str
     if (userId && ws?.readyState === WebSocket.OPEN) {
         ws.send(
             JSON.stringify({
-                action: "CONFIRM_PAIRING",
+                action: "CONFIRM_PAIRING_MINCIFRI",
                 payload: {code, licenseKey, userId, branchId},
             })
         );

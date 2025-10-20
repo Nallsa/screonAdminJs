@@ -82,13 +82,6 @@ export const useCatalogStore = create<CatalogState>()(
                 const {activeBranches} = useOrganizationStore.getState?.();
 
 
-                if (!accessToken || !userId || !organizationId) {
-                    throw new Error('Не хватает данных: accessToken / userId / organizationId');
-                }
-                if (!activeBranches) {
-                    throw new Error('Не выбран активный филиал');
-                }
-                
                 const {data} = await axios.post(
                     `${SERVER_URL}library/items/from-catalog`,
                     {

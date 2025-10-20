@@ -891,12 +891,12 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     (useOrganizationStore.getState?.().activeBranches ?? [])
                         .map(b => b.id)
                         .filter(Boolean)
-                if (branchIds.length === 0) {
-                    set(s => {
-                        s.errorMessage = 'Не выбран филиал (branchId)'
-                    })
-                    return
-                }
+                // if (branchIds.length === 0) {
+                //     set(s => {
+                //         s.errorMessage = 'Не выбран филиал (branchId)'
+                //     })
+                //     return
+                // }
 
                 set(s => {
                     s.scheduledFixedMap = {}

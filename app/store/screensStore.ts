@@ -228,9 +228,9 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     return
                 }
 
-                if (activeBranches.length < 1) {
-                    get().setError("У вас не выбран(ы) филиал(ы)")
-                }
+                // if (activeBranches.length < 1) {
+                //     get().setError("У вас не выбран(ы) филиал(ы)")
+                // }
 
                 const branchIds = Array.isArray(activeBranches) ? activeBranches.map(b => b.id) : []
 
@@ -435,7 +435,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     return
                 }
 
-                sendConfirmPairing(code, licenseKey, userId, branchId || null)
+                sendConfirmPairing(code, "ABC", userId, branchId || null)
             } catch (error: any) {
                 console.error("Ошибка при подтверждении пары:", error)
                 get().setError(error?.message || "Не удалось подтвердить код экрана")
