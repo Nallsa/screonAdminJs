@@ -300,9 +300,9 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                         id: string
                     }>
                 }
-                const actorRole = useOrganizationStore.getState?.().role
+                const actorRole = useOrganizationStore.getState?.().role ?? ''
                 const actorOrgId = getValueInStorage('organizationId')
-                const actorBranchId = activeBranches[0]
+                const actorBranchId = activeBranches[0].id
 
                 if (!actorUserId || !accessToken) {
                     get().setError("Не удалось удалить экран: отсутствуют данные пользователя или токен.")
