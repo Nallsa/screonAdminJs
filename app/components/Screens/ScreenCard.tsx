@@ -50,8 +50,8 @@ export default function ScreenCard({
 
     // Собираем имена групп, в которые входит этот экран
     const groupName = screen.groupId
-        ? groups.find(g => g.id === screen.groupId)?.name || '— без группы —'
-        : ' без группы '
+        ? groups.find(g => g.id === screen.groupId)?.name || 'Без группы'
+        : ' Без группы '
 
 
     const statusEntry = useScreensStore(s => s.statusByScreen[screen.id]);
@@ -63,20 +63,12 @@ export default function ScreenCard({
 
     const [showStatusModal, setShowStatusModal] = useState(false);
     const [statusLoading, setStatusLoading] = useState(false);
-    const [seenAt, setSeenAt] = useState<string | undefined>(undefined);
     const [prevRecvAt, setPrevRecvAt] = useState<number | null>(null);
     const timeoutRef = React.useRef<any>(null);
     const currentPl = useCurrentPlayingPlaylist(screen.id);
 
     function openStatus() {
         setShowStatusModal(true);
-        // setStatusLoading(true);
-        // setPrevRecvAt(live?.receivedAt ?? null);
-        // sendGetStatus(screen.id);
-        //
-        //
-        // clearTimeout(timeoutRef.current);
-        // timeoutRef.current = setTimeout(() => setStatusLoading(false), 4000);
     }
 
 
@@ -147,7 +139,7 @@ export default function ScreenCard({
                         borderTopRightRadius: 8,
                         overflow: 'hidden',
                         background: '#000',
-                        position: 'relative',              // ВАЖНО для PreviewImage с prop `fill`
+                        position: 'relative',
                     }}
                 >
                     {currentPl?.filePreviewId && isOnline && (
@@ -259,7 +251,7 @@ export default function ScreenCard({
                                 value={editModalGroup || ''}
                                 onChange={e => setEditModalGroup(e.target.value)}
                             >
-                                <option value="">— без группы —</option>
+                                {/*<option value="">Без группы</option>*/}
                                 {groups.map(g => (
                                     <option key={g.id} value={g.id}>{g.name}</option>
                                 ))}

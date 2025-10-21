@@ -13,6 +13,7 @@ import {StateCreator} from 'zustand'
 import axios from "axios";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 import {useOrganizationStore} from "@/app/store/organizationStore";
+import {useLicenseStore} from "@/app/store/licenseStore";
 
 
 export type StatusEntry = LiveStatus & {
@@ -460,6 +461,10 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                             const screen: ScreenData = payload;
 
                             console.log("screen", screen)
+
+                            const licDeps = useLicenseStore.getState()
+
+                            licDeps.getLicense()
 
                             set(state => {
 
