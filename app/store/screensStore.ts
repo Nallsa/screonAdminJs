@@ -292,15 +292,24 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
         delScreen: async (screenId) => {
             try {
                 const SERVER = process.env.NEXT_PUBLIC_SERVER_URL;
-                const userId = getValueInStorage("userId");
+                const actorUserId = getValueInStorage("userId");
                 const accessToken = getValueInStorage("accessToken");
 
-                if (!userId || !accessToken) {
+                const {activeBranches} = useOrganizationStore.getState?.() ?? {
+                    activeBranches: [] as Array<{
+                        id: string
+                    }>
+                }
+                const actorRole = useOrganizationStore.getState?.().role
+                const actorOrgId = getValueInStorage('organizationId')
+                const actorBranchId = activeBranches[0]
+
+                if (!actorUserId || !accessToken) {
                     get().setError("Не удалось удалить экран: отсутствуют данные пользователя или токен.")
                     return
                 }
 
-                const data = {userId, screenId};
+                const data = {screenId, actorUserId, actorRole, actorOrgId, actorBranchId};
 
                 const res = await axios.delete(`${SERVER}screens/unpair`, {
                     data: data,
