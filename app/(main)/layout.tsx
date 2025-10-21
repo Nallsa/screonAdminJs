@@ -34,7 +34,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
         startAutoStatusPolling
     } = useScreensStore(state => state)
     const {getSchedule, scheduledCalendarMap} = useScheduleStore();
-    const {getInfoOrg, activeBranches} = useOrganizationStore();
+    const {getInfoOrg, activeBranches, organizationInfo} = useOrganizationStore();
     const {getLicense} = useLicenseStore();
     const [showOrgModal, setShowOrgModal] = useState(false);
 
@@ -55,18 +55,23 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
                 return
             }
 
-            if(pathname.startsWith('/settings')) return
+            if (pathname.startsWith('/settings')) return
 
-            // const orgInfo = await getInfoOrg()
-            //
-            // if (!orgInfo) {
-            //     router.push('/organization/createOrgElements?isBranch=false');
-            // }
+
+            if (organizationInfo !== null) return
+
+            const orgInfo = await getInfoOrg()
+
+            if (!orgInfo) {
+                router.push('/organization/createOrgElements?isBranch=false');
+            } else {
+                router.push('/screens');
+            }
         }
 
 
         init()
-    }, [])
+    }, [organizationInfo])
 
 
     const branchesKey = useMemo(

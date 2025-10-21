@@ -6,9 +6,6 @@
 'use client';
 import Link from "next/link";
 import {usePathname, useRouter} from 'next/navigation';
-import {getValueInStorage} from "@/app/API/localStorage";
-// import {FaBars} from "react-icons/fa";
-import {useSettingsStore} from "@/app/store/settingsStore";
 import {FaBars} from "react-icons/fa";
 import {useOrganizationStore} from "@/app/store/organizationStore";
 import {Grade, useLicenseStore} from "@/app/store/licenseStore";
@@ -33,7 +30,7 @@ const navItems = [
 ];
 
 function mapHrefToTab(href: string) {
-    if (href.startsWith('/org')) return 'org'
+    if (href.startsWith('/organization') || href.startsWith('/org')) return 'org'
     if (href.startsWith('/settings')) return 'settings'
     if (href.startsWith('/screens')) return 'screens'
     if (href.startsWith('/emergency')) return 'emergency'
@@ -48,7 +45,7 @@ function isTabEnabled(hasOrg: boolean, grade: Grade, href: string): boolean {
     const isEmergencyTab = tab === 'emergency'
 
     // 1) Нет организации — только "Организации"
-    if (!hasOrg) return  isOrgTab || isSettingsTab
+    if (!hasOrg) return isOrgTab || isSettingsTab
 
     // 2) Правила по грейдам
     switch (grade) {
@@ -73,7 +70,6 @@ export default function Sidebar({collapsed, onToggle, className = ''}: Props) {
     }
 
     const width = collapsed ? 46 : 220;
-
 
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const enabledFor = useCallback(
@@ -130,14 +126,17 @@ export default function Sidebar({collapsed, onToggle, className = ''}: Props) {
             </div>
 
             {navItems.map(({href, label, icon}) => {
-                const enabled = enabledFor(href);
-                const active = enabled && (pathname === href);
+                const enabled = isTabEnabled(hasOrg, screenLicense, href) // всегда свежие значения
+                const active = enabled && pathname === href
+
                 return (
                     // кнопки навигации
                     <Link
                         key={href}
                         href={href}
-                        onClick={(e) => { if (!enabled) e.preventDefault() }}
+                        onClick={(e) => {
+                            if (!enabled) e.preventDefault()
+                        }}
                         className={
                             'text-decoration-none d-flex align-items-center py-3 ' +
                             (active ? 'bg-light fw-bold text-dark' : 'text-secondary') +
