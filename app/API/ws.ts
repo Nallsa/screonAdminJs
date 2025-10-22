@@ -131,3 +131,23 @@ export function sendConfirmPairing(code: string, licenseKey: string, userId: str
         console.warn("WS[pairing] not connected");
     }
 }
+
+export function sendUnpairScreen(data: {
+    screenId: string;
+    actorUserId: string;
+    actorRole: string;
+    actorOrgId: string | null;
+    actorBranchId: string | null;
+}) {
+    const ws = sockets.pairing;
+    if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(
+            JSON.stringify({
+                action: "UNPAIR_SCREEN",
+                payload: data,
+            })
+        );
+    } else {
+        console.warn("WS[pairing] not connected");
+    }
+}

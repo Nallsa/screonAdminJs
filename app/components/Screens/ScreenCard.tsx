@@ -32,7 +32,7 @@ export default function ScreenCard({
                                    }: ScreenCardProps) {
 
 
-    const delScreen = useScreensStore(state => state.delScreen)
+    const unpairScreen = useScreensStore(state => state.unpairScreen)
     const groups = useScreensStore(state => state.groups)
     const assignGroupToScreen = useScreensStore(state => state.assignGroupToScreen)
     const updateScreenName = useScreensStore(state => state.updateScreenName)
@@ -83,7 +83,7 @@ export default function ScreenCard({
     }, [statusLoading, live?.receivedAt, prevRecvAt]);
 
     function handleDelete() {
-        delScreen(screen.id)
+        unpairScreen(screen.id)
         setShowConfirm(false)
     }
 

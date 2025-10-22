@@ -8,7 +8,7 @@ import {create} from 'zustand'
 import {immer} from 'zustand/middleware/immer'
 import {FileItem, GroupData, LiveStatus, ScreenData, UpdateInfoDto} from "@/public/types/interfaces"
 import {getValueInStorage} from "@/app/API/localStorage"
-import {connectWebSocket, sendConfirmPairing} from '../API/ws'
+import {connectWebSocket, sendConfirmPairing, sendUnpairScreen} from '../API/ws'
 import {StateCreator} from 'zustand'
 import axios from "axios";
 import {useScheduleStore} from "@/app/store/scheduleStore";
@@ -56,6 +56,8 @@ interface ScreensState {
     // WS pairing
     connectWsForScreen: () => Promise<void>
     addPairingConfirm: (code: string, licenseKey: string, branchId?: string) => Promise<void>
+    unpairScreen: (screenId: string) => Promise<void>;
+
 
     //Status
     statusByScreen: Record<string, StatusEntry>;
@@ -334,6 +336,32 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             }
         },
 
+        unpairScreen: async (screenId: string) => {
+            try {
+                const actorUserId = getValueInStorage("userId");
+                const actorOrgId = getValueInStorage("organizationId") ?? null;
+                const actorRole = useOrganizationStore.getState?.().role ?? '';
+                const activeBranches = useOrganizationStore.getState?.().activeBranches ?? [];
+                const actorBranchId = activeBranches?.[0]?.id ?? null;
+
+                if (!actorUserId) {
+                    get().setError("Пользователь не авторизован");
+                    return;
+                }
+
+                sendUnpairScreen({
+                    screenId,
+                    actorUserId,
+                    actorRole,
+                    actorOrgId,
+                    actorBranchId,
+                });
+            } catch (e: any) {
+                console.error("Ошибка при отправке UNPAIR_SCREEN:", e);
+                get().setError(e?.message || "Не удалось отвязать экран");
+            }
+        },
+
         // ==== ГРУППЫ ====
 
         assignGroupToScreen: async (screenId, groupId) => {
@@ -484,6 +512,20 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                                 state.errorMessage = null;
                             });
                             break;
+
+                        case 'SCREEN_UNPAIRED': {
+                            const sid = payload?.screenId ?? payload?.id;
+
+                            set(state => {
+                                state.allScreens = state.allScreens.filter(s => s.id !== sid);
+                                state.filteredScreens = state.filteredScreens.filter(s => s.id !== sid);
+                                state.successMessage = 'Экран удалён';
+                                state.errorMessage = null;
+                            });
+
+                            useScheduleStore.getState().getSchedule();
+                            break;
+                        }
 
                         case 'ERROR': {
                             const msg = getMsg() ?? 'Не удалось добавить экран';
