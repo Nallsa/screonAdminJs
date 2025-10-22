@@ -62,12 +62,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.removeItem("userId")
         localStorage.removeItem("organizationId")
 
-        set({ loading: true, error: null })
+        set({loading: true, error: null})
         try {
-            const res = await axios.post(`${base}/auth/login`, { email, password })
+            const res = await axios.post(`${base}auth/login`, {email, password})
 
-            console.log("base" , base)
-            const { accessToken, refreshToken, userId } = res.data
+            console.log("base", base)
+            const {accessToken, refreshToken, userId} = res.data
             localStorage.setItem("accessToken", accessToken)
             localStorage.setItem("refreshToken", refreshToken)
             localStorage.setItem("userId", userId)
@@ -80,10 +80,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             })
             return true
         } catch (e: any) {
-            set({ error: e.response?.data?.message || "Ошибка входа" })
+            set({error: e.response?.data?.message || "Ошибка входа"})
             return false
         } finally {
-            set({ loading: false })
+            set({loading: false})
         }
     },
 
@@ -93,15 +93,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.removeItem("userId")
         localStorage.removeItem("organizationId")
 
-        set({ loading: true, error: null })
+        set({loading: true, error: null})
         try {
-            const res = await axios.post(`${base}/auth/register`, {
+            const res = await axios.post(`${base}auth/register`, {
                 name: username,
                 phone: phone.replace(/^\+/, ""),
                 password,
                 email,
             })
-            const { accessToken, refreshToken, userId } = res.data
+            const {accessToken, refreshToken, userId} = res.data
             localStorage.setItem("accessToken", accessToken)
             localStorage.setItem("refreshToken", refreshToken)
             localStorage.setItem("userId", userId)
@@ -113,10 +113,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             })
             return true
         } catch (e: any) {
-            set({ error: e.response?.data?.message || "Ошибка регистрации" })
+            set({error: e.response?.data?.message || "Ошибка регистрации"})
             return false
         } finally {
-            set({ loading: false })
+            set({loading: false})
         }
     },
 
@@ -138,12 +138,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     checkToken: async () => {
-        set({ loading: true, error: null })
+        set({loading: true, error: null})
         try {
             const token = localStorage.getItem("refreshToken")
             if (!token) throw new Error("no token")
 
-            const res = await axios.post(`${base}/auth/refresh`, { refreshToken: token })
+            const res = await axios.post(`${base}auth/refresh`, {refreshToken: token})
             const ok = res.status
             const accessToken = res.data.accessToken
             const refreshToken = res.data.refreshToken
@@ -153,13 +153,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             addValueInStorage("refreshToken", refreshToken)
             addValueInStorage("userId", userId)
 
-            if (ok === 200) set({ isAuthenticated: true })
+            if (ok === 200) set({isAuthenticated: true})
             return ok === 200
         } catch {
-            set({ isAuthenticated: false })
+            set({isAuthenticated: false})
             return false
         } finally {
-            set({ loading: false })
+            set({loading: false})
         }
     },
 
@@ -169,11 +169,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // 1) Отправить код на e-mail
     requestPasswordResetCode: async (email) => {
-        set({ loading: true, error: null })
+        set({loading: true, error: null})
         try {
-            await axios.post(`${base}auth/password/forgot`, { email })
+            await axios.post(`${base}auth/password/forgot`, {email})
 
-            set({ resetStep: "code_sent" })
+            set({resetStep: "code_sent"})
             return true
         } catch (e: any) {
             set({
@@ -182,22 +182,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             })
             return false
         } finally {
-            set({ loading: false })
+            set({loading: false})
         }
     },
 
     // 2) Подтвердить код → получить resetSession (ПЛЕЙН-ТЕКСТ строка)
-    confirmPasswordResetCode: async ({ email, code }) => {
-        set({ loading: true, error: null })
+    confirmPasswordResetCode: async ({email, code}) => {
+        set({loading: true, error: null})
         try {
             const res = await axios.post(
                 `${base}auth/password/verify`,
-                { email, code },
-                { responseType: "text" }
+                {email, code},
+                {responseType: "text"}
             )
             const resetSession = (res?.data ?? "").toString().trim()
             if (!resetSession) throw new Error("Пустой ответ от сервера")
-            set({ resetSession, resetStep: "verified" })
+            set({resetSession, resetStep: "verified"})
             return resetSession
         } catch (e: any) {
             set({
@@ -206,13 +206,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             })
             return null
         } finally {
-            set({ loading: false })
+            set({loading: false})
         }
     },
 
     // 3) Установить новый пароль
-    resetPassword: async ({ newPassword, resetSession }) => {
-        set({ loading: true, error: null })
+    resetPassword: async ({newPassword, resetSession}) => {
+        set({loading: true, error: null})
         try {
             const session = resetSession ?? get().resetSession
             if (!session) throw new Error("resetSession отсутствует. Сначала подтвердите код.")
@@ -221,7 +221,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 resetSession: session,
                 newPassword,
             })
-            set({ resetStep: "done" })
+            set({resetStep: "done"})
             return true
         } catch (e: any) {
             set({
@@ -229,22 +229,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             })
             return false
         } finally {
-            set({ loading: false })
+            set({loading: false})
         }
     },
 
     // (опционально) по токену из ссылки
-    confirmPasswordReset: async ({ newPassword }) => {
-        set({ loading: true, error: null })
+    confirmPasswordReset: async ({newPassword}) => {
+        set({loading: true, error: null})
         try {
-            await axios.post(`${base}auth/password/reset-by-token`, { newPassword })
-            set({ resetStep: "done" })
+            await axios.post(`${base}auth/password/reset-by-token`, {newPassword})
+            set({resetStep: "done"})
             return true
         } catch (e: any) {
-            set({ error: e?.response?.data?.message || "Не удалось обновить пароль" })
+            set({error: e?.response?.data?.message || "Не удалось обновить пароль"})
             return false
         } finally {
-            set({ loading: false })
+            set({loading: false})
         }
     },
 }))
