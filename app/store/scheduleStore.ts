@@ -70,6 +70,7 @@ function chunkArray<T>(arr: T[], chunkSize: number): T[][] {
     return chunks;
 }
 
+
 interface ScheduleState {
     selectedDate: Date
     currentWeek: Date[]
