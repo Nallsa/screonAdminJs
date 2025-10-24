@@ -1,22 +1,24 @@
 import React, { CSSProperties, useMemo, useState } from "react";
 
+type SplitCount = 1 | 2 | 4;
+
 type SplitScreenProps = {
-    count: 1 | 2 | 4;
+    count: SplitCount;
     value?: number | null;
     onChange?: (index: number) => void;
     showLabels?: boolean;
-    radius?: number;        // <-- радиус углов экрана (по умолчанию 12)
-    lineThickness?: number; // <-- толщина разделителей (по умолчанию 2)
+    radius?: number;
+    lineThickness?: number;
 };
 
 export default function SplitScreen({
-                                        count,
-                                        value,
-                                        onChange,
-                                        showLabels = true,
-                                        radius = 12,
-                                        lineThickness = 2,
-                                    }: SplitScreenProps) {
+                                count,
+                                value,
+                                onChange,
+                                showLabels = true,
+                                radius = 12,
+                                lineThickness = 2,
+                            }: SplitScreenProps) {
     const [internalSelected, setInternalSelected] = useState<number | null>(null);
     const selected = value ?? internalSelected;
 
@@ -39,7 +41,6 @@ export default function SplitScreen({
         userSelect: "none",
     };
 
-    // линии: укорачиваем на radius и делаем «капсулы»
     const vLine: CSSProperties = {
         position: "absolute",
         top: radius,
@@ -48,9 +49,9 @@ export default function SplitScreen({
         width: lineThickness,
         transform: "translateX(-50%)",
         background: lineColor,
-        borderRadius: 9999,         // круглые окончания
+        borderRadius: 9999,
         pointerEvents: "none",
-        zIndex: 2,                   // чтобы линия была над подсветкой
+        zIndex: 2,
     };
     const hLine: CSSProperties = {
         position: "absolute",
@@ -60,7 +61,7 @@ export default function SplitScreen({
         height: lineThickness,
         transform: "translateY(-50%)",
         background: lineColor,
-        borderRadius: 9999,         // круглые окончания
+        borderRadius: 9999,
         pointerEvents: "none",
         zIndex: 2,
     };
@@ -83,7 +84,6 @@ export default function SplitScreen({
         ];
     }, [count]);
 
-    // Скругления для подсветки областей, чтобы совпадали с углами экрана
     const areaCornerRadius = (idx: number): CSSProperties => {
         if (count === 1) return { borderRadius: radius };
         if (count === 2) {
@@ -91,7 +91,6 @@ export default function SplitScreen({
                 ? { borderTopLeftRadius: radius, borderBottomLeftRadius: radius }
                 : { borderTopRightRadius: radius, borderBottomRightRadius: radius };
         }
-        // 4 части
         switch (idx) {
             case 0: return { borderTopLeftRadius: radius };
             case 1: return { borderTopRightRadius: radius };
@@ -106,7 +105,7 @@ export default function SplitScreen({
         cursor: "pointer",
         outline: "none",
         transition: "background 120ms ease, box-shadow 120ms ease",
-        zIndex: 1, // ниже линий
+        zIndex: 1,
     };
 
     const labelStyle: CSSProperties = {
@@ -121,11 +120,9 @@ export default function SplitScreen({
 
     return (
         <div style={boxStyle} role="group" aria-label="Разделение экрана">
-            {/* линии-разделители */}
             {count >= 2 && <div style={vLine} />}
             {count === 4 && <div style={hLine} />}
 
-            {/* кликабельные области */}
             {areas.map((a, idx) => {
                 const isActive = selected === idx;
                 return (
@@ -150,6 +147,12 @@ export default function SplitScreen({
                             boxShadow: isActive
                                 ? "inset 0 0 0 3px var(--bs-primary, #0d6efd)"
                                 : "none",
+                        }}
+                        onMouseEnter={(e) => {
+                            if (!isActive) (e.currentTarget.style.background = "rgba(13,110,253,0.05)");
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!isActive) (e.currentTarget.style.background = "transparent");
                         }}
                     >
                         {showLabels && (

@@ -105,6 +105,17 @@ export interface ScheduledBlock {
     branchId: string,
 }
 
+export type ZoneIndex = 0 | 1 | 2 | 3;
+export type SplitCount = 1 | 2 | 4;
+
+export type ZonePlaylistsByScreen = Record<
+    string,
+    Partial<Record<ZoneIndex, string | null>>
+>;
+
+export type SplitCountByScreen = Record<string, SplitCount>;
+
+
 
 export interface MemberDto {
     id: string;

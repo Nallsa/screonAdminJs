@@ -16,8 +16,8 @@ import {
     BackgroundInfo,
     PlaylistItem,
     ScheduledBlock,
-    ScreenData,
-    TypeMode
+    ScreenData, SplitCount, SplitCountByScreen,
+    TypeMode, ZoneIndex, ZonePlaylistsByScreen
 } from "@/public/types/interfaces";
 import axios from "axios";
 import {SERVER_URL} from "@/app/API/api";
@@ -196,6 +196,15 @@ interface ScheduleState {
         playlistId: string,
         screenIds: string[]
     }) => Promise<boolean>
+
+    // --- сплит и плейлисты по зонам ---
+    splitCountByScreen: SplitCountByScreen
+    zonePlaylistsByScreen: ZonePlaylistsByScreen
+
+    setSplitCount: (screenId: string, count: SplitCount) => void
+    setZonePlaylist: (screenId: string, zone: ZoneIndex, playlistId: string | null) => void
+    clearZonePlaylists: (screenId: string) => void
+
 }
 
 export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]>(
@@ -798,41 +807,85 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 })
             },
 
+            splitCountByScreen: {},
+            zonePlaylistsByScreen: {},
+
+            setSplitCount: (screenId, count) =>
+                set(s => {
+                    s.splitCountByScreen ??= {};
+                    s.zonePlaylistsByScreen ??= {};
+                    const zones = { ...(s.zonePlaylistsByScreen[screenId] ?? {}) };
+
+                    // если сужаем сплит — чистим несуществующие зоны
+                    if (count === 2) {
+                        delete zones[2 as ZoneIndex];
+                        delete zones[3 as ZoneIndex];
+                    }
+                    if (count === 1) {
+                        delete zones[1 as ZoneIndex];
+                        delete zones[2 as ZoneIndex];
+                        delete zones[3 as ZoneIndex];
+                    }
+
+                    s.splitCountByScreen[screenId] = count;
+                    s.zonePlaylistsByScreen[screenId] = zones;
+                }),
+
+            setZonePlaylist: (screenId, zone, playlistId) =>
+                set(s => {
+                    s.zonePlaylistsByScreen ??= {};
+                    const m = { ...(s.zonePlaylistsByScreen[screenId] ?? {}) };
+                    m[zone] = playlistId;
+                    s.zonePlaylistsByScreen[screenId] = m;
+                }),
+
+            clearZonePlaylists: (screenId) =>
+                set(s => {
+                    s.zonePlaylistsByScreen ??= {};
+                    s.zonePlaylistsByScreen[screenId] = {};
+                }),
+
+
 
             sendSchedule: async () => {
-
-                if (!ws || ws.readyState !== WebSocket.OPEN) {
-                    console.warn('WS[schedule] not connected or not open');
-                    return;
-                }
+                // if (!ws || ws.readyState !== WebSocket.OPEN) {
+                //     console.warn('WS[schedule] not connected or not open');
+                //     return;
+                // }
 
                 const {
-                    scheduledFixedMap,
                     scheduledCalendarMap,
                     isRecurring,
                     scheduleId,
+
+                    // НОВОЕ:
+                    splitCountByScreen,
+                    zonePlaylistsByScreen,
                 } = get();
 
-                // соберём уникальный список экранов из обеих карт
+                // Соберём экраны из обоих источников
                 const screenIds = Array.from(
                     new Set([
                         ...Object.keys(scheduledCalendarMap || {}),
+                        ...Object.keys(splitCountByScreen || {}),
+                        ...Object.keys(zonePlaylistsByScreen || {}),
                     ])
                 );
-                const toHHmm = (t: string) => t.startsWith('24:00') ? '23:59' : t.slice(0, 5)
 
-                // нормализация тайм-слотов для отправки
+                const toHHmm = (t: string) => t.startsWith('24:00') ? '23:59' : t.slice(0, 5);
+
                 const toSlots = (
                     blocks: ScheduledBlock[] | undefined,
-                    fixed: boolean,
                     screenId: string
                 ) =>
                     (blocks || []).map(b => ({
                         dayOfWeek: b.dayOfWeek,
-                        startDate: fixed ? null : b.startDate,
-                        endDate: fixed ? null : b.endDate,
+                        startDate: b.startDate,
+                        endDate: b.endDate,
                         startTime: toHHmm(b.startTime),
                         endTime: toHHmm(b.endTime),
+                        // ВАЖНО: playlistId тут можно оставить как есть (дефолт),
+                        // зоны перекроют поведение на плеере:
                         playlistId: b.playlistId,
                         isRecurring: b.isRecurring,
                         priority: b.priority,
@@ -841,44 +894,73 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         branchId: b.branchId,
                     }));
 
-                // собираем слоты по всем экранам из обеих карт
+                // 1) обычные тайм-слоты (без зон)
                 const slots: any[] = [];
                 for (const sid of screenIds) {
-                    slots.push(...toSlots(scheduledCalendarMap[sid], false, sid));
+                    slots.push(...toSlots(scheduledCalendarMap[sid], sid));
                 }
+
+                // 2) назначения зон (split + playlistId на зонах)
+                const zoneAssignments = screenIds
+                    .map((sid) => {
+                        const splitCount: SplitCount = (splitCountByScreen?.[sid] ?? 1) as SplitCount;
+                        const zoneMap = zonePlaylistsByScreen?.[sid] ?? {};
+                        const zones = Object.entries(zoneMap)
+                            .filter(([, pid]) => !!pid)
+                            .map(([z, pid]) => ({
+                                zoneIndex: Number(z) as ZoneIndex,
+                                playlistId: pid as string,
+                            }));
+                        return { screenId: sid, splitCount, zones };
+                    })
+                    .filter(x => x.zones.length > 0);
 
                 const branchIds =
                     (useOrganizationStore.getState?.().activeBranches ?? [])
                         .map(b => b.id)
-                        .filter(Boolean)
+                        .filter(Boolean);
+
                 const payload = {
                     startDate: null,
                     endDate: null,
                     isRecurring,
+                    // НОВОЕ:
+                    zoneAssignments, // <— ключ
+                };
 
-                }
+                console.log("id расписания", scheduleId);
 
-                console.log("id расписания", scheduleId)
-
-                const CHUNK_SIZE = 20
+                const CHUNK_SIZE = 20;
                 const chunks = slots.length ? chunkArray(slots, CHUNK_SIZE) : [[]];
-                const totalChunks = chunks.length
+                const totalChunks = chunks.length;
 
-                const actionName = scheduleId ? 'update' : 'create'
+                const actionName = scheduleId ? 'update' : 'create';
 
+                console.log("adasdasdada", JSON.stringify({
+                    action: actionName,
+                    data: {
+                        ...payload,
+                        ...(scheduleId ? { id: scheduleId, scheduleId } : {}),
+                        timeSlots: 1,
+                        chunkIndex: 1,
+                        totalChunks,
+                        branchIds,
+                    }
+                }))
+                return
 
                 for (let i = 0; i < totalChunks; i++) {
                     ws.send(JSON.stringify({
                         action: actionName,
                         data: {
                             ...payload,
-                            ...(scheduleId ? {id: scheduleId, scheduleId} : {}),
+                            ...(scheduleId ? { id: scheduleId, scheduleId } : {}),
                             timeSlots: chunks[i],
                             chunkIndex: i,
                             totalChunks,
                             branchIds,
                         }
-                    }))
+                    }));
                 }
             },
 
