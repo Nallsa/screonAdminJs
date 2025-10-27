@@ -143,11 +143,15 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
                 addPlaylist(result)
 
+
                 return !!result
             } catch (err: any) {
                 console.error('Ошибка при создании плейлиста:', err)
                 get().setError(err?.response?.data?.message || "Не удалось создать плейлист.")
                 return false
+            } finally {
+                const {getPlaylists} = get()
+                getPlaylists()
             }
         },
 
