@@ -1,35 +1,61 @@
 import React, { CSSProperties, useMemo, useState } from "react";
+import {SplitCount, ZoneIndex} from "@/public/types/interfaces";
 
-type SplitCount = 1 | 2 | 4;
+
+// типы из твоего проекта
+export type ZoneIndex = 0 | 1 | 2 | 3;
+export type SplitCount = 1 | 2 | 4;
+
+type Rect = { top: number | string; left: number | string; width: number | string; height: number | string };
 
 type SplitScreenProps = {
     count: SplitCount;
-    value?: number | null;
-    onChange?: (index: number) => void;
+    value?: ZoneIndex | null;
+    onChange?: (z: ZoneIndex | null) => void;
     showLabels?: boolean;
     radius?: number;
     lineThickness?: number;
 };
 
-export default function SplitScreen({
-                                count,
-                                value,
-                                onChange,
-                                showLabels = true,
-                                radius = 12,
-                                lineThickness = 2,
-                            }: SplitScreenProps) {
-    const [internalSelected, setInternalSelected] = useState<number | null>(null);
-    const selected = value ?? internalSelected;
+const ZONES_BY_COUNT: Record<SplitCount, readonly ZoneIndex[]> = {
+    1: [0],
+    2: [0, 1],
+    4: [0, 1, 2, 3],
+} as const;
 
-    const setSelected = (idx: number) => {
+const AREAS_BY_COUNT: Record<SplitCount, readonly Rect[]> = {
+    1: [{ top: 0, left: 0, width: "100%", height: "100%" }],
+    2: [
+        { top: 0, left: 0, width: "50%", height: "100%" },       // левая (0)
+        { top: 0, left: "50%", width: "50%", height: "100%" },   // правая (1)
+    ],
+    4: [
+        { top: 0, left: 0, width: "50%", height: "50%" },        // ВЛ (0)
+        { top: 0, left: "50%", width: "50%", height: "50%" },    // ВП (1)
+        { top: "50%", left: 0, width: "50%", height: "50%" },    // НЛ (2)
+        { top: "50%", left: "50%", width: "50%", height: "50%" } // НП (3)
+    ],
+} as const;
+
+export default function SplitScreen({
+                                        count,
+                                        value,
+                                        onChange,
+                                        showLabels = true,
+                                        radius = 12,
+                                        lineThickness = 2,
+                                    }: SplitScreenProps) {
+    const [internalSelected, setInternalSelected] = React.useState<ZoneIndex | null>(null);
+    const selected: ZoneIndex | null = value ?? internalSelected;
+
+    const setSelected = (idx: ZoneIndex) => {
         if (value === undefined) setInternalSelected(idx);
         onChange?.(idx);
     };
 
     const lineColor = "var(--bs-primary, #0d6efd)";
 
-    const boxStyle: CSSProperties = {
+    const boxStyle: React.CSSProperties = {
         position: "relative",
         width: "100%",
         maxWidth: 900,
@@ -41,7 +67,7 @@ export default function SplitScreen({
         userSelect: "none",
     };
 
-    const vLine: CSSProperties = {
+    const vLine: React.CSSProperties = {
         position: "absolute",
         top: radius,
         bottom: radius,
@@ -53,7 +79,7 @@ export default function SplitScreen({
         pointerEvents: "none",
         zIndex: 2,
     };
-    const hLine: CSSProperties = {
+    const hLine: React.CSSProperties = {
         position: "absolute",
         left: radius,
         right: radius,
@@ -66,25 +92,10 @@ export default function SplitScreen({
         zIndex: 2,
     };
 
-    const areas = useMemo(() => {
-        if (count === 1) {
-            return [{ top: 0, left: 0, width: "100%", height: "100%" }];
-        }
-        if (count === 2) {
-            return [
-                { top: 0, left: 0, width: "50%", height: "100%" },      // левая
-                { top: 0, left: "50%", width: "50%", height: "100%" },  // правая
-            ];
-        }
-        return [
-            { top: 0, left: 0, width: "50%", height: "50%" },         // ВЛ
-            { top: 0, left: "50%", width: "50%", height: "50%" },     // ВП
-            { top: "50%", left: 0, width: "50%", height: "50%" },     // НЛ
-            { top: "50%", left: "50%", width: "50%", height: "50%" }, // НП
-        ];
-    }, [count]);
+    const zones = React.useMemo<readonly ZoneIndex[]>(() => ZONES_BY_COUNT[count], [count]);
+    const areas = React.useMemo<readonly Rect[]>(() => AREAS_BY_COUNT[count], [count]);
 
-    const areaCornerRadius = (idx: number): CSSProperties => {
+    const areaCornerRadius = (idx: ZoneIndex): React.CSSProperties => {
         if (count === 1) return { borderRadius: radius };
         if (count === 2) {
             return idx === 0
@@ -96,11 +107,10 @@ export default function SplitScreen({
             case 1: return { borderTopRightRadius: radius };
             case 2: return { borderBottomLeftRadius: radius };
             case 3: return { borderBottomRightRadius: radius };
-            default: return {};
         }
     };
 
-    const baseArea: CSSProperties = {
+    const baseArea: React.CSSProperties = {
         position: "absolute",
         cursor: "pointer",
         outline: "none",
@@ -108,7 +118,7 @@ export default function SplitScreen({
         zIndex: 1,
     };
 
-    const labelStyle: CSSProperties = {
+    const labelStyle: React.CSSProperties = {
         position: "absolute",
         inset: 0,
         display: "grid",
@@ -123,30 +133,29 @@ export default function SplitScreen({
             {count >= 2 && <div style={vLine} />}
             {count === 4 && <div style={hLine} />}
 
-            {areas.map((a, idx) => {
-                const isActive = selected === idx;
+            {zones.map((z) => {
+                const a = areas[z];
+                const isActive = selected === z;
                 return (
                     <div
-                        key={idx}
+                        key={z}
                         role="button"
                         tabIndex={0}
                         aria-pressed={isActive}
-                        aria-label={`Область ${idx + 1} из ${areas.length}`}
-                        onClick={() => setSelected(idx)}
+                        aria-label={`Область ${z + 1} из ${zones.length}`}
+                        onClick={() => setSelected(z)}
                         onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                setSelected(idx);
+                                setSelected(z);
                             }
                         }}
                         style={{
                             ...baseArea,
                             ...a,
-                            ...areaCornerRadius(idx),
+                            ...areaCornerRadius(z),
                             background: isActive ? "rgba(13,110,253,0.08)" : "transparent",
-                            boxShadow: isActive
-                                ? "inset 0 0 0 3px var(--bs-primary, #0d6efd)"
-                                : "none",
+                            boxShadow: isActive ? "inset 0 0 0 3px var(--bs-primary, #0d6efd)" : "none",
                         }}
                         onMouseEnter={(e) => {
                             if (!isActive) (e.currentTarget.style.background = "rgba(13,110,253,0.05)");
@@ -157,7 +166,7 @@ export default function SplitScreen({
                     >
                         {showLabels && (
                             <div style={labelStyle}>
-                                <span>{idx + 1}</span>
+                                <span>{z + 1}</span>
                             </div>
                         )}
                     </div>

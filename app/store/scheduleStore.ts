@@ -14,10 +14,9 @@ import {
 } from '@/app/lib/scheduleUtils'
 import {
     BackgroundInfo,
-    PlaylistItem,
     ScheduledBlock,
-    ScreenData, SplitCount, SplitCountByScreen,
-    TypeMode, ZoneIndex, ZonePlaylistsByScreen
+    SplitCount, SplitCountByScreen,
+    TypeMode, ZoneAssignments, ZoneIndex, ZonePlaylists, ZonePlaylistsByScreen,
 } from "@/public/types/interfaces";
 import axios from "axios";
 import {SERVER_URL} from "@/app/API/api";
@@ -158,6 +157,21 @@ interface ScheduleState {
     clearAllSlots: () => void
     clearDaySlots: (day: Date, screenIds?: string[]) => void
 
+    splitCountByScreen: SplitCountByScreen;       // { [screenId]: 1|2|4 }
+    zonePlaylistsByScreen: ZonePlaylistsByScreen; // { [screenId]: {0?:plId,1?:plId,2?:plId,3?:plId} }
+    activeZoneByScreen: Partial<Record<string, ZoneIndex | null>>;
+
+    // сеттеры/экшены
+    setSplitCount: (screenId: string, next: SplitCount) => void; // c trimZones
+    setActiveZone: (screenId: string, z: ZoneIndex | null) => void;
+    assignZonePlaylist: (screenId: string, zone: ZoneIndex, playlistId: string | null) => void;
+    clearZonePlaylist: (screenId: string, zone: ZoneIndex) => void;
+    resetZones: (screenId: string) => void;
+
+    // удобные хелперы
+    getZoneAssignments: (screenId: string) => ZoneAssignments;
+    setZoneAssignments: (screenId: string, a: ZoneAssignments) => void;
+
     // === emergency  ===
     emergency: Emergency[]
     currentScreenEmergency: EmergencyScreenState | null
@@ -197,13 +211,6 @@ interface ScheduleState {
         screenIds: string[]
     }) => Promise<boolean>
 
-    // --- сплит и плейлисты по зонам ---
-    splitCountByScreen: SplitCountByScreen
-    zonePlaylistsByScreen: ZonePlaylistsByScreen
-
-    setSplitCount: (screenId: string, count: SplitCount) => void
-    setZonePlaylist: (screenId: string, zone: ZoneIndex, playlistId: string | null) => void
-    clearZonePlaylists: (screenId: string) => void
 
 }
 
@@ -301,7 +308,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 endDate: slot.endDate ?? null,
                                 startTime: toHms(slot.startTime)!,
                                 endTime: toHms(slot.endTime)!,
-                                playlistId: slot.playlistId,
+                                playlistIds: slot.playlistIds,
                                 isRecurring: asBool(slot.isRecurring ?? slot.recurring),
                                 priority: Number(slot.priority ?? 1),
                                 type: slot.type,
@@ -331,7 +338,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 (b.endDate ?? null) === (slot.endDate ?? null) &&
                                 b.startTime === slot.startTime &&
                                 b.endTime === slot.endTime &&
-                                b.playlistId === slot.playlistId &&
+                                // b.playlistId === slot.playlistId && // TODO
                                 b.priority === slot.priority &&
                                 b.type === slot.type &&
                                 b.isRecurring === slot.isRecurring &&
@@ -374,7 +381,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             status: it.status ?? 'ACTIVE',
                             startedAt: it.startedAt ?? it.started_at ?? undefined,
                             screens: arr.length || (typeof it.screens === 'number' ? it.screens : 0),
-                            playlistId: it.playlistId,
+                            playlistIds: it.playlistIds,
                             recurring: Boolean(it.recurring ?? it.isRecurring),
                             screensIds: arr.length ? arr : undefined,
                         }
@@ -400,7 +407,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             screensIds: collected.length ? collected : undefined,
                             groups: Array.isArray(it.groups)
                                 ? it.groups.map((g: any) => ({
-                                    playlistId: g.playlistId,
+                                    playlistIds: g.playlistIds,
                                     screens: Number(g.screens ?? 0),
                                 }))
                                 : [],
@@ -429,20 +436,20 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             : !!v
 
 
-                    if (p.emergencyId && p.playlistId) {
-                        set(s => {
-                            s.currentScreenEmergency = {
-                                emergencyId: p.emergencyId,
-                                playlistId: p.playlistId,
-                                recurring: toBool(p.isRecurring ?? p.recurring),
-                            }
-                            s.emgSuccessMessage = 'Экстренный показ запущен'
-                        })
-                    } else {
-                        set(s => {
-                            s.emgSuccessMessage = 'Экстренный показ запущен'
-                        })
-                    }
+                    // if (p.emergencyId && p.playlistId) {
+                    //     set(s => {
+                    //         s.currentScreenEmergency = {
+                    //             emergencyId: p.emergencyId,
+                    //             playlistId: p.playlistId,
+                    //             recurring: toBool(p.isRecurring ?? p.recurring),
+                    //         }
+                    //         s.emgSuccessMessage = 'Экстренный показ запущен'
+                    //     })
+                    // } else {
+                    //     set(s => {
+                    //         s.emgSuccessMessage = 'Экстренный показ запущен'
+                    //     })
+                    // } // TODO
 
 
                     if (lastOrgId) get().getByOrganization(lastOrgId)
@@ -459,20 +466,20 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     }
 
 
-                    if (p.playlistId && p.emergencyId) {
-                        set(s => {
-                            s.currentScreenEmergency = {
-                                emergencyId: p.emergencyId,
-                                playlistId: p.playlistId,
-                                recurring: Boolean(p.isRecurring ?? p.recurring),
-                            }
-                            s.emgSuccessMessage = 'Запущено'
-                        })
-                    } else {
-                        set(s => {
-                            s.emgSuccessMessage = 'Запущено'
-                        })
-                    }
+                    // if (p.playlistId && p.emergencyId) {
+                    //     set(s => {
+                    //         s.currentScreenEmergency = {
+                    //             emergencyId: p.emergencyId,
+                    //             playlistId: p.playlistId,
+                    //             recurring: Boolean(p.isRecurring ?? p.recurring),
+                    //         }
+                    //         s.emgSuccessMessage = 'Запущено'
+                    //     })
+                    // } else {
+                    //     set(s => {
+                    //         s.emgSuccessMessage = 'Запущено'
+                    //     })
+                    // } // TODO
 
                     if (lastOrgId) get().getByOrganization(lastOrgId)
                     break
@@ -508,47 +515,49 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 // ===== background =====
 
                 case 'backgroundResolve': {
-                    const root = (payload as any) ?? {}
-                    const status = root.status ?? 'success'
-                    const p = root.payload ?? root
-                    const playlistId = p?.playlistId ?? null
-                    const branchId = p?.branchId ?? root.data?.branchId ?? null
-
-                    if (status === 'success' && branchId) {
-                        set(s => {
-                            s.backgroundByBranch ??= {}
-                            s.backgroundByBranch[branchId] = {playlistId, configured: !!playlistId}
-                            s.bgErrorMessage = null
-                        })
-                    } else {
-                        // set(s => {
-                        //     s.bgErrorMessage = root.message || 'Не удалось получить фоновый плейлист'
-                        // })
-                    }
-                    break
+                    // const root = (payload as any) ?? {}
+                    // const status = root.status ?? 'success'
+                    // const p = root.payload ?? root
+                    // const playlistId = p?.playlistId ?? null
+                    // const branchId = p?.branchId ?? root.data?.branchId ?? null
+                    //
+                    // if (status === 'success' && branchId) {
+                    //     set(s => {
+                    //         s.backgroundByBranch ??= {}
+                    //         s.backgroundByBranch[branchId] = {playlistId, configured: !!playlistId}
+                    //         s.bgErrorMessage = null
+                    //     })
+                    // } else {
+                    //     // set(s => {
+                    //     //     s.bgErrorMessage = root.message || 'Не удалось получить фоновый плейлист'
+                    //     // })
+                    // }
+                    // break // TODO
                 }
 
                 case 'backgroundSet': {
-                    const status = (payload as any)?.status ?? 'error'
-                    const p = (payload as any)?.payload ?? payload
-                    if (status !== 'success' || !p) {
-                        set(s => {
-                            s.errorMessage = (payload as any)?.message || 'Не удалось задать фоновый плейлист'
-                        })
-                        break
-                    }
+                    // const status = (payload as any)?.status ?? 'error'
+                    // const p = (payload as any)?.payload ?? payload
+                    // if (status !== 'success' || !p) {
+                    //     set(s => {
+                    //         s.errorMessage = (payload as any)?.message || 'Не удалось задать фоновый плейлист'
+                    //     })
+                    //     break
+                    // }
+                    //
+                    // const branchId = p?.branchId
+                    // const playlistId = p?.playlistId ?? null
+                    //
+                    // if (branchId) {
+                    //     set(s => {
+                    //         s.backgroundByBranch ??= {}
+                    //         s.backgroundByBranch[branchId] = {playlistId, configured: true}
+                    //         s.successMessage = 'Фоновый плейлист сохранён'
+                    //     })
+                    // }
+                    // break
 
-                    const branchId = p?.branchId
-                    const playlistId = p?.playlistId ?? null
-
-                    if (branchId) {
-                        set(s => {
-                            s.backgroundByBranch ??= {}
-                            s.backgroundByBranch[branchId] = {playlistId, configured: true}
-                            s.successMessage = 'Фоновый плейлист сохранён'
-                        })
-                    }
-                    break
+                    // TODO
                 }
             }
         })
@@ -567,6 +576,12 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             startDate: null,
             endDate: null,
             currentScreenEmergency: null,
+
+            splitCountByScreen: {},
+            zonePlaylistsByScreen: {},
+            activeZoneByScreen: {},
+
+
             setPriority: (p) => set(s => {
                 s.priority = p
             }),
@@ -784,7 +799,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         b.dayOfWeek === block.dayOfWeek &&
                         b.startTime === block.startTime &&
                         b.endTime === block.endTime &&
-                        b.playlistId === block.playlistId &&
+                        // b.playlistId === block.playlistId && // TODO
                         //  b.priority   === block.priority &&
                         //   b.type       === block.type &&
                         //   b.isRecurring=== block.isRecurring &&
@@ -807,113 +822,71 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 })
             },
 
-            splitCountByScreen: {},
-            zonePlaylistsByScreen: {},
-
-            setSplitCount: (screenId, count) =>
-                set(s => {
-                    s.splitCountByScreen ??= {};
-                    s.zonePlaylistsByScreen ??= {};
-                    const zones = { ...(s.zonePlaylistsByScreen[screenId] ?? {}) };
-
-                    // если сужаем сплит — чистим несуществующие зоны
-                    if (count === 2) {
-                        delete zones[2 as ZoneIndex];
-                        delete zones[3 as ZoneIndex];
-                    }
-                    if (count === 1) {
-                        delete zones[1 as ZoneIndex];
-                        delete zones[2 as ZoneIndex];
-                        delete zones[3 as ZoneIndex];
-                    }
-
-                    s.splitCountByScreen[screenId] = count;
-                    s.zonePlaylistsByScreen[screenId] = zones;
-                }),
-
-            setZonePlaylist: (screenId, zone, playlistId) =>
-                set(s => {
-                    s.zonePlaylistsByScreen ??= {};
-                    const m = { ...(s.zonePlaylistsByScreen[screenId] ?? {}) };
-                    m[zone] = playlistId;
-                    s.zonePlaylistsByScreen[screenId] = m;
-                }),
-
-            clearZonePlaylists: (screenId) =>
-                set(s => {
-                    s.zonePlaylistsByScreen ??= {};
-                    s.zonePlaylistsByScreen[screenId] = {};
-                }),
-
-
-
             sendSchedule: async () => {
                 // if (!ws || ws.readyState !== WebSocket.OPEN) {
-                //     console.warn('WS[schedule] not connected or not open');
-                //     return;
+                //   console.warn('WS[schedule] not connected or not open');
+                //   return;
                 // }
 
                 const {
                     scheduledCalendarMap,
                     isRecurring,
                     scheduleId,
-
-                    // НОВОЕ:
+                    // === берём зонирование ===
                     splitCountByScreen,
                     zonePlaylistsByScreen,
                 } = get();
 
-                // Соберём экраны из обоих источников
-                const screenIds = Array.from(
-                    new Set([
-                        ...Object.keys(scheduledCalendarMap || {}),
-                        ...Object.keys(splitCountByScreen || {}),
-                        ...Object.keys(zonePlaylistsByScreen || {}),
-                    ])
-                );
+                // Все экраны, у которых есть обычные слоты
+                const screenIds = Array.from(new Set([
+                    ...Object.keys(scheduledCalendarMap || {}),
+                ]));
 
                 const toHHmm = (t: string) => t.startsWith('24:00') ? '23:59' : t.slice(0, 5);
 
-                const toSlots = (
-                    blocks: ScheduledBlock[] | undefined,
-                    screenId: string
-                ) =>
-                    (blocks || []).map(b => ({
+                // вспомогательно: собрать zoneAssignments и playlistIds для экрана
+                const collectZones = (screenId: string) => {
+                    const count = splitCountByScreen[screenId] ?? 1 as SplitCount;
+                    const zonePlaylists = zonePlaylistsByScreen[screenId] ?? ({0: null} as ZonePlaylists);
+
+                    // плоский список id по зонам (без null/дубликатов)
+                    const playlistIds = Array.from(
+                        new Set(
+                            (Object.values(zonePlaylists).filter(Boolean) as string[])
+                        )
+                    );
+
+                    const zoneAssignments: ZoneAssignments = {count, zonePlaylists};
+                    return {zoneAssignments, playlistIds};
+                };
+
+                const toSlots = (blocks: ScheduledBlock[] | undefined, screenId: string) => {
+                    const {zoneAssignments, playlistIds} = collectZones(screenId);
+
+                    return (blocks || []).map(b => ({
                         dayOfWeek: b.dayOfWeek,
                         startDate: b.startDate,
                         endDate: b.endDate,
                         startTime: toHHmm(b.startTime),
                         endTime: toHHmm(b.endTime),
-                        // ВАЖНО: playlistId тут можно оставить как есть (дефолт),
-                        // зоны перекроют поведение на плеере:
-                        playlistId: b.playlistId,
+                        // базовые поля, как и раньше:
                         isRecurring: b.isRecurring,
                         priority: b.priority,
                         screenId,
                         type: b.type,
                         branchId: b.branchId,
-                    }));
 
-                // 1) обычные тайм-слоты (без зон)
+                        // === дополняем слоты зонированием ===
+                        zoneAssignments,          // { count, zonePlaylists }
+                        playlistIds,              // массив id плейлистов из зон
+                    }));
+                };
+
+                // 1) обычные тайм-слоты (без зон): теперь с zoneAssignments/playlistIds
                 const slots: any[] = [];
                 for (const sid of screenIds) {
                     slots.push(...toSlots(scheduledCalendarMap[sid], sid));
                 }
-
-                // 2) назначения зон (split + playlistId на зонах)
-                const zoneAssignments = screenIds
-                    .map((sid) => {
-                        const splitCount: SplitCount = (splitCountByScreen?.[sid] ?? 1) as SplitCount;
-                        const zoneMap = zonePlaylistsByScreen?.[sid] ?? {};
-                        const zones = Object.entries(zoneMap)
-                            .filter(([, pid]) => !!pid)
-                            .map(([z, pid]) => ({
-                                zoneIndex: Number(z) as ZoneIndex,
-                                playlistId: pid as string,
-                            }));
-                        return { screenId: sid, splitCount, zones };
-                    })
-                    .filter(x => x.zones.length > 0);
 
                 const branchIds =
                     (useOrganizationStore.getState?.().activeBranches ?? [])
@@ -924,11 +897,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     startDate: null,
                     endDate: null,
                     isRecurring,
-                    // НОВОЕ:
-                    zoneAssignments, // <— ключ
                 };
-
-                console.log("id расписания", scheduleId);
 
                 const CHUNK_SIZE = 20;
                 const chunks = slots.length ? chunkArray(slots, CHUNK_SIZE) : [[]];
@@ -936,25 +905,25 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                 const actionName = scheduleId ? 'update' : 'create';
 
-                console.log("adasdasdada", JSON.stringify({
+                console.log("sendSchedule payload preview", JSON.stringify({
                     action: actionName,
                     data: {
                         ...payload,
-                        ...(scheduleId ? { id: scheduleId, scheduleId } : {}),
-                        timeSlots: 1,
-                        chunkIndex: 1,
+                        ...(scheduleId ? {id: scheduleId, scheduleId} : {}),
+                        timeSlots: slots.slice(0, 2), // показать первые 2 для проверки
                         totalChunks,
                         branchIds,
                     }
-                }))
-                return
+                }, null, 2));
+                return;
 
+                // отправка чанками (как было)
                 for (let i = 0; i < totalChunks; i++) {
                     ws.send(JSON.stringify({
                         action: actionName,
                         data: {
                             ...payload,
-                            ...(scheduleId ? { id: scheduleId, scheduleId } : {}),
+                            ...(scheduleId ? {id: scheduleId, scheduleId} : {}),
                             timeSlots: chunks[i],
                             chunkIndex: i,
                             totalChunks,
@@ -1088,6 +1057,94 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 })
             },
 
+            getZoneAssignments: (screenId) => {
+                const s = get();
+                const count = s.splitCountByScreen[screenId] ?? 1;
+                const zonePlaylists = s.zonePlaylistsByScreen[screenId] ?? {0: null};
+                return {count, zonePlaylists};
+            },
+
+            setZoneAssignments: (screenId, a) =>
+                set((s) => {
+                    s.splitCountByScreen[screenId] = a.count;
+                    // trim сразу на всякий случай
+                    const prev = a.zonePlaylists ?? {};
+                    if (a.count === 1) {
+                        s.zonePlaylistsByScreen[screenId] = {0: prev[0] ?? null};
+                    } else if (a.count === 2) {
+                        s.zonePlaylistsByScreen[screenId] = {
+                            0: prev[0] ?? null,
+                            1: prev[1] ?? null,
+                        };
+                    } else {
+                        s.zonePlaylistsByScreen[screenId] = {
+                            0: prev[0] ?? null,
+                            1: prev[1] ?? null,
+                            2: prev[2] ?? null,
+                            3: prev[3] ?? null,
+                        };
+                    }
+                    s.activeZoneByScreen[screenId] = null;
+                }),
+
+            setSplitCount: (screenId, next) =>
+                set((s) => {
+                    if (s.splitCountByScreen[screenId] === next) return; // ✅ ранний выход
+
+                    s.splitCountByScreen[screenId] = next;
+                    const prev = s.zonePlaylistsByScreen[screenId] ?? {};
+                    if (next === 1) {
+                        s.zonePlaylistsByScreen[screenId] = {0: prev[0] ?? null};
+                    } else if (next === 2) {
+                        s.zonePlaylistsByScreen[screenId] = {0: prev[0] ?? null, 1: prev[1] ?? null};
+                    } else {
+                        s.zonePlaylistsByScreen[screenId] = {
+                            0: prev[0] ?? null,
+                            1: prev[1] ?? null,
+                            2: prev[2] ?? null,
+                            3: prev[3] ?? null,
+                        };
+                    }
+                    s.activeZoneByScreen[screenId] = null;
+                }),
+
+            setActiveZone: (screenId, z) =>
+                set((s) => {
+                    if (s.activeZoneByScreen[screenId] === z) return; // ✅
+                    s.activeZoneByScreen[screenId] = z;
+                }),
+
+            assignZonePlaylist: (screenId, zone, playlistId) =>
+                set((s) => {
+                    const prev = s.zonePlaylistsByScreen[screenId] ?? {};
+                    const next = playlistId ?? null;
+
+                    if ((prev[zone] ?? null) === next) return;
+
+                    // если хочешь очищать — разреши null
+                    s.zonePlaylistsByScreen[screenId] = { ...prev, [zone]: next };
+
+                    // просто присвой поле, а не экшен
+                    if (next !== null) {
+                        s.selectedPlaylist = next; // ✅ безопасно в immer
+                    }
+                }),
+
+
+            clearZonePlaylist: (screenId, zone) =>
+                set((s) => {
+                    const prev = s.zonePlaylistsByScreen[screenId] ?? {};
+                    if (prev[zone] !== undefined) {
+                        s.zonePlaylistsByScreen[screenId] = {...prev, [zone]: null};
+                    }
+                }),
+
+            resetZones: (screenId) =>
+                set((s) => {
+                    s.splitCountByScreen[screenId] = 1;
+                    s.zonePlaylistsByScreen[screenId] = {0: null};
+                    s.activeZoneByScreen[screenId] = null;
+                }),
 
 // ============================ emergency =============================
             emergency: [],
@@ -1292,20 +1349,20 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                             const status = root?.status ?? 'success'
                             const p = root?.payload ?? root
-                            const playlistId = p?.playlistId ?? null
-                            if (status === 'success') {
-                                set(s => {
-                                    s.backgroundByBranch ??= {}
-                                    s.backgroundByBranch[branchId] = {playlistId, configured: !!playlistId}
-                                    s.bgErrorMessage = null
-                                })
-                                resolve(true)
-                            } else {
-                                set(s => {
-                                    s.bgErrorMessage = root?.message || 'Не удалось получить фоновый плейлист'
-                                })
-                                resolve(false)
-                            }
+                            // const playlistId = p?.playlistId ?? null
+                            // if (status === 'success') {
+                            //     set(s => {
+                            //         s.backgroundByBranch ??= {}
+                            //         s.backgroundByBranch[branchId] = {playlistId, configured: !!playlistId}
+                            //         s.bgErrorMessage = null
+                            //     })
+                            //     resolve(true)
+                            // } else {
+                            //     set(s => {
+                            //         s.bgErrorMessage = root?.message || 'Не удалось получить фоновый плейлист'
+                            //     })
+                            //     resolve(false)
+                            // } // TODO
                         } catch {
                         }
                     }
@@ -1347,22 +1404,22 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                             const status = root?.status ?? 'error'
                             const p = root?.payload ?? root
-                            if (status === 'success') {
-                                const bId = p?.branchId ?? branchId
-                                const plId = p?.playlistId ?? playlistId
-                                set(s => {
-                                    s.backgroundByBranch ??= {}
-                                    s.backgroundByBranch[bId] = {playlistId: plId, configured: true}
-                                    s.bgSuccessMessage = 'Фоновый плейлист сохранён'
-                                    s.bgErrorMessage = null
-                                })
-                                resolve(true)
-                            } else {
-                                set(s => {
-                                    s.bgErrorMessage = root?.message || 'Не удалось задать фоновый плейлист'
-                                })
-                                resolve(false)
-                            }
+                            // if (status === 'success') {
+                            //     const bId = p?.branchId ?? branchId
+                            //     const plId = p?.playlistId ?? playlistId
+                            //     set(s => {
+                            //         s.backgroundByBranch ??= {}
+                            //         s.backgroundByBranch[bId] = {playlistId: plId, configured: true}
+                            //         s.bgSuccessMessage = 'Фоновый плейлист сохранён'
+                            //         s.bgErrorMessage = null
+                            //     })
+                            //     resolve(true)
+                            // } else {
+                            //     set(s => {
+                            //         s.bgErrorMessage = root?.message || 'Не удалось задать фоновый плейлист'
+                            //     })
+                            //     resolve(false)
+                            // } // TODO
                         } catch {
                         }
                     }

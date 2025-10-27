@@ -1,40 +1,63 @@
-import {useState} from "react";
-import {Badge, ButtonGroup, Card, Dropdown, Form, ToggleButton} from "react-bootstrap";
+'use client';
+import React, {useState} from "react";
+import {Badge, Button, ButtonGroup, Card, Dropdown, Form, ToggleButton} from "react-bootstrap";
 import DropDownSelect from "@/app/components/Schedule/Settings/ScreenSelection/DropDownSelect";
 import SplitScreen from "@/app/components/Schedule/Settings/ScreenSelection/SplitScreen";
-import {SplitCount} from "@/public/types/interfaces";
+import {SplitCount, ZoneIndex, ZonePlaylists} from "@/public/types/interfaces";
+import {useScheduleStore} from "@/app/store/scheduleStore";
+import {usePlaylistStore} from "@/app/store/playlistStore";
 
 
-type ZoneMap = Record<number, string | null>;
 
 export default function ScreenSelection() {
-    const [count, setCount] = useState<SplitCount>(1);
-    const [activeZone, setActiveZone] = useState<number | null>(null);
-    const [zonePlaylists, setZonePlaylists] = useState<ZoneMap>({});
+    // читаем всё из стора
+    const selectedScreens        = useScheduleStore(s => s.selectedScreens);
+    const splitCountByScreen     = useScheduleStore(s => s.splitCountByScreen);
+    const zonePlaylistsByScreen  = useScheduleStore(s => s.zonePlaylistsByScreen);
+    const activeZoneByScreen     = useScheduleStore(s => s.activeZoneByScreen);
 
-    // при смене сплита — чистим лишние зоны
-    const trimZones = (next: SplitCount) => {
-        setZonePlaylists(prev => {
-            if (next === 4) return prev;
-            const copy: ZoneMap = {};
-            if (next === 1) {
-                // можно оставить только 0-ю (как дефолт) или вообще очистить
-                copy[0] = prev[0] ?? null;
-            } else {
-                copy[0] = prev[0] ?? null;
-                copy[1] = prev[1] ?? null;
-            }
-            return copy;
-        });
-        setActiveZone(null);
+    const setSplitCount      = useScheduleStore(s => s.setSplitCount);
+    const setActiveZone      = useScheduleStore(s => s.setActiveZone);
+    const assignZonePlaylist = useScheduleStore(s => s.assignZonePlaylist);
+    const clearZonePlaylist  = useScheduleStore(s => s.clearZonePlaylist);
+
+    const {playlistItems} = usePlaylistStore()
+
+    if (playlistItems.length === 0) {
+        return (
+            <Button variant="secondary">
+                Плейлисты
+            </Button>
+        )
+    }
+
+    // выбираем текущий экран (первый из выбранных)
+    const screenId = selectedScreens[0];
+
+    if (!screenId) {
+        return (
+            <Card>
+                <Card.Header className="border-top">Разделение экрана</Card.Header>
+                <Card.Body className="text-muted">
+                    Выберите экран, чтобы настроить зоны и плейлисты.
+                </Card.Body>
+            </Card>
+        );
+    }
+
+    const splitCount: SplitCount = splitCountByScreen[screenId] ?? 1;
+    const zonePlaylists: ZonePlaylists = zonePlaylistsByScreen[screenId] ?? { 0: null };
+    const activeZone = activeZoneByScreen[screenId] ?? null;
+
+    const zoneCount = splitCount === 4 ? 4 : splitCount === 2 ? 2 : 1;
+    const zones = Array.from({ length: zoneCount }, (_, i) => i as ZoneIndex);
+
+    const onSetSplit = (n: SplitCount) => {
+        if (splitCount !== n) setSplitCount(screenId, n);
     };
-
-    const assignPlaylist = (zone: number, playlistId: string | null) => {
-        setZonePlaylists(prev => ({ ...prev, [zone]: playlistId }));
+    const onSetActive = (z: ZoneIndex | null) => {
+        if (activeZone !== z) setActiveZone(screenId, z);
     };
-
-    const zoneCount = count === 4 ? 4 : count === 2 ? 2 : 1;
-    const zones = Array.from({ length: zoneCount }, (_, i) => i);
 
     return (
         <Card>
@@ -46,11 +69,11 @@ export default function ScreenSelection() {
                             key={n}
                             id={`split-${n}`}
                             type="radio"
-                            variant={count === n ? "primary" : "outline-primary"}
+                            variant={splitCount === n ? "primary" : "outline-primary"}
                             name="split"
                             value={n}
-                            checked={count === (n as SplitCount)}
-                            onChange={() => { setCount(n as SplitCount); trimZones(n as SplitCount); }}
+                            checked={splitCount === (n as SplitCount)}
+                            onChange={() => onSetSplit(n as SplitCount)}
                         >
                             {n}
                         </ToggleButton>
@@ -60,14 +83,12 @@ export default function ScreenSelection() {
 
             <Card.Body>
                 <div className="d-flex flex-column gap-3 align-items-start">
-                    {/* Превью с кликабельными зонами */}
                     <SplitScreen
-                        count={count}
+                        count={splitCount}
                         value={activeZone}
-                        onChange={setActiveZone}
+                        onChange={onSetActive}
                     />
 
-                    {/* Панель назначения плейлистов */}
                     <div className="w-100">
                         <div className="d-flex align-items-center gap-2 mb-2">
                             <Badge bg="secondary">Зоны: {zoneCount}</Badge>
@@ -86,22 +107,30 @@ export default function ScreenSelection() {
                                                 <Badge bg="light" text="dark">пусто</Badge>
                                             )}
                                         </div>
+
                                         <Form.Select
                                             aria-label={`Плейлист для зоны ${z + 1}`}
-                                            value={zonePlaylists[z] ?? ""}
-                                            onChange={(e) => assignPlaylist(z, e.target.value || null)}
-                                            onFocus={() => setActiveZone(z)}
+                                            value={zonePlaylists[z] ?? ""}           // здесь должен быть ID или ""
+                                            onChange={(e) => {
+                                                const id = e.currentTarget.value || null; // string | null
+                                                assignZonePlaylist(screenId, z, id);
+                                            }}
+                                            onFocus={() => onSetActive(z)}
                                         >
                                             <option value="">Выберите плейлист…</option>
-                                            {/* Заменишь на реальные плейлисты */}
-                                            <option value="pl-1">Playlist A</option>
-                                            <option value="pl-2">Playlist B</option>
-                                            <option value="pl-3">Playlist C</option>
+                                            {playlistItems.map((pl) => (
+                                                <option key={pl.id} value={pl.id}>   {/* <-- ВАЖНО: value={pl.id} */}
+                                                    {pl.name}
+                                                </option>
+                                            ))}
                                         </Form.Select>
+
+
+
                                         {zonePlaylists[z] && (
                                             <button
                                                 className="btn btn-link px-0 mt-2"
-                                                onClick={() => assignPlaylist(z, null)}
+                                                onClick={() => clearZonePlaylist(screenId, z)}
                                             >
                                                 Очистить
                                             </button>
@@ -112,9 +141,8 @@ export default function ScreenSelection() {
                         </div>
                     </div>
 
-                    {/* Итог (для отладки/интеграции) */}
                     <pre className="mt-3 small text-muted">
-            {JSON.stringify({ count, activeZone, zonePlaylists }, null, 2)}
+            {JSON.stringify({ screenId, splitCount, activeZone, zonePlaylists }, null, 2)}
           </pre>
                 </div>
             </Card.Body>

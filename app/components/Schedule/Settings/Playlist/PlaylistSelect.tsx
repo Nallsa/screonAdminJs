@@ -15,7 +15,7 @@ type Props = {
 
 export default function PlaylistSelect({onEmptyClick}: Props) {
     const {playlistItems} = usePlaylistStore()
-    const {selectedPlaylist, setSelectedPlaylist} = useScheduleStore()
+    const {selectedPlaylists, setSelectedPlaylist} = useScheduleStore()
 
     if (playlistItems.length === 0) {
         return (

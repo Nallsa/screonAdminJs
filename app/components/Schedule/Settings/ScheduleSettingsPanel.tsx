@@ -30,7 +30,6 @@ export default function ScheduleSettingsPanel() {
         togglePlayRecurring,
         isFixedSchedule,
         toggleFixedSchedule,
-        selectedPlaylist,
         setSelectedPlaylist,
         startTime,
         endTime,
@@ -62,6 +61,13 @@ export default function ScheduleSettingsPanel() {
         selectedGroup,
         setSelectedGroup
     } = useScheduleStore()
+
+    const selectedPlaylist = useScheduleStore(s => s.selectedPlaylist)
+
+    useEffect(() => {
+        console.log(selectedPlaylist)
+
+    }, [selectedPlaylist])
 
     const {allScreens, groups} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
