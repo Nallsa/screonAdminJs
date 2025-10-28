@@ -244,6 +244,9 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                 case 'getByBranchIds': {
                     const status = (payload as any)?.status;
+
+                    console.log("sdadsdasdasasffasfas" , payload)
+
                     if (status === 'error') {
                         set(s => {
                             s.errorMessage = (payload as any)?.message ?? 'Не удалось получить расписание филиала';
@@ -309,6 +312,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 startTime: toHms(slot.startTime)!,
                                 endTime: toHms(slot.endTime)!,
                                 playlistIds: slot.playlistIds,
+                                zoneAssignments: slot.zoneAssignments,
                                 isRecurring: asBool(slot.isRecurring ?? slot.recurring),
                                 priority: Number(slot.priority ?? 1),
                                 type: slot.type,
@@ -823,10 +827,10 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             },
 
             sendSchedule: async () => {
-                // if (!ws || ws.readyState !== WebSocket.OPEN) {
-                //   console.warn('WS[schedule] not connected or not open');
-                //   return;
-                // }
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                  console.warn('WS[schedule] not connected or not open');
+                  return;
+                }
 
                 const {
                     scheduledCalendarMap,
@@ -915,7 +919,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         branchIds,
                     }
                 }, null, 2));
-                return;
 
                 // отправка чанками (как было)
                 for (let i = 0; i < totalChunks; i++) {
