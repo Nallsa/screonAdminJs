@@ -1,11 +1,6 @@
 import React, {CSSProperties, useMemo, useState} from "react";
 import {SplitCount, ZoneIndex} from "@/public/types/interfaces";
 
-
-// типы из твоего проекта
-export type ZoneIndex = 0 | 1 | 2 | 3;
-export type SplitCount = 1 | 2 | 4;
-
 type Rect = { top: number | string; left: number | string; width: number | string; height: number | string };
 
 type SplitScreenProps = {
