@@ -20,7 +20,7 @@ import TypeOfTimeSlot from "@/app/components/Schedule/Settings/ShowMode/TypeOfTi
 import HowToShowCard from "@/app/components/Schedule/Settings/ShowMode/HowToShowCard";
 import WhatToShowCard from "@/app/components/Schedule/Settings/WhatToShowCard";
 import WhereToShowCard from "@/app/components/Schedule/Settings/WhereToShowCard";
-import ScreenSelection from "@/app/components/Schedule/Settings/ScreenSelection/ScreenSelection";
+import SectionsSelection from "@/app/components/Schedule/Settings/ScreenSelection/SectionsSelection";
 
 export default function ScheduleSettingsPanel() {
     const {
@@ -336,7 +336,7 @@ export default function ScheduleSettingsPanel() {
 
                     <motion.div layout>
 
-                        <ScreenSelection/>
+                        <SectionsSelection/>
 
                     </motion.div>
 

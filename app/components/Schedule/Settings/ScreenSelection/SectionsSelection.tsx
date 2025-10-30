@@ -8,18 +8,17 @@ import {useScheduleStore} from "@/app/store/scheduleStore";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 
 
-
-export default function ScreenSelection() {
+export default function SectionsSelection() {
     // читаем всё из стора
-    const selectedScreens        = useScheduleStore(s => s.selectedScreens);
-    const splitCountByScreen     = useScheduleStore(s => s.splitCountByScreen);
-    const zonePlaylistsByScreen  = useScheduleStore(s => s.zonePlaylistsByScreen);
-    const activeZoneByScreen     = useScheduleStore(s => s.activeZoneByScreen);
+    const selectedScreens = useScheduleStore(s => s.selectedScreens);
+    const splitCountByScreen = useScheduleStore(s => s.splitCountByScreen);
+    const zonePlaylistsByScreen = useScheduleStore(s => s.zonePlaylistsByScreen);
+    const activeZoneByScreen = useScheduleStore(s => s.activeZoneByScreen);
 
-    const setSplitCount      = useScheduleStore(s => s.setSplitCount);
-    const setActiveZone      = useScheduleStore(s => s.setActiveZone);
+    const setSplitCount = useScheduleStore(s => s.setSplitCount);
+    const setActiveZone = useScheduleStore(s => s.setActiveZone);
     const assignZonePlaylist = useScheduleStore(s => s.assignZonePlaylist);
-    const clearZonePlaylist  = useScheduleStore(s => s.clearZonePlaylist);
+    const clearZonePlaylist = useScheduleStore(s => s.clearZonePlaylist);
 
     const {playlistItems} = usePlaylistStore()
 
@@ -46,11 +45,11 @@ export default function ScreenSelection() {
     }
 
     const splitCount: SplitCount = splitCountByScreen[screenId] ?? 1;
-    const zonePlaylists: ZonePlaylists = zonePlaylistsByScreen[screenId] ?? { 0: null };
+    const zonePlaylists: ZonePlaylists = zonePlaylistsByScreen[screenId] ?? {0: null};
     const activeZone = activeZoneByScreen[screenId] ?? null;
 
     const zoneCount = splitCount === 4 ? 4 : splitCount === 2 ? 2 : 1;
-    const zones = Array.from({ length: zoneCount }, (_, i) => i as ZoneIndex);
+    const zones = Array.from({length: zoneCount}, (_, i) => i as ZoneIndex);
 
     const onSetSplit = (n: SplitCount) => {
         if (splitCount !== n) setSplitCount(screenId, n);
@@ -98,7 +97,8 @@ export default function ScreenSelection() {
                         <div className="row g-3">
                             {zones.map((z) => (
                                 <div key={z} className="col-12 col-md-6 col-lg-3">
-                                    <div className={`p-3 rounded border ${activeZone === z ? "border-primary" : "border-light"}`}>
+                                    <div
+                                        className={`p-3 rounded border ${activeZone === z ? "border-primary" : "border-light"}`}>
                                         <div className="d-flex justify-content-between align-items-center mb-2">
                                             <strong>Зона {z + 1}</strong>
                                             {zonePlaylists[z] ? (
@@ -126,7 +126,6 @@ export default function ScreenSelection() {
                                         </Form.Select>
 
 
-
                                         {zonePlaylists[z] && (
                                             <button
                                                 className="btn btn-link px-0 mt-2"
@@ -140,10 +139,6 @@ export default function ScreenSelection() {
                             ))}
                         </div>
                     </div>
-
-                    <pre className="mt-3 small text-muted">
-            {JSON.stringify({ screenId, splitCount, activeZone, zonePlaylists }, null, 2)}
-          </pre>
                 </div>
             </Card.Body>
         </Card>
