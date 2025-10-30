@@ -245,7 +245,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 case 'getByBranchIds': {
                     const status = (payload as any)?.status;
 
-                    console.log("sdadsdasdasasffasfas" , payload)
+                    console.log("sdadsdasdasasffasfas", payload)
 
                     if (status === 'error') {
                         set(s => {
@@ -342,6 +342,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 (b.endDate ?? null) === (slot.endDate ?? null) &&
                                 b.startTime === slot.startTime &&
                                 b.endTime === slot.endTime &&
+                                b.playlistIds === slot.playlistIds &&
                                 b.priority === slot.priority &&
                                 b.type === slot.type &&
                                 b.isRecurring === slot.isRecurring &&
@@ -468,7 +469,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         break
                     }
 
-
                     if (p.playlistId && p.emergencyId) {
                         set(s => {
                             s.currentScreenEmergency = {
@@ -543,7 +543,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     const p = (payload as any)?.payload ?? payload
                     if (status !== 'success' || !p) {
                         set(s => {
-                            s.errorMessage = (payload as any)?.message || 'Не удалось задать фоновый плейлист'
+                            s.bgErrorMessage = (payload as any)?.message || 'Не удалось задать фоновый плейлист'
                         })
                         break
                     }
@@ -555,7 +555,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         set(s => {
                             s.backgroundByBranch ??= {}
                             s.backgroundByBranch[branchId] = {playlistId, configured: true}
-                            s.successMessage = 'Фоновый плейлист сохранён'
+                            s.bgSuccessMessage = 'Фоновый плейлист сохранён'
                         })
                     }
                     break
@@ -662,10 +662,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                 const durationMin = Math.ceil(playlist.totalDurationSeconds / 60)
 
-                console.log(durationMin, 'мин totalDurationMinutes');
-
-
-                const newBlocks: ScheduledBlock[] = []
                 const hhmmToMinutes = (hhmm: string) => {
                     const [h, m] = hhmm.split(':').map(Number);
                     return h * 60 + m;
@@ -735,7 +731,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                         switch (advertisementShowMode) {
                             case 'minutes': {
-                                // «один раз»: начинаем с playlistStart и каждые N минут
+                                // один раз: начинаем с playlistStart и каждые N минут
                                 // вставляем блокы длиной durationMin, пока не дойдём до playlistEnd
                                 let cursor = startMin
                                 while (cursor + durationMin <= endMin) {
@@ -746,7 +742,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             }
 
                             case 'hours': {
-                                // «по часам»: то же самое, но шаг = N часов
+                                // по часам: то же самое, но шаг = N часов
                                 let cursor = startMin
                                 const step = advertisementIntervalHours * 60
                                 while (cursor + durationMin <= endMin) {
@@ -757,7 +753,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             }
 
                             case 'specific':
-                                // «в конкретные часы»: берём каждый из заранее выбранных
+                                // в конкретные часы: берём каждый из заранее выбранных
                                 advertisementSpecificTimes.forEach(hhmm => {
                                     const m = hhmmToMinutes(hhmm)
                                     if (m >= startMin && m + durationMin <= endMin) {
@@ -800,10 +796,10 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         b.dayOfWeek === block.dayOfWeek &&
                         b.startTime === block.startTime &&
                         b.endTime === block.endTime &&
-                        // b.playlistId === block.playlistId && // TODO
-                        //  b.priority   === block.priority &&
-                        //   b.type       === block.type &&
-                        //   b.isRecurring=== block.isRecurring &&
+                        b.playlistIds === block.playlistIds &&
+                        b.priority === block.priority &&
+                        b.type === block.type &&
+                        b.isRecurring === block.isRecurring &&
                         b.branchId === block.branchId)
                     if (idx >= 0) arr.splice(idx, 1)
                 })
@@ -825,8 +821,8 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
             sendSchedule: async () => {
                 if (!ws || ws.readyState !== WebSocket.OPEN) {
-                  console.warn('WS[schedule] not connected or not open');
-                  return;
+                    console.warn('WS[schedule] not connected or not open');
+                    return;
                 }
 
                 const {
@@ -917,7 +913,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     }
                 }, null, 2));
 
-                // отправка чанками (как было)
+
                 for (let i = 0; i < totalChunks; i++) {
                     ws.send(JSON.stringify({
                         action: actionName,
@@ -1067,7 +1063,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             setZoneAssignments: (screenId, a) =>
                 set((s) => {
                     s.splitCountByScreen[screenId] = a.count;
-                    // trim сразу на всякий случай
+
                     const prev = a.zonePlaylists ?? {};
                     if (a.count === 1) {
                         s.zonePlaylistsByScreen[screenId] = {0: prev[0] ?? null};
@@ -1089,7 +1085,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
             setSplitCount: (screenId, next) =>
                 set((s) => {
-                    if (s.splitCountByScreen[screenId] === next) return; // ✅ ранний выход
+                    if (s.splitCountByScreen[screenId] === next) return;
 
                     s.splitCountByScreen[screenId] = next;
                     const prev = s.zonePlaylistsByScreen[screenId] ?? {};
@@ -1110,7 +1106,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
             setActiveZone: (screenId, z) =>
                 set((s) => {
-                    if (s.activeZoneByScreen[screenId] === z) return; // ✅
+                    if (s.activeZoneByScreen[screenId] === z) return;
                     s.activeZoneByScreen[screenId] = z;
                 }),
 
@@ -1121,12 +1117,10 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                     if ((prev[zone] ?? null) === next) return;
 
-                    // если хочешь очищать — разреши null
-                    s.zonePlaylistsByScreen[screenId] = { ...prev, [zone]: next };
+                    s.zonePlaylistsByScreen[screenId] = {...prev, [zone]: next};
 
-                    // просто присвой поле, а не экшен
                     if (next !== null) {
-                        s.selectedPlaylist = next; // ✅ безопасно в immer
+                        s.selectedPlaylist = next;
                     }
                 }),
 

@@ -1,4 +1,4 @@
-import React, { CSSProperties, useMemo, useState } from "react";
+import React, {CSSProperties, useMemo, useState} from "react";
 import {SplitCount, ZoneIndex} from "@/public/types/interfaces";
 
 
@@ -24,16 +24,16 @@ const ZONES_BY_COUNT: Record<SplitCount, readonly ZoneIndex[]> = {
 } as const;
 
 const AREAS_BY_COUNT: Record<SplitCount, readonly Rect[]> = {
-    1: [{ top: 0, left: 0, width: "100%", height: "100%" }],
+    1: [{top: 0, left: 0, width: "100%", height: "100%"}],
     2: [
-        { top: 0, left: 0, width: "50%", height: "100%" },       // левая (0)
-        { top: 0, left: "50%", width: "50%", height: "100%" },   // правая (1)
+        {top: 0, left: 0, width: "50%", height: "100%"},       // левая (0)
+        {top: 0, left: "50%", width: "50%", height: "100%"},   // правая (1)
     ],
     4: [
-        { top: 0, left: 0, width: "50%", height: "50%" },        // ВЛ (0)
-        { top: 0, left: "50%", width: "50%", height: "50%" },    // ВП (1)
-        { top: "50%", left: 0, width: "50%", height: "50%" },    // НЛ (2)
-        { top: "50%", left: "50%", width: "50%", height: "50%" } // НП (3)
+        {top: 0, left: 0, width: "50%", height: "50%"},        // ВЛ (0)
+        {top: 0, left: "50%", width: "50%", height: "50%"},    // ВП (1)
+        {top: "50%", left: 0, width: "50%", height: "50%"},    // НЛ (2)
+        {top: "50%", left: "50%", width: "50%", height: "50%"} // НП (3)
     ],
 } as const;
 
@@ -59,6 +59,7 @@ export default function SplitScreen({
         position: "relative",
         width: "100%",
         maxWidth: 900,
+        maxHeight: 150,
         aspectRatio: "16 / 9",
         border: "2px solid var(--bs-border-color, #dee2e6)",
         borderRadius: radius,
@@ -96,17 +97,21 @@ export default function SplitScreen({
     const areas = React.useMemo<readonly Rect[]>(() => AREAS_BY_COUNT[count], [count]);
 
     const areaCornerRadius = (idx: ZoneIndex): React.CSSProperties => {
-        if (count === 1) return { borderRadius: radius };
+        if (count === 1) return {borderRadius: radius};
         if (count === 2) {
             return idx === 0
-                ? { borderTopLeftRadius: radius, borderBottomLeftRadius: radius }
-                : { borderTopRightRadius: radius, borderBottomRightRadius: radius };
+                ? {borderTopLeftRadius: radius, borderBottomLeftRadius: radius}
+                : {borderTopRightRadius: radius, borderBottomRightRadius: radius};
         }
         switch (idx) {
-            case 0: return { borderTopLeftRadius: radius };
-            case 1: return { borderTopRightRadius: radius };
-            case 2: return { borderBottomLeftRadius: radius };
-            case 3: return { borderBottomRightRadius: radius };
+            case 0:
+                return {borderTopLeftRadius: radius};
+            case 1:
+                return {borderTopRightRadius: radius};
+            case 2:
+                return {borderBottomLeftRadius: radius};
+            case 3:
+                return {borderBottomRightRadius: radius};
         }
     };
 
@@ -130,8 +135,8 @@ export default function SplitScreen({
 
     return (
         <div style={boxStyle} role="group" aria-label="Разделение экрана">
-            {count >= 2 && <div style={vLine} />}
-            {count === 4 && <div style={hLine} />}
+            {count >= 2 && <div style={vLine}/>}
+            {count === 4 && <div style={hLine}/>}
 
             {zones.map((z) => {
                 const a = areas[z];
