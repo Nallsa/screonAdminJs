@@ -342,7 +342,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                                 (b.endDate ?? null) === (slot.endDate ?? null) &&
                                 b.startTime === slot.startTime &&
                                 b.endTime === slot.endTime &&
-                                // b.playlistId === slot.playlistId && // TODO
                                 b.priority === slot.priority &&
                                 b.type === slot.type &&
                                 b.isRecurring === slot.isRecurring &&
@@ -440,20 +439,20 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             : !!v
 
 
-                    // if (p.emergencyId && p.playlistId) {
-                    //     set(s => {
-                    //         s.currentScreenEmergency = {
-                    //             emergencyId: p.emergencyId,
-                    //             playlistId: p.playlistId,
-                    //             recurring: toBool(p.isRecurring ?? p.recurring),
-                    //         }
-                    //         s.emgSuccessMessage = 'Экстренный показ запущен'
-                    //     })
-                    // } else {
-                    //     set(s => {
-                    //         s.emgSuccessMessage = 'Экстренный показ запущен'
-                    //     })
-                    // } // TODO
+                    if (p.emergencyId && p.playlistId) {
+                        set(s => {
+                            s.currentScreenEmergency = {
+                                emergencyId: p.emergencyId,
+                                playlistId: p.playlistId,
+                                recurring: toBool(p.isRecurring ?? p.recurring),
+                            }
+                            s.emgSuccessMessage = 'Экстренный показ запущен'
+                        })
+                    } else {
+                        set(s => {
+                            s.emgSuccessMessage = 'Экстренный показ запущен'
+                        })
+                    }
 
 
                     if (lastOrgId) get().getByOrganization(lastOrgId)
@@ -470,20 +469,20 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     }
 
 
-                    // if (p.playlistId && p.emergencyId) {
-                    //     set(s => {
-                    //         s.currentScreenEmergency = {
-                    //             emergencyId: p.emergencyId,
-                    //             playlistId: p.playlistId,
-                    //             recurring: Boolean(p.isRecurring ?? p.recurring),
-                    //         }
-                    //         s.emgSuccessMessage = 'Запущено'
-                    //     })
-                    // } else {
-                    //     set(s => {
-                    //         s.emgSuccessMessage = 'Запущено'
-                    //     })
-                    // } // TODO
+                    if (p.playlistId && p.emergencyId) {
+                        set(s => {
+                            s.currentScreenEmergency = {
+                                emergencyId: p.emergencyId,
+                                playlistId: p.playlistId,
+                                recurring: Boolean(p.isRecurring ?? p.recurring),
+                            }
+                            s.emgSuccessMessage = 'Запущено'
+                        })
+                    } else {
+                        set(s => {
+                            s.emgSuccessMessage = 'Запущено'
+                        })
+                    }
 
                     if (lastOrgId) get().getByOrganization(lastOrgId)
                     break
@@ -519,49 +518,47 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 // ===== background =====
 
                 case 'backgroundResolve': {
-                    // const root = (payload as any) ?? {}
-                    // const status = root.status ?? 'success'
-                    // const p = root.payload ?? root
-                    // const playlistId = p?.playlistId ?? null
-                    // const branchId = p?.branchId ?? root.data?.branchId ?? null
-                    //
-                    // if (status === 'success' && branchId) {
-                    //     set(s => {
-                    //         s.backgroundByBranch ??= {}
-                    //         s.backgroundByBranch[branchId] = {playlistId, configured: !!playlistId}
-                    //         s.bgErrorMessage = null
-                    //     })
-                    // } else {
-                    //     // set(s => {
-                    //     //     s.bgErrorMessage = root.message || 'Не удалось получить фоновый плейлист'
-                    //     // })
-                    // }
-                    // break // TODO
+                    const root = (payload as any) ?? {}
+                    const status = root.status ?? 'success'
+                    const p = root.payload ?? root
+                    const playlistId = p?.playlistId ?? null
+                    const branchId = p?.branchId ?? root.data?.branchId ?? null
+
+                    if (status === 'success' && branchId) {
+                        set(s => {
+                            s.backgroundByBranch ??= {}
+                            s.backgroundByBranch[branchId] = {playlistId, configured: !!playlistId}
+                            s.bgErrorMessage = null
+                        })
+                    } else {
+                        // set(s => {
+                        //     s.bgErrorMessage = root.message || 'Не удалось получить фоновый плейлист'
+                        // })
+                    }
+                    break
                 }
 
                 case 'backgroundSet': {
-                    // const status = (payload as any)?.status ?? 'error'
-                    // const p = (payload as any)?.payload ?? payload
-                    // if (status !== 'success' || !p) {
-                    //     set(s => {
-                    //         s.errorMessage = (payload as any)?.message || 'Не удалось задать фоновый плейлист'
-                    //     })
-                    //     break
-                    // }
-                    //
-                    // const branchId = p?.branchId
-                    // const playlistId = p?.playlistId ?? null
-                    //
-                    // if (branchId) {
-                    //     set(s => {
-                    //         s.backgroundByBranch ??= {}
-                    //         s.backgroundByBranch[branchId] = {playlistId, configured: true}
-                    //         s.successMessage = 'Фоновый плейлист сохранён'
-                    //     })
-                    // }
-                    // break
+                    const status = (payload as any)?.status ?? 'error'
+                    const p = (payload as any)?.payload ?? payload
+                    if (status !== 'success' || !p) {
+                        set(s => {
+                            s.errorMessage = (payload as any)?.message || 'Не удалось задать фоновый плейлист'
+                        })
+                        break
+                    }
 
-                    // TODO
+                    const branchId = p?.branchId
+                    const playlistId = p?.playlistId ?? null
+
+                    if (branchId) {
+                        set(s => {
+                            s.backgroundByBranch ??= {}
+                            s.backgroundByBranch[branchId] = {playlistId, configured: true}
+                            s.successMessage = 'Фоновый плейлист сохранён'
+                        })
+                    }
+                    break
                 }
             }
         })
@@ -1352,20 +1349,20 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                             const status = root?.status ?? 'success'
                             const p = root?.payload ?? root
-                            // const playlistId = p?.playlistId ?? null
-                            // if (status === 'success') {
-                            //     set(s => {
-                            //         s.backgroundByBranch ??= {}
-                            //         s.backgroundByBranch[branchId] = {playlistId, configured: !!playlistId}
-                            //         s.bgErrorMessage = null
-                            //     })
-                            //     resolve(true)
-                            // } else {
-                            //     set(s => {
-                            //         s.bgErrorMessage = root?.message || 'Не удалось получить фоновый плейлист'
-                            //     })
-                            //     resolve(false)
-                            // } // TODO
+                            const playlistId = p?.playlistId ?? null
+                            if (status === 'success') {
+                                set(s => {
+                                    s.backgroundByBranch ??= {}
+                                    s.backgroundByBranch[branchId] = {playlistId, configured: !!playlistId}
+                                    s.bgErrorMessage = null
+                                })
+                                resolve(true)
+                            } else {
+                                set(s => {
+                                    s.bgErrorMessage = root?.message || 'Не удалось получить фоновый плейлист'
+                                })
+                                resolve(false)
+                            }
                         } catch {
                         }
                     }
@@ -1407,22 +1404,22 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
                             const status = root?.status ?? 'error'
                             const p = root?.payload ?? root
-                            // if (status === 'success') {
-                            //     const bId = p?.branchId ?? branchId
-                            //     const plId = p?.playlistId ?? playlistId
-                            //     set(s => {
-                            //         s.backgroundByBranch ??= {}
-                            //         s.backgroundByBranch[bId] = {playlistId: plId, configured: true}
-                            //         s.bgSuccessMessage = 'Фоновый плейлист сохранён'
-                            //         s.bgErrorMessage = null
-                            //     })
-                            //     resolve(true)
-                            // } else {
-                            //     set(s => {
-                            //         s.bgErrorMessage = root?.message || 'Не удалось задать фоновый плейлист'
-                            //     })
-                            //     resolve(false)
-                            // } // TODO
+                            if (status === 'success') {
+                                const bId = p?.branchId ?? branchId
+                                const plId = p?.playlistId ?? playlistId
+                                set(s => {
+                                    s.backgroundByBranch ??= {}
+                                    s.backgroundByBranch[bId] = {playlistId: plId, configured: true}
+                                    s.bgSuccessMessage = 'Фоновый плейлист сохранён'
+                                    s.bgErrorMessage = null
+                                })
+                                resolve(true)
+                            } else {
+                                set(s => {
+                                    s.bgErrorMessage = root?.message || 'Не удалось задать фоновый плейлист'
+                                })
+                                resolve(false)
+                            }
                         } catch {
                         }
                     }
