@@ -15,6 +15,7 @@ import {useScheduleStore} from "@/app/store/scheduleStore";
 import {shallow} from 'zustand/shallow';
 import PreviewImage from "@/app/components/Common/PreviewImage";
 import {fmtC, fmtPct, fmtVer, formatLastSeen} from "@/app/lib/screensUtils";
+import {useCurrentPlayingPlaylist} from "@/app/hooks/useCurrentPlayingPlaylist";
 
 interface ScreenCardProps {
     screen: ScreenData
@@ -64,7 +65,7 @@ export default function ScreenCard({
     const [statusLoading, setStatusLoading] = useState(false);
     const [prevRecvAt, setPrevRecvAt] = useState<number | null>(null);
     const timeoutRef = React.useRef<any>(null);
-    // const currentPl = useCurrentPlayingPlaylist(screen.id);
+    const currentPl = useCurrentPlayingPlaylist(screen.id);
 
     function openStatus() {
         setShowStatusModal(true);
@@ -141,14 +142,14 @@ export default function ScreenCard({
                         position: 'relative',
                     }}
                 >
-                    {/*{currentPl?.filePreviewId && isOnline && (*/}
-                    {/*    <PreviewImage*/}
-                    {/*        id={currentPl.filePreviewId}*/}
-                    {/*        name={currentPl.name}*/}
-                    {/*        fill*/}
-                    {/*        aspectRatio={16 / 9}*/}
-                    {/*    />*/}
-                    {/*)}*/}
+                    {currentPl?.filePreviewId && isOnline && (
+                        <PreviewImage
+                            id={currentPl.filePreviewId}
+                            name={currentPl.name}
+                            fill
+                            aspectRatio={16 / 9}
+                        />
+                    )}
                 </div>
                 <Card.Body className="p-2">
                     {/* Название */}

@@ -65,3 +65,20 @@ export function dateToIsoLocal(d: Date): string {
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
 }
+
+export const hhmmOrHmsToMinutes = (t: string): number => {
+    // принимает "HH:MM" или "HH:MM:SS"
+    const s = t.trim();
+    const [hh, mm] = s.split(':').slice(0, 2).map(n => parseInt(n, 10));
+    if (hh === 24 && (mm ?? 0) === 0) return 1440;      // поддержка 24:00[:00]
+    return (hh * 60) + (mm || 0);
+};
+
+export const normalizeRange = (startHHMM: string, endHHMM: string) => {
+    // "00:00"–"00:00" трактуем как полный день [0, 1440]
+    const isFullDay = startHHMM === '00:00' && endHHMM === '00:00';
+    if (isFullDay) return {start: 0, end: 1440, isFullDay: true};
+    const start = timeToMinutes(startHHMM);
+    const end = timeToMinutes(endHHMM);
+    return {start, end, isFullDay: false};
+};

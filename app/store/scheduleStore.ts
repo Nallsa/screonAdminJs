@@ -324,7 +324,6 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
 
                     set(s => {
-                        if (!s.scheduledFixedMap) s.scheduledFixedMap = {};
                         if (!s.scheduledCalendarMap) s.scheduledCalendarMap = {};
 
                         s.isRecurring = meta.isRecurring;
@@ -355,6 +354,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         const screens = new Set<string>(s.selectedScreens);
                         normalizedAll.forEach(sl => screens.add(sl.screenId));
                         s.selectedScreens = Array.from(screens);
+                        s.errorMessage = null
                     });
 
                     break;
@@ -796,15 +796,12 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         b.dayOfWeek === block.dayOfWeek &&
                         b.startTime === block.startTime &&
                         b.endTime === block.endTime &&
-                        b.playlistIds === block.playlistIds &&
                         b.priority === block.priority &&
                         b.type === block.type &&
                         b.isRecurring === block.isRecurring &&
                         b.branchId === block.branchId)
                     if (idx >= 0) arr.splice(idx, 1)
                 })
-
-
             },
 
             addEditedBlock: (screenId, block) => {
@@ -896,7 +893,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     isRecurring,
                 };
 
-                const CHUNK_SIZE = 20;
+                const CHUNK_SIZE = 15;
                 const chunks = slots.length ? chunkArray(slots, CHUNK_SIZE) : [[]];
                 const totalChunks = chunks.length;
 
