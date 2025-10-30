@@ -92,18 +92,37 @@ export type TypeMode = 'PLAYLIST' | 'ADVERTISEMENT' | 'EMERGENCY';
 
 
 export interface ScheduledBlock {
-    dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'
-    startDate: string | null
-    endDate: string | null
-    startTime: string
-    endTime: string
-    playlistId: string,
-    priority: number,
-    type: TypeMode,
-    isRecurring: boolean,
-    screenId: string,
-    branchId: string,
+    dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+    startDate: string | null;
+    endDate: string | null;
+    startTime: string;
+    endTime: string;
+    playlistId?: string;
+    priority: number;
+    type: TypeMode;
+    isRecurring: boolean;
+    screenId: string;
+    branchId: string;
+
+    // ВАШ ключ и ВАША структура:
+    zoneAssignments?: ZoneAssignments;
+    playlistIds?: string[];
 }
+
+
+export type ZoneIndex = 0 | 1 | 2 | 3;
+export type SplitCount = 1 | 2 | 4;
+
+export type ZonePlaylists = Partial<Record<ZoneIndex, string | null>>;
+
+export interface ZoneAssignments {
+    count: SplitCount;
+    zonePlaylists: ZonePlaylists;
+}
+
+export type ZonePlaylistsByScreen = Record<string, ZonePlaylists>;
+export type SplitCountByScreen   = Record<string, SplitCount>;
+
 
 
 export interface MemberDto {

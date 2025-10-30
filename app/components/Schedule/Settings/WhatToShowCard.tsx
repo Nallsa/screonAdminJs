@@ -22,9 +22,9 @@ export default function WhatToShowCard({onNoPlaylistsClick}: Props) {
 
     return (
         <div className="d-flex flex-column flex-sm-row justify-content-center align-items-center gap-3">
-            <Col xs="auto">
-                <PlaylistSelect onEmptyClick={onNoPlaylistsClick}/>
-            </Col>
+            {/*<Col xs="auto">*/}
+            {/*    <PlaylistSelect onEmptyClick={onNoPlaylistsClick}/>*/}
+            {/*</Col>*/}
 
 
             {licenseControl([Grade.PRO]) &&

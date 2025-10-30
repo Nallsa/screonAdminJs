@@ -199,7 +199,7 @@ export default function EditableScheduleTable() {
     const [editingMeta, setEditingMeta] = useState<Meta | null>(null)
     const [editStart, setEditStart] = useState('')
     const [editEnd, setEditEnd] = useState('')
-    const [editPlaylist, setEditPlaylist] = useState('')
+    // const [editPlaylist, setEditPlaylist] = useState('')
     const [editPriority, setEditPriority] = useState(1)
     const [editScreens, setEditScreens] = useState<string[]>([])
     const [error, setError] = useState<string | null>(null)
@@ -216,7 +216,7 @@ export default function EditableScheduleTable() {
         setEditStart(b.startTime.slice(0, 5))
         const end5 = b.endTime.slice(0, 5)
         setEditEnd(end5 === '24:00' ? '00:00' : end5)
-        setEditPlaylist(b.playlistId)
+        // setEditPlaylist(b.playlistId)
         setEditPriority(b.priority)
         setEditScreens([editingMeta.screenId])
         setError(null)
@@ -225,27 +225,27 @@ export default function EditableScheduleTable() {
 
     }, [editingMeta])
 
-    useEffect(() => {
-        if (!editingMeta) return;
-
-        if (
-            editTypeMode === 'ADVERTISEMENT' ||
-            (editTypeMode === 'PLAYLIST' && editShowMode === 'once')
-        ) {
-            const pl = playlistItems.find(p => p.id === editPlaylist);
-            if (!pl) return;
-            // рассчитаем длительность в минутах
-            const durMin = Math.ceil(pl.totalDurationSeconds / 60);
-
-            const [h, m] = editStart.split(':').map(Number);
-            let total = h * 60 + m + durMin;
-            const hh = Math.floor(total / 60);
-            const mm = total % 60;
-            setEditEnd(
-                `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
-            );
-        }
-    }, [editTypeMode, editShowMode, editStart, editPlaylist, playlistItems, editingMeta]);
+    // useEffect(() => {
+    //     if (!editingMeta) return;
+    //
+    //     if (
+    //         editTypeMode === 'ADVERTISEMENT' ||
+    //         (editTypeMode === 'PLAYLIST' && editShowMode === 'once')
+    //     ) {
+    //         const pl = playlistItems.find(p => p.id === editPlaylist);
+    //         if (!pl) return;
+    //         // рассчитаем длительность в минутах
+    //         const durMin = Math.ceil(pl.totalDurationSeconds / 60);
+    //
+    //         const [h, m] = editStart.split(':').map(Number);
+    //         let total = h * 60 + m + durMin;
+    //         const hh = Math.floor(total / 60);
+    //         const mm = total % 60;
+    //         setEditEnd(
+    //             `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+    //         );
+    //     }
+    // }, [editTypeMode, editShowMode, editStart, editPlaylist, playlistItems, editingMeta]);
 
     // чистая проверка без сообщений
     const canSave = () => {
@@ -257,7 +257,7 @@ export default function EditableScheduleTable() {
         if (editTypeMode === 'PLAYLIST' && editShowMode === 'cycle' && !isFullDay) {
             if (editStart >= editEnd) return false
         }
-        if (!playlistItems.some(p => p.id === editPlaylist)) return false
+        // if (!playlistItems.some(p => p.id === editPlaylist)) return false
         if (editScreens.length === 0) return false
 
         return true
@@ -293,10 +293,11 @@ export default function EditableScheduleTable() {
             setError('Начало должно быть раньше конца');
             return false;
         }
-        if (!playlistItems.some(p => p.id === editPlaylist)) {
-            setError('Выберите плейлист');
-            return false;
-        }
+        // if (!playlistItems.some(p => p.id === editPlaylist)) {
+        //     setError('Выберите плейлист');
+        //     return false;
+        // }
+
         if (editScreens.length === 0) {
             setError('Выберите экран(ы)');
             return false;
@@ -339,48 +340,48 @@ export default function EditableScheduleTable() {
             }
         }
 
-        if (editTypeMode === 'ADVERTISEMENT') {
-            const store = useScheduleStore.getState()
-            const mapKey = store.isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
-
-            // длительность плейлиста в минутах
-            const playlist = playlistItems.find(p => p.id === editPlaylist)!
-            const durationMin = Math.ceil(playlist.totalDurationSeconds / 60)
-
-            // кандидат на новое время
-            const candidateStart = timeToMinutes(editStart)
-            const candidateEnd = candidateStart + durationMin
-
-            for (const screenId of editScreens) {
-                let existing = (store as any)[mapKey][screenId] as ScheduledBlock[] | undefined
-                if (!existing) existing = []
-                // сначала уберём все, кроме рекламы, и сам редактируемый блок
-                existing = existing
-                    .filter(b => b.type === 'ADVERTISEMENT' && b !== editingMeta!.block)
-
-                const conflict = existing.find(b => {
-                    const sameDay = store.isFixedSchedule
-                        ? b.dayOfWeek === editingMeta!.block.dayOfWeek
-                        : b.startDate === editingMeta!.block.startDate
-                    if (!sameDay) return false
-                    if (b.branchId !== candidateBranchId) return false;
-                    const s = timeToMinutes(b.startTime)
-                    const e = timeToMinutes(b.endTime)
-                    // проверка пересечения [candidateStart,candidateEnd) с [s,e)
-                    return !(candidateEnd <= s || e <= candidateStart)
-                })
-
-                if (conflict) {
-                    setError(
-                        `На экране пересекается реклама с ${conflict.startTime.slice(0, 5)}` +
-                        `–${conflict.endTime.slice(0, 5)} в ${
-                            store.isFixedSchedule ? `день ${conflict.dayOfWeek}` : conflict.startDate
-                        }.`
-                    )
-                    return false
-                }
-            }
-        }
+        // if (editTypeMode === 'ADVERTISEMENT') {
+        //     const store = useScheduleStore.getState()
+        //     const mapKey = store.isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
+        //
+        //     // длительность плейлиста в минутах
+        //     const playlist = playlistItems.find(p => p.id === editPlaylist)!
+        //     const durationMin = Math.ceil(playlist.totalDurationSeconds / 60)
+        //
+        //     // кандидат на новое время
+        //     const candidateStart = timeToMinutes(editStart)
+        //     const candidateEnd = candidateStart + durationMin
+        //
+        //     for (const screenId of editScreens) {
+        //         let existing = (store as any)[mapKey][screenId] as ScheduledBlock[] | undefined
+        //         if (!existing) existing = []
+        //         // сначала уберём все, кроме рекламы, и сам редактируемый блок
+        //         existing = existing
+        //             .filter(b => b.type === 'ADVERTISEMENT' && b !== editingMeta!.block)
+        //
+        //         const conflict = existing.find(b => {
+        //             const sameDay = store.isFixedSchedule
+        //                 ? b.dayOfWeek === editingMeta!.block.dayOfWeek
+        //                 : b.startDate === editingMeta!.block.startDate
+        //             if (!sameDay) return false
+        //             if (b.branchId !== candidateBranchId) return false;
+        //             const s = timeToMinutes(b.startTime)
+        //             const e = timeToMinutes(b.endTime)
+        //             // проверка пересечения [candidateStart,candidateEnd) с [s,e)
+        //             return !(candidateEnd <= s || e <= candidateStart)
+        //         })
+        //
+        //         if (conflict) {
+        //             setError(
+        //                 `На экране пересекается реклама с ${conflict.startTime.slice(0, 5)}` +
+        //                 `–${conflict.endTime.slice(0, 5)} в ${
+        //                     store.isFixedSchedule ? `день ${conflict.dayOfWeek}` : conflict.startDate
+        //                 }.`
+        //             )
+        //             return false
+        //         }
+        //     }
+        // }
 
         return true;
     };
@@ -403,7 +404,7 @@ export default function EditableScheduleTable() {
                 isRecurring: editTypeMode === 'PLAYLIST' && editShowMode === 'cycle',
                 startTime: startStr,
                 endTime: endStr,
-                playlistId: editPlaylist,
+                // playlistId: editPlaylist,
                 priority: editPriority,
                 branchId: editingMeta!.block.branchId,
             })
@@ -490,7 +491,7 @@ export default function EditableScheduleTable() {
                     const top = headerH + m.startRow * slotH;
                     const height = (m.endRow - m.startRow) * slotH;
 
-                    const playlistName = playlistItems.find(p => p.id === m.block.playlistId)?.name ?? m.block.playlistId;
+                    // const playlistName = playlistItems.find(p => p.id === m.block.playlistId)?.name ?? m.block.playlistId;
                     const screenName = allScreens.find(s => s.id === m.screenId)?.name ?? m.screenId;
                     const isAd = m.block.type === 'ADVERTISEMENT';
 
@@ -651,14 +652,14 @@ export default function EditableScheduleTable() {
                                     ))}
                                 </Form.Select>
                             </Form.Group>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Плейлист</Form.Label>
-                                <Form.Select value={editPlaylist} onChange={e => setEditPlaylist(e.target.value)}>
-                                    {playlistItems.map(pl => (
-                                        <option key={pl.id} value={pl.id}>{pl.name}</option>
-                                    ))}
-                                </Form.Select>
-                            </Form.Group>
+                            {/*<Form.Group className="mb-3">*/}
+                            {/*    <Form.Label>Плейлист</Form.Label>*/}
+                            {/*    <Form.Select value={editPlaylist} onChange={e => setEditPlaylist(e.target.value)}>*/}
+                            {/*        {playlistItems.map(pl => (*/}
+                            {/*            <option key={pl.id} value={pl.id}>{pl.name}</option>*/}
+                            {/*        ))}*/}
+                            {/*    </Form.Select>*/}
+                            {/*</Form.Group>*/}
                             {licenseControl([Grade.PRO]) &&
                                 (
                                     editTypeMode === 'PLAYLIST' ? (

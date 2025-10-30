@@ -64,6 +64,17 @@ export default function ScreensPage() {
     }, [connectWsForScreen]);
 
 
+    useEffect(() => {
+        if (allScreens.length !== 0) return;
+
+        const initialize = async () => {
+            await getScreens();
+        };
+
+        initialize();
+    }, []);
+
+
     const handleOpenAddModal = () => {
         setScreenCode('')
         if (!selectedBranchId && branches.length > 0) {
