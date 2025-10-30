@@ -187,13 +187,13 @@ export default function PlaylistsPage() {
                     setBgError(null);
                 }}
             />
-            {/*<WarningModal*/}
-            {/*    show={!!bgSuccessMessage}*/}
-            {/*    title="Готово"*/}
-            {/*    message={bgSuccessMessage || ''}*/}
-            {/*    buttonText="Ок"*/}
-            {/*    onClose={() => setBgSuccess(null)}*/}
-            {/*/>*/}
+            <WarningModal
+                show={!!bgSuccessMessage}
+                title="Готово"
+                message={bgSuccessMessage || ''}
+                buttonText="Ок"
+                onClose={() => setBgSuccess(null)}
+            />
         </>
     )
 }
