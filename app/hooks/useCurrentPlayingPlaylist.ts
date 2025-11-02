@@ -7,60 +7,92 @@ import React from "react";
 import {useScheduleStore} from "@/app/store/scheduleStore";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 
-const DOW = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+const DAYS_OF_WEEK = [
+    "SUNDAY",
+    "MONDAY",
+    "TUESDAY",
+    "WEDNESDAY",
+    "THURSDAY",
+    "FRIDAY",
+    "SATURDAY",
+] as const;
 
-function useMinuteKey() {
-    const [k, setK] = React.useState(() => Math.floor(Date.now() / 60000));
+function useMinuteTickKey() {
+    const [minuteTickKey, setMinuteTickKey] = React.useState(
+        () => Math.floor(Date.now() / 60_000)
+    );
+
     React.useEffect(() => {
-        const id = setInterval(() => setK(Math.floor(Date.now() / 60000)), 60_000);
-        return () => clearInterval(id);
+        const intervalId = setInterval(
+            () => setMinuteTickKey(Math.floor(Date.now() / 60_000)),
+            60_000
+        );
+        return () => clearInterval(intervalId);
     }, []);
-    return k;
+
+    return minuteTickKey;
 }
 
-const toMin = (hhmmss: string) => {
-    const [hh, mm] = hhmmss.split(':').map(Number);
-    return (hh || 0) * 60 + (mm || 0);
+const hhmmssToMinutes = (hhmmss: string) => {
+    const [hours, minutes] = hhmmss.split(":").map(Number);
+    return (hours || 0) * 60 + (minutes || 0);
 };
 
 export function useCurrentPlayingPlaylist(screenId: string) {
-    const scheduledFixedMap = useScheduleStore(s => s.scheduledFixedMap);
-    const scheduledCalendarMap = useScheduleStore(s => s.scheduledCalendarMap);
-    const playlists = usePlaylistStore(s => s.playlistItems);
-    const minuteKey = useMinuteKey();
+    const scheduledCalendarMap = useScheduleStore((s) => s.scheduledCalendarMap);
+    const playlistItems = usePlaylistStore((s) => s.playlistItems);
+    const minuteTickKey = useMinuteTickKey();
 
     return React.useMemo(() => {
-        const now = new Date();
-        const nowM = now.getHours() * 60 + now.getMinutes();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const dow = DOW[now.getDay()];
+        const nowDate = new Date();
+        const nowTotalMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+        const todayIsoDate = `${nowDate.getFullYear()}-${String(
+            nowDate.getMonth() + 1
+        ).padStart(2, "0")}-${String(nowDate.getDate()).padStart(2, "0")}`;
 
-        const inRange = (a: string, b: string) => {
-            const s = toMin(a), e = toMin(b);
-            return e < s ? (nowM >= s || nowM < e) : (nowM >= s && nowM < e);
+
+        const isNowWithinRange = (startTime: string, endTime: string) => {
+            const startMinutes = hhmmssToMinutes(startTime);
+            const endMinutes = hhmmssToMinutes(endTime);
+            return endMinutes < startMinutes
+                ? nowTotalMinutes >= startMinutes || nowTotalMinutes < endMinutes
+                : nowTotalMinutes >= startMinutes && nowTotalMinutes < endMinutes;
         };
 
-        const cand: Array<{ playlistId: string; priority: number; startTime: string }> = [];
+        type Candidate = {
+            playlistId: string;
+            priority: number;
+            startTime: string;
+        };
 
-        (scheduledCalendarMap[screenId] ?? []).forEach(b => {
-            if (b.startDate === today && inRange(b.startTime, b.endTime)) {
-                if (b.playlistIds) {
-                    cand.push({playlistId: b.playlistIds[0], priority: b.priority ?? 1, startTime: b.startTime});
+        const candidates: Candidate[] = [];
+
+        (scheduledCalendarMap[screenId] ?? []).forEach((block) => {
+            if (
+                block.startDate === todayIsoDate &&
+                isNowWithinRange(block.startTime, block.endTime)
+            ) {
+                if (block.playlistIds && block.playlistIds[0]) {
+                    candidates.push({
+                        playlistId: block.playlistIds[0],
+                        priority: block.priority ?? 1,
+                        startTime: block.startTime,
+                    });
                 }
             }
         });
-        (scheduledFixedMap[screenId] ?? []).forEach(b => {
-            if (b.dayOfWeek === dow && inRange(b.startTime, b.endTime)) {
-                if (b.playlistIds) {
-                    cand.push({playlistId: b.playlistIds[0], priority: b.priority ?? 1, startTime: b.startTime});
-                }
-            }
-        });
 
-        if (!cand.length) return null;
+        if (!candidates.length) return null;
 
-        cand.sort((x, y) => (y.priority - x.priority) || (toMin(x.startTime) - toMin(y.startTime)));
-        const pl = playlists.find(p => p.id === cand[0].playlistId) || null;
-        return pl;
-    }, [scheduledFixedMap, scheduledCalendarMap, playlists, screenId, minuteKey]);
+        candidates.sort(
+            (left, right) =>
+                right.priority - left.priority ||
+                hhmmssToMinutes(left.startTime) - hhmmssToMinutes(right.startTime)
+        );
+
+        const currentPlaylist =
+            playlistItems.find((p) => p.id === candidates[0].playlistId) || null;
+
+        return currentPlaylist;
+    }, [scheduledCalendarMap, playlistItems, screenId, minuteTickKey]);
 }

@@ -4,7 +4,7 @@
  */
 
 'use client'
-import React, {useEffect} from 'react'
+import React, {useEffect, useRef} from 'react'
 import ScheduleHeader from '@/app/components/Schedule/ScheduleHeader'
 import ScheduleSettingsPanel from '@/app/components/Schedule/Settings/ScheduleSettingsPanel'
 import EditableScheduleTable from '@/app/components/Schedule/Table/EditableScheduleTable'
@@ -19,9 +19,15 @@ export default function SchedulePage() {
     const {errorMessage, setError, successMessage, setSuccess, getSchedule} = useScheduleStore()
     const activeBranches = useOrganizationStore(state => state.activeBranches)
 
+    const lastKeyRef = useRef<string>('')
+
     useEffect(() => {
+        if (!activeBranches || activeBranches.length === 0) return
+        const key = activeBranches.map(b => b.id).sort().join(',')
+        if (lastKeyRef.current === key) return
+        lastKeyRef.current = key
         getSchedule()
-    }, [activeBranches.length])
+    }, [activeBranches, getSchedule])
 
     return (
         <div style={{padding: 16, display: 'flex', flexDirection: 'column', gap: 24}}>

@@ -95,7 +95,7 @@ export function connectWebSocket(
     };
 
     ws.onclose = (ev) => {
-        console.warn(`WS[${channel}] closed`, ev);
+        console.warn(`WS[${channel}] closed code=${ev.code} reason=${ev.reason}`);
         const id = heartbeatIds[channel];
         if (id != null) {
             window.clearInterval(id);

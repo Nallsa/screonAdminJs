@@ -8,11 +8,12 @@ import React, {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'reac
 import type {ShowMode} from '@/app/store/scheduleStore'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import {dateToIsoLocal, generateTimeSlots, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
-import {ScheduledBlock, TypeMode} from "@/public/types/interfaces";
+import {ScheduledBlock, SplitCount, TypeMode, ZoneIndex, ZonePlaylists} from "@/public/types/interfaces";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {useScreensStore} from "@/app/store/screensStore";
 import {Button, Form, Modal} from "react-bootstrap";
 import {Grade, licenseControl} from "@/app/store/licenseStore";
+import SectionsSelection from "@/app/components/Schedule/Settings/ScreenSelection/SectionsSelection";
 // подготавливаем метаданные для позиционирования
 type Meta = {
     screenId: string
@@ -35,9 +36,11 @@ export default function EditableScheduleTable() {
         addEditedBlock,
         selectedGroup,
         showMode,
-        clearDaySlots
+        clearDaySlots,
+        setSplitCount,
+        assignZonePlaylist,
+        clearZonePlaylist,
     } = useScheduleStore()
-
 
     const {allScreens} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
@@ -151,7 +154,7 @@ export default function EditableScheduleTable() {
         if (firstRow) setSlotH(firstRow.getBoundingClientRect().height)
     }, [])
 
-    // --------- мобилка + выбранный день
+    //  мобилка
     const [isMobile, setIsMobile] = useState(false)
     const [selectedDay, setSelectedDay] = useState(0)
     const dayShort = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС']
@@ -172,10 +175,10 @@ export default function EditableScheduleTable() {
         setSelectedDay(mondayFirst)
     }, [])
 
-    // ---- видимые дни
+    //  видимые дни
     const visibleWeek = isMobile ? [currentWeek[selectedDay]].filter(Boolean) : currentWeek
 
-    //const totalCols = currentWeek.length + 1
+    // const totalCols = currentWeek.length + 1
     const totalCols = visibleWeek.length + 1
     const colWidth = 100 / totalCols
 
@@ -199,78 +202,127 @@ export default function EditableScheduleTable() {
     const [editingMeta, setEditingMeta] = useState<Meta | null>(null)
     const [editStart, setEditStart] = useState('')
     const [editEnd, setEditEnd] = useState('')
-    // const [editPlaylist, setEditPlaylist] = useState('')
+    const [editSplitCount, setEditSplitCount] = useState<SplitCount>(1);
+    const [editZonePlaylists, setEditZonePlaylists] = useState<ZonePlaylists>({0: null});
+    const [activeZoneModal, setActiveZoneModal] = useState<ZoneIndex | null>(null);
     const [editPriority, setEditPriority] = useState(1)
     const [editScreens, setEditScreens] = useState<string[]>([])
     const [error, setError] = useState<string | null>(null)
+
 
     //  стейты для выбора внутри модалки
     const [editTypeMode, setEditTypeMode] = useState<TypeMode>('PLAYLIST')
     const [editShowMode, setEditShowMode] = useState<ShowMode>('once')
 
+    const playlistById = useMemo(
+        () => new Map(playlistItems.map(p => [p.id, p])),
+        [playlistItems]
+    );
+
+// максимальная длительность среди выбранных зон в модалке
+    const modalMaxDurationMin = useMemo(() => {
+        let maxMin = 0;
+        for (let i = 0; i < (editSplitCount === 4 ? 4 : editSplitCount === 2 ? 2 : 1); i++) {
+            const id = editZonePlaylists[i as ZoneIndex];
+            if (!id) continue;
+            const pl = playlistById.get(id);
+            if (!pl) continue;
+            const mins = Math.ceil((pl.totalDurationSeconds || 0) / 60);
+            if (mins > maxMin) maxMin = mins;
+        }
+        return maxMin;
+    }, [editSplitCount, editZonePlaylists, playlistById]);
+
+    const modalZonesComplete = useMemo(() => {
+        const need = editSplitCount === 4 ? 4 : editSplitCount === 2 ? 2 : 1;
+        for (let i = 0; i < need; i++) {
+            if (!editZonePlaylists[i as ZoneIndex]) return false;
+        }
+        return true;
+    }, [editSplitCount, editZonePlaylists]);
+
 
     // инициализация при открытии
     useEffect(() => {
-        if (!editingMeta) return
-        const b = editingMeta.block
-        setEditStart(b.startTime.slice(0, 5))
-        const end5 = b.endTime.slice(0, 5)
-        setEditEnd(end5 === '24:00' ? '00:00' : end5)
-        // setEditPlaylist(b.playlistId)
-        setEditPriority(b.priority)
-        setEditScreens([editingMeta.screenId])
-        setError(null)
-        setEditTypeMode(b.type === 'ADVERTISEMENT' ? 'ADVERTISEMENT' : 'PLAYLIST')
-        setEditShowMode(b.isRecurring ? 'cycle' : 'once')
+        if (!editingMeta) return;
+        const b = editingMeta.block;
 
-    }, [editingMeta])
+        setEditStart(b.startTime.slice(0, 5));
+        const end5 = b.endTime.slice(0, 5);
+        setEditEnd(end5 === '24:00' ? '00:00' : end5);
+        setEditPriority(b.priority);
+        setEditScreens([editingMeta.screenId]);
+        setError(null);
+        setEditTypeMode(b.type === 'ADVERTISEMENT' ? 'ADVERTISEMENT' : 'PLAYLIST');
+        setEditShowMode(b.isRecurring ? 'cycle' : 'once');
 
-    // useEffect(() => {
-    //     if (!editingMeta) return;
-    //
-    //     if (
-    //         editTypeMode === 'ADVERTISEMENT' ||
-    //         (editTypeMode === 'PLAYLIST' && editShowMode === 'once')
-    //     ) {
-    //         const pl = playlistItems.find(p => p.id === editPlaylist);
-    //         if (!pl) return;
-    //         // рассчитаем длительность в минутах
-    //         const durMin = Math.ceil(pl.totalDurationSeconds / 60);
-    //
-    //         const [h, m] = editStart.split(':').map(Number);
-    //         let total = h * 60 + m + durMin;
-    //         const hh = Math.floor(total / 60);
-    //         const mm = total % 60;
-    //         setEditEnd(
-    //             `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
-    //         );
-    //     }
-    // }, [editTypeMode, editShowMode, editStart, editPlaylist, playlistItems, editingMeta]);
+        const count = b.zoneAssignments?.count ?? 1;
+        const zones = b.zoneAssignments?.zonePlaylists ?? ({0: b.playlistId ?? null} as ZonePlaylists);
+
+        setEditSplitCount(count as SplitCount);
+        setEditZonePlaylists(zones);
+        setActiveZoneModal(null);
+    }, [editingMeta]);
+
+    useEffect(() => {
+        if (!editingMeta) return;
+
+        if (
+            editTypeMode === 'ADVERTISEMENT' ||
+            (editTypeMode === 'PLAYLIST' && editShowMode === 'once')
+        ) {
+            if (modalMaxDurationMin > 0 && editStart) {
+                const [h, m] = editStart.split(':').map(Number);
+                const total = h * 60 + m + modalMaxDurationMin;
+                const hh = Math.floor(total / 60);
+                const mm = total % 60;
+                setEditEnd(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
+            }
+        }
+    }, [editTypeMode, editShowMode, editStart, modalMaxDurationMin, editingMeta]);
+
+    const onSelectPlaylistForZoneModal = (z: ZoneIndex, idOrEmpty: string) => {
+        const id = idOrEmpty || null;
+        setEditZonePlaylists(prev => ({...prev, [z]: id}));
+    };
+
+    const onClearZoneModal = (z: ZoneIndex) => {
+        setEditZonePlaylists(prev => ({...prev, [z]: null}));
+    };
 
     // чистая проверка без сообщений
     const canSave = () => {
-        if (!editingMeta) return false
-        if (!editStart || !editEnd) return false
+        if (!editingMeta) return false;
+        if (!editStart || !editEnd) return false;
+
         const isFullDay = editTypeMode === 'PLAYLIST' && editShowMode === 'cycle'
-            && editStart === '00:00' && editEnd === '00:00'
+            && editStart === '00:00' && editEnd === '00:00';
 
         if (editTypeMode === 'PLAYLIST' && editShowMode === 'cycle' && !isFullDay) {
-            if (editStart >= editEnd) return false
+            if (editStart >= editEnd) return false;
         }
-        // if (!playlistItems.some(p => p.id === editPlaylist)) return false
-        if (editScreens.length === 0) return false
 
-        return true
-    }
+        if (!modalZonesComplete) return false;
+        if (editScreens.length === 0) return false;
+
+        return true;
+    };
 
     // валидация
     const validateAndSetError = (): boolean => {
         setError(null);
 
-        const candidateBranchId =
-            editingMeta?.block.branchId
-            ?? getBranchOf(editScreens[0]);
+        if (!editingMeta) {
+            setError('Нечего сохранять');
+            return false;
+        }
+        if (!editStart || !editEnd) {
+            setError('Введите время');
+            return false;
+        }
 
+        const candidateBranchId =
+            editingMeta.block.branchId ?? getBranchOf(editScreens[0]);
         if (!candidateBranchId) {
             setError('Не удалось определить филиал для слота');
             return false;
@@ -281,30 +333,37 @@ export default function EditableScheduleTable() {
             return false;
         }
 
-        if (!editingMeta) {
-            setError('Нечего сохранять');
-            return false;
-        }
-        if (!editStart || !editEnd) {
-            setError('Введите время');
-            return false;
-        }
-        if (editStart >= editEnd) {
-            setError('Начало должно быть раньше конца');
-            return false;
-        }
-        // if (!playlistItems.some(p => p.id === editPlaylist)) {
-        //     setError('Выберите плейлист');
-        //     return false;
-        // }
+        const isFullDay = editTypeMode === 'PLAYLIST' && editShowMode === 'cycle'
+            && editStart === '00:00' && editEnd === '00:00';
 
-        if (editScreens.length === 0) {
-            setError('Выберите экран(ы)');
+        if (editTypeMode === 'PLAYLIST' && editShowMode === 'cycle' && !isFullDay) {
+            if (editStart >= editEnd) {
+                setError('Начало должно быть раньше конца');
+                return false;
+            }
+        }
+
+        // зоны должны быть заполнены
+        if (!modalZonesComplete) {
+            setError('Назначьте плейлисты для всех секций.');
             return false;
+        }
+
+        // при once/ADVERTISEMENT должна быть ненулевая длительность
+        if (
+            (editTypeMode === 'PLAYLIST' && editShowMode === 'once') ||
+            editTypeMode === 'ADVERTISEMENT'
+        ) {
+            if (modalMaxDurationMin <= 0) {
+                setError('Длительность выбранных плейлистов равна 0 мин.');
+                return false;
+            }
         }
 
         const candidateStart = timeToMinutes(editStart);
-        const candidateEnd = timeToMinutes(editEnd);
+        const candidateEnd = editTypeMode === 'ADVERTISEMENT' || (editTypeMode === 'PLAYLIST' && editShowMode === 'once')
+            ? candidateStart + modalMaxDurationMin
+            : timeToMinutes(editEnd);
 
         if (editTypeMode === 'PLAYLIST' && editShowMode === 'once') {
             const store = useScheduleStore.getState();
@@ -314,16 +373,12 @@ export default function EditableScheduleTable() {
                 const existing = (store as any)[mapKey][screenId] as ScheduledBlock[] | undefined;
                 if (!existing) continue;
                 const conflict = existing.find(b =>
-                    // пропускаем то же самое
                     b !== editingMeta!.block &&
-                    // совпадение дня или даты
                     (store.isFixedSchedule
                         ? b.dayOfWeek === editingMeta!.block.dayOfWeek
                         : b.startDate === editingMeta!.block.startDate) &&
-                    // пересечение по времени
                     !(candidateEnd <= timeToMinutes(b.startTime) ||
                         timeToMinutes(b.endTime) <= candidateStart) &&
-                    // совпадение приоритета
                     b.priority === editPriority &&
                     b.branchId === candidateBranchId
                 );
@@ -340,63 +395,96 @@ export default function EditableScheduleTable() {
             }
         }
 
-        // if (editTypeMode === 'ADVERTISEMENT') {
-        //     const store = useScheduleStore.getState()
-        //     const mapKey = store.isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
-        //
-        //     // длительность плейлиста в минутах
-        //     const playlist = playlistItems.find(p => p.id === editPlaylist)!
-        //     const durationMin = Math.ceil(playlist.totalDurationSeconds / 60)
-        //
-        //     // кандидат на новое время
-        //     const candidateStart = timeToMinutes(editStart)
-        //     const candidateEnd = candidateStart + durationMin
-        //
-        //     for (const screenId of editScreens) {
-        //         let existing = (store as any)[mapKey][screenId] as ScheduledBlock[] | undefined
-        //         if (!existing) existing = []
-        //         // сначала уберём все, кроме рекламы, и сам редактируемый блок
-        //         existing = existing
-        //             .filter(b => b.type === 'ADVERTISEMENT' && b !== editingMeta!.block)
-        //
-        //         const conflict = existing.find(b => {
-        //             const sameDay = store.isFixedSchedule
-        //                 ? b.dayOfWeek === editingMeta!.block.dayOfWeek
-        //                 : b.startDate === editingMeta!.block.startDate
-        //             if (!sameDay) return false
-        //             if (b.branchId !== candidateBranchId) return false;
-        //             const s = timeToMinutes(b.startTime)
-        //             const e = timeToMinutes(b.endTime)
-        //             // проверка пересечения [candidateStart,candidateEnd) с [s,e)
-        //             return !(candidateEnd <= s || e <= candidateStart)
-        //         })
-        //
-        //         if (conflict) {
-        //             setError(
-        //                 `На экране пересекается реклама с ${conflict.startTime.slice(0, 5)}` +
-        //                 `–${conflict.endTime.slice(0, 5)} в ${
-        //                     store.isFixedSchedule ? `день ${conflict.dayOfWeek}` : conflict.startDate
-        //                 }.`
-        //             )
-        //             return false
-        //         }
-        //     }
-        // }
+        if (editTypeMode === 'ADVERTISEMENT') {
+            const store = useScheduleStore.getState();
+            const mapKey = store.isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap';
+
+            for (const screenId of editScreens) {
+                let existing = (store as any)[mapKey][screenId] as ScheduledBlock[] | undefined;
+                if (!existing) existing = [];
+                existing = existing.filter(b => b.type === 'ADVERTISEMENT' && b !== editingMeta!.block);
+
+                const conflict = existing.find(b => {
+                    const sameDay = store.isFixedSchedule
+                        ? b.dayOfWeek === editingMeta!.block.dayOfWeek
+                        : b.startDate === editingMeta!.block.startDate;
+                    if (!sameDay) return false;
+                    if (b.branchId !== candidateBranchId) return false;
+                    const s = timeToMinutes(b.startTime);
+                    const e = timeToMinutes(b.endTime);
+                    return !(candidateEnd <= s || e <= candidateStart);
+                });
+
+                if (conflict) {
+                    setError(
+                        `На экране пересекается реклама с ${conflict.startTime.slice(0, 5)}–${conflict.endTime.slice(0, 5)} ` +
+                        `${store.isFixedSchedule ? `в день ${conflict.dayOfWeek}` : `в ${conflict.startDate}`}.`
+                    );
+                    return false;
+                }
+            }
+        }
 
         return true;
     };
 
     // сохранить изменения таймслота
     const onSave = () => {
-        if (!validateAndSetError()) return
+        if (!validateAndSetError()) return;
 
         const isFullDay = editTypeMode === 'PLAYLIST' && editShowMode === 'cycle'
-            && editStart === '00:00' && editEnd === '00:00'
+            && editStart === '00:00' && editEnd === '00:00';
 
-        const startStr = `${editStart}:00`
-        const endStr = isFullDay ? '24:00:00' : `${editEnd}:00`
+        const startStr = `${editStart}:00`;
+        const endStr =
+            isFullDay
+                ? '24:00:00'
+                : (editTypeMode === 'ADVERTISEMENT' || (editTypeMode === 'PLAYLIST' && editShowMode === 'once'))
+                    ? (() => {
+                        // «once/adv»: длина = max длительность зон
+                        const [h, m] = editStart.split(':').map(Number);
+                        const total = h * 60 + m + Math.max(1, modalMaxDurationMin);
+                        const hh = Math.floor(total / 60);
+                        const mm = total % 60;
+                        return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00`;
+                    })()
+                    : `${editEnd}:00`;
 
-        removeBlock(editingMeta!.screenId, editingMeta!.block)
+        const zoneAssignments = {
+            count: editSplitCount,
+            zonePlaylists: editZonePlaylists,
+        } as const;
+
+        const playlistIds = Array.from(
+            new Set(
+                Object.values(editZonePlaylists).filter(Boolean) as string[]
+            )
+        );
+
+        // 1) удалить старый блок
+        removeBlock(editingMeta!.screenId, editingMeta!.block);
+
+        // 2) синхронизировать стор зонирования по выбранным экранам
+        for (const screenId of editScreens) {
+            setSplitCount(screenId, editSplitCount);
+            // очистим лишние зоны, если стало меньше
+            if (editSplitCount === 1) {
+                clearZonePlaylist(screenId, 1 as ZoneIndex);
+                clearZonePlaylist(screenId, 2 as ZoneIndex);
+                clearZonePlaylist(screenId, 3 as ZoneIndex);
+            } else if (editSplitCount === 2) {
+                clearZonePlaylist(screenId, 2 as ZoneIndex);
+                clearZonePlaylist(screenId, 3 as ZoneIndex);
+            }
+            // применим выбранные плейлисты
+            const maxZ = editSplitCount === 4 ? 4 : editSplitCount === 2 ? 2 : 1;
+            for (let z = 0; z < maxZ; z++) {
+                const pid = editZonePlaylists[z as ZoneIndex] ?? null;
+                assignZonePlaylist(screenId, z as ZoneIndex, pid);
+            }
+        }
+
+        // 3) добавить обновлённый блок на все выбранные экраны
         editScreens.forEach(screenId =>
             addEditedBlock(screenId, {
                 ...editingMeta!.block,
@@ -404,13 +492,17 @@ export default function EditableScheduleTable() {
                 isRecurring: editTypeMode === 'PLAYLIST' && editShowMode === 'cycle',
                 startTime: startStr,
                 endTime: endStr,
-                // playlistId: editPlaylist,
+                // legacy поле можно опустить; если нужно — оставим только в зоне 0
+                // playlistId: editZonePlaylists[0] ?? undefined,
                 priority: editPriority,
                 branchId: editingMeta!.block.branchId,
+                zoneAssignments,
+                playlistIds,
             })
-        )
-        setEditingMeta(null)
-    }
+        );
+
+        setEditingMeta(null);
+    };
 
 
     return (
@@ -652,14 +744,19 @@ export default function EditableScheduleTable() {
                                     ))}
                                 </Form.Select>
                             </Form.Group>
-                            {/*<Form.Group className="mb-3">*/}
-                            {/*    <Form.Label>Плейлист</Form.Label>*/}
-                            {/*    <Form.Select value={editPlaylist} onChange={e => setEditPlaylist(e.target.value)}>*/}
-                            {/*        {playlistItems.map(pl => (*/}
-                            {/*            <option key={pl.id} value={pl.id}>{pl.name}</option>*/}
-                            {/*        ))}*/}
-                            {/*    </Form.Select>*/}
-                            {/*</Form.Group>*/}
+                            <Form.Group className="mb-3">
+                                <Form.Label>Плейлист</Form.Label>
+
+                                <SectionsSelection
+                                    count={editSplitCount}
+                                    activeZone={activeZoneModal}
+                                    onChangeActive={setActiveZoneModal}
+                                    zonePlaylists={editZonePlaylists}
+                                    playlists={playlistItems}
+                                    onSelectPlaylistForZone={onSelectPlaylistForZoneModal}
+                                    onClearZone={onClearZoneModal}
+                                />
+                            </Form.Group>
                             {licenseControl([Grade.PRO]) &&
                                 (
                                     editTypeMode === 'PLAYLIST' ? (

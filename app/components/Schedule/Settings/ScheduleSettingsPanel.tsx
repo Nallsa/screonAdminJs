@@ -4,9 +4,16 @@
  */
 
 'use client'
-import React, {useEffect, useState} from 'react'
+import React, {useEffect, useMemo, useState} from 'react'
 import {Form, Button, Dropdown, InputGroup, Card, Col, Row, ListGroup} from 'react-bootstrap'
-import {getCurrentWeekByDate, parseDayToDate, RU_DAYS, timeToMinutes, WEEK_DAYS} from '@/app/lib/scheduleUtils'
+import {
+    getCurrentWeekByDate, hhmmOrHmsToMinutes,
+    normalizeRange,
+    parseDayToDate,
+    RU_DAYS,
+    timeToMinutes,
+    WEEK_DAYS
+} from '@/app/lib/scheduleUtils'
 import {useScheduleStore} from '@/app/store/scheduleStore'
 import {motion, LayoutGroup, AnimatePresence} from 'framer-motion'
 import {usePlaylistStore} from "@/app/store/playlistStore";
@@ -20,54 +27,32 @@ import TypeOfTimeSlot from "@/app/components/Schedule/Settings/ShowMode/TypeOfTi
 import HowToShowCard from "@/app/components/Schedule/Settings/ShowMode/HowToShowCard";
 import WhatToShowCard from "@/app/components/Schedule/Settings/WhatToShowCard";
 import WhereToShowCard from "@/app/components/Schedule/Settings/WhereToShowCard";
-import SectionsSelection from "@/app/components/Schedule/Settings/ScreenSelection/SectionsSelection";
+import SectionsSelection from "@/app/components/Schedule/Settings/ScreenSelection/SectionsSelectionCard";
+import {ZoneIndex} from "@/public/types/interfaces";
 
 export default function ScheduleSettingsPanel() {
     const {
         selectedDate,
         onDateSelected,
-        isRecurring,
-        togglePlayRecurring,
         isFixedSchedule,
-        toggleFixedSchedule,
-        setSelectedPlaylist,
         startTime,
         endTime,
-        setStartTime,
-        setEndTime,
         selectedDays,
-        toggleDay,
         selectedScreens,
-        toggleScreen,
         scheduledFixedMap,
         scheduledCalendarMap,
         addBlock,
         priority,
-        setPriority,
-        showMode,
-        setShowMode,
         typeMode,
-        setTypeMode,
-        // рекламные:
         advertisementShowMode,
-        setAdvertisementShowMode,
         advertisementIntervalMinutes,
-        setAdvertisementIntervalMinutes,
         advertisementIntervalHours,
-        setAdvertisementIntervalHours,
         advertisementSpecificTimes,
-        addAdvertisementSpecificTime,
-        removeAdvertisementSpecificTime,
         selectedGroup,
-        setSelectedGroup
+        setSelectedGroup,
+        getZoneAssignments
     } = useScheduleStore()
 
-    const selectedPlaylist = useScheduleStore(s => s.selectedPlaylist)
-
-    useEffect(() => {
-        console.log(selectedPlaylist)
-
-    }, [selectedPlaylist])
 
     const {allScreens, groups} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
@@ -77,13 +62,12 @@ export default function ScheduleSettingsPanel() {
     const [open, setOpen] = useState(true)
     const router = useRouter();
 
-
     useEffect(() => {
         onDateSelected(new Date())
     }, [onDateSelected])
 
     useEffect(() => {
-        setOpen(true) // показываем сразу после маунта
+        setOpen(true)
     }, [])
 
     const handleScreensToggle = (e: React.MouseEvent) => {
@@ -100,13 +84,49 @@ export default function ScheduleSettingsPanel() {
         }
     }
 
+    const playlistById = useMemo(
+        () => new Map(playlistItems.map(p => [p.id, p])),
+        [playlistItems]
+    );
+
+    const getTargetScreens = () =>
+        (selectedGroup
+            ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
+            : selectedScreens);
+
+    const isScreenZonesComplete = (screenId: string) => {
+        const {count, zonePlaylists} = getZoneAssignments(screenId);
+        for (let z = 0; z < count; z++) {
+            if (!zonePlaylists[z as ZoneIndex]) return false;
+        }
+        return true;
+    };
+
+    const getScreenPlaylistIds = (screenId: string): string[] => {
+        const {count, zonePlaylists} = getZoneAssignments(screenId);
+        return Array.from({length: count}, (_, i) => zonePlaylists[i as ZoneIndex])
+            .filter(Boolean) as string[];
+    };
+
+    const getScreenMaxDurationMin = (screenId: string): number => {
+        const ids = getScreenPlaylistIds(screenId);
+        let maxMin = 0;
+        for (const id of ids) {
+            const pl = playlistById.get(id);
+            if (pl) {
+                const mins = Math.ceil((pl.totalDurationSeconds || 0) / 60);
+                if (mins > maxMin) maxMin = mins;
+            }
+        }
+        return maxMin;
+    };
+
+    const targetScreens = getTargetScreens();
+    const zonesOkForAllScreens = targetScreens.length > 0 && targetScreens.every(isScreenZonesComplete);
+
 
     const handleAdd = () => {
-        // Базовые проверки
-        if (!selectedPlaylist) {
-            window.alert('Выберите, пожалуйста, плейлист');
-            return;
-        }
+        // базовые проверки
         if (selectedScreens.length === 0 && !selectedGroup) {
             window.alert('Выберите хотя бы один экран');
             return;
@@ -116,46 +136,56 @@ export default function ScheduleSettingsPanel() {
             return;
         }
 
+        const {start: rangeStart, end: rangeEnd} = normalizeRange(startTime, endTime);
+
+        const screensToAdd = getTargetScreens();
+
+
+        // проверка зон и сбор длительностей по экранам
+        const maxDurationByScreen = new Map<string, number>();
+        for (const sid of screensToAdd) {
+            if (!isScreenZonesComplete(sid)) {
+                const {count, zonePlaylists} = getZoneAssignments(sid);
+                const name = allScreens.find(s => s.id === sid)?.name ?? sid;
+                const missing = Array.from({length: count}, (_, i) => i as ZoneIndex)
+                    .filter(z => !zonePlaylists[z])
+                    .map(z => `Зона ${z + 1}`).join(', ');
+                window.alert(`Экран «${name}» разделён на ${count} секции.\nНазначьте плейлисты для всех секций. Пустые: ${missing}.`);
+                return;
+            }
+            const maxMin = getScreenMaxDurationMin(sid);
+            // если показ разово или реклама — длительность должна быть > 0
+            if ((typeMode === 'PLAYLIST' && startTime !== '00:00' && endTime !== '00:00') || typeMode === 'ADVERTISEMENT') {
+                if (maxMin <= 0) {
+                    const name = allScreens.find(s => s.id === sid)?.name ?? sid;
+                    window.alert(`На экране «${name}» длительность плейлистов = 0 мин. Проверьте содержимое плейлистов.`);
+                    return;
+                }
+            }
+            maxDurationByScreen.set(sid, maxMin);
+        }
+
+        // спец-проверки для рекламы — интервалы против max длительности по экрану
         if (typeMode === 'ADVERTISEMENT') {
-            const playlist = playlistItems.find(p => p.id === selectedPlaylist)!
-            const durationMin = Math.ceil(playlist.totalDurationSeconds / 60)
-
-            if (advertisementShowMode === 'minutes' && advertisementIntervalMinutes < durationMin) {
-                window.alert(
-                    `Интервал между показами ( ${advertisementIntervalMinutes} мин ) меньше общей длительности плейлиста ( ${durationMin} мин ).`
-                )
-                return
-            }
-            if (advertisementShowMode === 'hours' && advertisementIntervalHours * 60 < durationMin) {
-                window.alert(
-                    `Интервал между показами ( ${advertisementIntervalHours} ч = ${advertisementIntervalHours * 60} мин ) меньше общей длительности плейлиста ( ${durationMin} мин ).`
-                )
-                return
+            for (const sid of screensToAdd) {
+                const durationMin = maxDurationByScreen.get(sid)!;
+                if (advertisementShowMode === 'minutes' && advertisementIntervalMinutes < durationMin) {
+                    const name = allScreens.find(s => s.id === sid)?.name ?? sid;
+                    window.alert(`На экране «${name}» интервал между показами (${advertisementIntervalMinutes} мин) меньше максимальной длительности выбранных плейлистов (${durationMin} мин).`);
+                    return;
+                }
+                if (advertisementShowMode === 'hours' && advertisementIntervalHours * 60 < durationMin) {
+                    const name = allScreens.find(s => s.id === sid)?.name ?? sid;
+                    window.alert(`На экране «${name}» интервал между показами (${advertisementIntervalHours} ч) меньше максимальной длительности (${durationMin} мин).`);
+                    return;
+                }
             }
         }
 
-        const newStart = timeToMinutes(startTime);
-        const newEnd = timeToMinutes(endTime);
-
-        const screensToAdd = selectedGroup
-            ? allScreens
-                .filter(s => s.groupId === selectedGroup)
-                .map(s => s.id)
-            : selectedScreens;
-
-        if (screensToAdd.length === 0) {
-            window.alert('В группе нет экранов');
-            return;
-        }
-
-        // Проверяем конфликты для обычных (PLAYLIST) слотов
+        // проверки конфликтов для PLAYLIST
         if (typeMode === 'PLAYLIST') {
             for (const screenId of screensToAdd) {
-                const existing = (isFixedSchedule
-                        ? scheduledFixedMap[screenId] ?? []
-                        : scheduledCalendarMap[screenId] ?? []
-                );
-
+                const existing = (isFixedSchedule ? scheduledFixedMap[screenId] ?? [] : scheduledCalendarMap[screenId] ?? []);
                 for (const dayShort of selectedDays) {
                     const week = getCurrentWeekByDate(selectedDate);
                     const dateObj = parseDayToDate(dayShort, week);
@@ -163,67 +193,56 @@ export default function ScheduleSettingsPanel() {
                     const dowKey = WEEK_DAYS[RU_DAYS.indexOf(dayShort)];
 
                     const conflict = existing.find(b => {
-                        // Совпадение дня/даты
                         if (isFixedSchedule) {
                             if (b.dayOfWeek !== dowKey) return false;
                         } else {
                             if (b.startDate !== isoDate) return false;
                         }
-                        // Пересечение по времени
-                        const existStart = timeToMinutes(b.startTime);
-                        const existEnd = timeToMinutes(b.endTime);
-                        if (!(newStart < existEnd && existStart < newEnd)) return false;
-                        // Совпадение приоритета
+                        const existStart = hhmmOrHmsToMinutes(b.startTime);
+                        const existEnd = hhmmOrHmsToMinutes(b.endTime);
+                        if (!(rangeStart < existEnd && existStart < rangeEnd)) return false;
                         if (b.priority !== priority) return false;
-
                         return true;
                     });
 
                     if (conflict) {
                         const name = allScreens.find(s => s.id === screenId)?.name ?? screenId;
-                        window.alert(
-                            `На экране «${name}» уже есть слот с приоритетом ${priority} ` +
-                            `в ${dayShort} с ${conflict.startTime} до ${conflict.endTime}.`
-                        );
+                        window.alert(`На экране «${name}» уже есть слот с приоритетом ${priority} в ${dayShort} с ${conflict.startTime} до ${conflict.endTime}.`);
                         return;
                     }
                 }
             }
         }
 
-        // Проверяем конфликты для рекламных (ADVERTISEMENT) слотов
+        // проверки конфликтов для ADVERTISEMENT
         if (typeMode === 'ADVERTISEMENT') {
-            const playlist = playlistItems.find(p => p.id === selectedPlaylist)!
-
             type Candidate = { screenId: string; date: string; start: number; end: number };
-            const durationMin = Math.ceil(playlist.totalDurationSeconds / 60)
             const candidates: Candidate[] = [];
 
-            // Сбор «кандидатов» по выбранным экранам, дням и режиму рекламы
             for (const screenId of screensToAdd) {
+                const durationMin = maxDurationByScreen.get(screenId)!;
                 for (const dayShort of selectedDays) {
                     const week = getCurrentWeekByDate(selectedDate);
                     const dateObj = parseDayToDate(dayShort, week);
                     const isoDate = dateObj.toISOString().slice(0, 10);
 
                     if (advertisementShowMode === 'minutes') {
-                        let cursor = newStart;
-                        while (cursor + durationMin <= newEnd) {
+                        let cursor = rangeStart;
+                        while (cursor + durationMin <= rangeEnd) {
                             candidates.push({screenId, date: isoDate, start: cursor, end: cursor + durationMin});
                             cursor += advertisementIntervalMinutes;
                         }
                     } else if (advertisementShowMode === 'hours') {
-                        let cursor = newStart;
+                        let cursor = rangeStart;
                         const step = advertisementIntervalHours * 60;
-                        while (cursor + durationMin <= newEnd) {
+                        while (cursor + durationMin <= rangeEnd) {
                             candidates.push({screenId, date: isoDate, start: cursor, end: cursor + durationMin});
                             cursor += step;
                         }
                     } else {
-                        // specific times
                         advertisementSpecificTimes.forEach(hhmm => {
-                            const m = timeToMinutes(hhmm);
-                            if (m >= newStart && m + durationMin <= newEnd) {
+                            const m = hhmmOrHmsToMinutes(hhmm);
+                            if (m >= rangeStart && m + durationMin <= rangeEnd) {
                                 candidates.push({screenId, date: isoDate, start: m, end: m + durationMin});
                             }
                         });
@@ -231,29 +250,19 @@ export default function ScheduleSettingsPanel() {
                 }
             }
 
-            // Проверка каждого кандидата на пересечение с уже существующими рекламными слотами
             for (const {screenId, date, start, end} of candidates) {
-                const existing = (isFixedSchedule
-                        ? scheduledFixedMap[screenId] ?? []
-                        : scheduledCalendarMap[screenId] ?? []
-                ).filter(b => b.priority === 100);
-
+                const existing = (isFixedSchedule ? scheduledFixedMap[screenId] ?? [] : scheduledCalendarMap[screenId] ?? [])
+                    .filter(b => b.priority === 100);
                 const conflict = existing.find(b => {
-                    const sameDay = isFixedSchedule
-                        ? b.dayOfWeek === WEEK_DAYS[RU_DAYS.indexOf(date.slice(8, 10))]
-                        : b.startDate === date;
+                    const sameDay = isFixedSchedule ? b.dayOfWeek === WEEK_DAYS[RU_DAYS.indexOf(date.slice(8, 10))] : b.startDate === date;
                     if (!sameDay) return false;
                     const existStart = timeToMinutes(b.startTime);
                     const existEnd = timeToMinutes(b.endTime);
                     return (start < existEnd && existStart < end);
                 });
-
                 if (conflict) {
                     const name = allScreens.find(s => s.id === screenId)?.name ?? screenId;
-                    window.alert(
-                        `На экране «${name}» рекламный слот пересекается с ` +
-                        `${conflict.startTime}–${conflict.endTime} в ${date}.`
-                    );
+                    window.alert(`На экране «${name}» рекламный слот пересекается с ${conflict.startTime}–${conflict.endTime} в ${date}.`);
                     return;
                 }
             }
@@ -263,6 +272,7 @@ export default function ScheduleSettingsPanel() {
         // Всё чисто — добавляем
         addBlock(screensToAdd);
     };
+
 
     return (
         <>
@@ -304,7 +314,7 @@ export default function ScheduleSettingsPanel() {
                     </motion.div>
                     <motion.div layout>
                         <Card>
-                            <Card.Header>Что показывать</Card.Header>
+                            <Card.Header>Приоритет</Card.Header>
                             <Card.Body>
 
                                 <WhatToShowCard onNoPlaylistsClick={handlePlaylistToggle}/>
@@ -323,7 +333,7 @@ export default function ScheduleSettingsPanel() {
                                         <Button
                                             variant="success"
                                             onClick={handleAdd}
-                                            disabled={(selectedScreens.length === 0 && !selectedGroup) || !selectedPlaylist}
+                                            disabled={targetScreens.length === 0 || selectedDays.length === 0 || !zonesOkForAllScreens}
                                             className="w-100"
                                         >
                                             Добавить
