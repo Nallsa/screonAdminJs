@@ -148,8 +148,7 @@ export default function PlaylistsPage() {
                                         </Badge>
                                     )}
 
-                                    <PreviewImage id={p.filePreviewId as string} name={p.name} fill
-                                                  aspectRatio={16 / 9}/>
+                                    <PreviewImage id={p.filePreviewId as string} name={p.name} fill aspectRatio={16 / 9}/>
 
                                     <div className="p-2">
                                         <div

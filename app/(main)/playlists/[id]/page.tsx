@@ -6,7 +6,7 @@
 'use client'
 
 import {useParams, useRouter} from 'next/navigation'
-import React, {useState, useCallback, useEffect} from 'react'
+import React, {useState, useCallback, useEffect, useMemo} from 'react'
 import Link from 'next/link'
 import {
     Button,
@@ -45,12 +45,124 @@ export default function PlaylistContentPage() {
         setError
     } = usePlaylistStore(state => state)
 
+
     const [items, setItems] = useState<FileItem[]>([])
     const [isEditingName, setIsEditingName] = useState(false)
     const [name, setName] = useState('Новый плейлист')
     const [priority, setPriority] = useState<'normal' | 'high' | 'override'>('normal')
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    type IptvChannel = {
+        name: string;
+        url: string;
+        group?: string | null;
+        logo?: string | null;
+    };
+
+    const [showIptv, setShowIptv] = useState(false);
+    const [iptvLoading, setIptvLoading] = useState(false);
+    const [iptvError, setIptvError] = useState<string | null>(null);
+    const [iptvChannels, setIptvChannels] = useState<IptvChannel[]>([]);
+
+
+    useEffect(() => {
+        if (!showIptv || iptvChannels.length > 0) return;
+
+        const controller = new AbortController();
+        const load = async () => {
+            try {
+                setIptvError(null);
+                setIptvLoading(true);
+                const res = await fetch('https://admin.screon.ru/api/iptv/channels', {
+                    signal: controller.signal,
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data: IptvChannel[] = await res.json();
+
+                // На всякий случай фильтруем мусор и нормализуем поля
+                const cleaned = (data ?? [])
+                    .filter(c => c && c.name && c.url)
+                    .map(c => ({
+                        name: c.name.trim(),
+                        url: c.url.trim(),
+                        group: (c.group ?? 'Прочее').trim(),
+                        logo: c.logo ?? null,
+                    }));
+
+                setIptvChannels(cleaned);
+            } catch (e: any) {
+                if (e?.name !== 'AbortError') {
+                    setIptvError('Не удалось загрузить список IPTV каналов');
+                    console.error('[IPTV fetch error]', e);
+                }
+            } finally {
+                setIptvLoading(false);
+            }
+        };
+
+        load();
+        return () => controller.abort();
+    }, [showIptv, iptvChannels.length]);
+
+
+    const groupedIptv = useMemo(() => {
+        const map = new Map<string, IptvChannel[]>();
+        for (const ch of iptvChannels) {
+            const key = ch.group || 'Прочее';
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(ch);
+        }
+        // для стабильности отсортируем группы и каналы по имени
+        const sortedEntries = Array.from(map.entries())
+            .sort((a, b) => a[0].localeCompare(b[0], 'ru'));
+        sortedEntries.forEach(([k, arr]) => arr.sort((a, b) => a.name.localeCompare(b.name, 'ru')));
+        return sortedEntries; // [ [groupName, IptvChannel[]], ... ]
+    }, [iptvChannels]);
+
+    // хелпер генерит стабильный fileId на основе URL
+    const makeIptvFileId = (url: string) => `iptv_${encodeURIComponent(url)}`
+
+    const addIptvToPlaylist = (ch: IptvChannel) => {
+
+        if (items.find(item => item.source === "FILE")) {
+            alert('Нельзя добавить канал');
+            return;
+        }
+
+        if (items.length == 1) {
+            alert('Можно добавить только 1 канал');
+            return;
+        }
+
+        const fileId = makeIptvFileId(ch.url)
+
+        // не добавляем дубликаты по iptvUrl/fileId
+        if (items.find(i => i.fileId === fileId || i.iptvUrl === ch.url)) {
+            alert('Этот канал уже в плейлисте');
+            return;
+        }
+
+        const it: FileItem = {
+            id: fileId,
+            fileId,                         // нужен для DnD/Sortable и MediaCard
+            name: ch.name,
+            type: 'IPTV',
+            size: null,
+            duration: null,                 // пусть бэк поставит дефолт (например 120)
+            hasPreview: Boolean(ch.logo),
+            previewUrl: ch.logo || undefined,
+            orderIndex: items.length,
+            source: 'IPTV',
+            iptvName: ch.name,
+            iptvUrl: ch.url,
+            iptvLogo: ch.logo || null,
+        }
+
+
+        setName(ch.name)
+        setItems(prev => [...prev, it])
+    }
 
 
     useEffect(() => {
@@ -80,13 +192,19 @@ export default function PlaylistContentPage() {
     };
 
 
-    const addToPlaylist = (item: FileItem) => {
+    const addFileToPlaylist = (item: FileItem) => {
+        if (items.find(item => item.source === "IPTV")) {
+            alert('Нельзя добавить файл');
+            return;
+        }
+
         if (!items.find(i => i.fileId === item.fileId)) {
             const duration = item.type?.startsWith('image') ? 30 : item.duration;
             setItems(prev => [
                 ...prev,
                 {
                     ...item,
+                    source: 'FILE',
                     duration,
                 },
             ]);
@@ -94,6 +212,7 @@ export default function PlaylistContentPage() {
             alert('Этот файл уже добавлен в плейлист');
         }
     };
+
 
     async function handleSavePlaylist() {
         // валидация
@@ -225,33 +344,179 @@ export default function PlaylistContentPage() {
 
                         <UploadZone/>
 
-                        {libraryItems.length > 0 ? (
-                            <div className="list-group">
-                                {libraryItems.map(li => (
-                                    <div
-                                        key={li.fileId}
-                                        className="list-group-item d-flex align-items-center justify-content-between"
-                                        style={{cursor: 'pointer'}}
-                                        onClick={() => addToPlaylist(li)}
-                                    >
-                                        <div style={{marginRight: 8}}>
-                                            <PreviewImage id={li.fileId} name={li.name}/>
-                                        </div>
-                                        <div className="flex-grow-1 overflow-hidden">
-                                            <span className="text-truncate d-block">
-                                                {li.name}
-                                            </span>
-                                        </div>
-                                        <div className="text-success fw-bold">+</div>
+                        {/* ⬇️ вставьте переключатель сразу после UploadZone */}
+                        <div className="mt-3 mb-4">
+                            <Form.Check
+                                type="switch"
+                                id="iptv-toggle"
+                                label="Вывести каналы с IPTV"
+                                checked={showIptv}
+                                onChange={(e) => setShowIptv(e.currentTarget.checked)}
+                            />
+                        </div>
+
+                        {/* ⬇️ далее условный рендер IPTV / библиотека */}
+                        {showIptv ? (
+                            <div className="mt-2">
+                                {iptvLoading && (
+                                    <div className="text-muted p-3">Загрузка каналов...</div>
+                                )}
+
+                                {iptvError && (
+                                    <div className="text-danger p-3">{iptvError}</div>
+                                )}
+
+                                {!iptvLoading && !iptvError && groupedIptv.length === 0 && (
+                                    <div className="text-muted p-3">Каналы не найдены</div>
+                                )}
+
+                                {!iptvLoading && !iptvError && groupedIptv.length > 0 && (
+                                    <div className="accordion" id="iptvAccordion">
+                                        {groupedIptv.map(([groupName, channels], idx) => {
+                                            const headingId = `heading-${idx}`;
+                                            const collapseId = `collapse-${idx}`;
+                                            return (
+                                                <div className="accordion-item" key={groupName}>
+                                                    <h2 className="accordion-header" id={headingId}>
+                                                        <button
+                                                            className={`accordion-button ${idx > 0 ? 'collapsed' : ''}`}
+                                                            type="button"
+                                                            data-bs-toggle="collapse"
+                                                            data-bs-target={`#${collapseId}`}
+                                                            aria-expanded={idx === 0 ? 'true' : 'false'}
+                                                            aria-controls={collapseId}
+                                                        >
+                                                            {groupName} <span
+                                                            className="ms-2 text-muted">({channels.length})</span>
+                                                        </button>
+                                                    </h2>
+                                                    <div
+                                                        id={collapseId}
+                                                        className={`accordion-collapse collapse ${idx === 0 ? 'show' : ''}`}
+                                                        aria-labelledby={headingId}
+                                                        data-bs-parent="#iptvAccordion"
+                                                    >
+                                                        <div className="accordion-body p-0">
+                                                            <div className="list-group list-group-flush">
+                                                                {channels.map(ch => (
+                                                                    <div
+                                                                        key={ch.url}
+                                                                        className="list-group-item d-flex align-items-center justify-content-between"
+                                                                        role="button"
+                                                                        tabIndex={0}
+                                                                        onClick={() => addIptvToPlaylist(ch)}
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                                                e.preventDefault();
+                                                                                addIptvToPlaylist(ch);
+                                                                            }
+                                                                        }}
+                                                                        style={{cursor: 'pointer', userSelect: 'none'}}
+                                                                        title="Добавить канал в плейлист"
+                                                                    >
+                                                                        <div
+                                                                            className="d-flex align-items-center gap-2 overflow-hidden"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                addIptvToPlaylist(ch);
+                                                                            }}
+                                                                        >
+
+                                                                            {/* ЛОГОТИП — кликабельно добавляет */}
+                                                                            {ch.logo ? (
+                                                                                <img
+                                                                                    src={ch.logo}
+                                                                                    alt={ch.name}
+                                                                                    width={28}
+                                                                                    height={28}
+                                                                                    style={{
+                                                                                        objectFit: 'contain',
+                                                                                        cursor: 'pointer'
+                                                                                    }}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        addIptvToPlaylist(ch);
+                                                                                    }}
+                                                                                    title="Добавить канал в плейлист"
+                                                                                />
+                                                                            ) : (
+                                                                                <div
+                                                                                    className="bg-light border rounded"
+                                                                                    style={{width: 28, height: 28}}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        addIptvToPlaylist(ch);
+                                                                                    }}
+                                                                                    title="Добавить канал в плейлист"
+                                                                                />
+                                                                            )}
+
+                                                                            {/* ИМЯ — кликабельно добавляет */}
+                                                                            <div
+                                                                                className="flex-grow-1 overflow-hidden">
+                                                                                <div
+                                                                                    className="text-truncate"
+                                                                                    style={{cursor: 'pointer'}}
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        addIptvToPlaylist(ch);
+                                                                                    }}
+                                                                                    title="Добавить канал в плейлист"
+                                                                                >
+                                                                                    {ch.name}
+                                                                                </div>
+
+                                                                                {/* URL — ссылка в новую вкладку, НЕ добавляет */}
+                                                                                <p
+                                                                                    className="text-muted small text-truncate d-block"
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                    title="Открыть поток в новой вкладке"
+                                                                                >
+                                                                                    {ch.url}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
                                     </div>
-                                ))}
+                                )}
                             </div>
                         ) : (
-
-
-                            <div className="text-center text-muted p-3">
-                                Чтобы начать, добавьте медиа контент в библиотеку
-                            </div>
+                            // === СТАРЫЙ ВЫВОД БИБЛИОТЕКИ, как у вас было ===
+                            <>
+                                {libraryItems.length > 0 ? (
+                                    <div className="list-group">
+                                        {libraryItems.map(li => (
+                                            <div
+                                                key={li.fileId}
+                                                className="list-group-item d-flex align-items-center justify-content-between"
+                                                style={{cursor: 'pointer'}}
+                                                onClick={() => addFileToPlaylist(li)}
+                                            >
+                                                <div style={{marginRight: 8}}>
+                                                    <PreviewImage id={li.fileId} name={li.name}/>
+                                                </div>
+                                                <div className="flex-grow-1 overflow-hidden">
+                <span className="text-truncate d-block">
+                  {li.name}
+                </span>
+                                                </div>
+                                                <div className="text-success fw-bold">+</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-muted p-3">
+                                        Чтобы начать, добавьте медиа контент в библиотеку
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -280,3 +545,5 @@ export default function PlaylistContentPage() {
 
     )
 }
+
+

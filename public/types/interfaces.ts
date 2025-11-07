@@ -18,12 +18,12 @@ export type BackgroundInfo = {
 
 export interface FileItem {
     id: string
-    fileId: string
+    fileId: string                    // для IPTV кладём стаб. строку вида "iptv_<url-encoded>"
     file?: File | null
     name: string
-    type: string
-    size: number
-    duration?: number | null
+    type: string                      // для IPTV: 'IPTV'
+    size: number | null               // для IPTV: null
+    duration?: number | null          // для IPTV: null (бэк выставит дефолт)
     width?: number | null
     height?: number | null
     sha256?: string
@@ -32,10 +32,17 @@ export interface FileItem {
     organizationId?: string
     branchId?: string
     hasPreview: boolean
-    previewUrl?: string
+    previewUrl?: string               // для IPTV: логотип
     downloadUrl?: string
     orderIndex: number
+
+    // 🔽 добавлено
+    source?: 'FILE' | 'IPTV'
+    iptvName?: string | null
+    iptvUrl?: string | null
+    iptvLogo?: string | null
 }
+
 
 export interface CatalogAsset {
     id: string;

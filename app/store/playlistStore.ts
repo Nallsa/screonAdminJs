@@ -71,42 +71,115 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
         getPlaylists: async () => {
             try {
-                get().clearPlayLists();
+                const { clearPlayLists, addPlaylists, setError } = get();
+                clearPlayLists();
 
                 const userId = getValueInStorage('userId');
-                const accessToken = getValueInStorage('accessToken')
+                const accessToken = getValueInStorage('accessToken');
 
                 if (!userId || !accessToken) {
-                    get().setError("Невозможно загрузить плейлисты: отсутствуют учетные данные.")
-                    return
+                    setError('Невозможно загрузить плейлисты: отсутствуют учетные данные.');
+                    return;
                 }
 
-                // Здесь получаем состояние из другого стора
-                const orgState = useOrganizationStore.getState?.();
-                const organizationId = orgState.organizationInfo?.id;
+                const orgStore = useOrganizationStore.getState?.();
+                const activeBranches = orgStore?.activeBranches ?? [];
 
+                if (!Array.isArray(activeBranches) || activeBranches.length === 0) {
+                    // нет выбранных веток — просто нечего грузить
+                    addPlaylists([]);
+                    return;
+                }
 
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
-
-                const activeBranches = useOrganizationStore.getState?.().activeBranches;
-                const data = {
-                    branchIds: activeBranches.map(b => b.id),
+                const payload = {
+                    branchIds: activeBranches.map(b => b.id).filter(Boolean),
                 };
 
-                console.log('datadata:', data);
-
-                const response = await axios.post(`${SERVER_URL}playlists/branches`, data,
-                    {headers: {Authorization: `Bearer ${accessToken}`}}
+                const resp = await axios.post(
+                    `${SERVER_URL}playlists/branches`,
+                    payload,
+                    { headers: { Authorization: `Bearer ${accessToken}` } }
                 );
 
-                const playlists = response.data;
+                const rawPlaylists: any[] = Array.isArray(resp.data) ? resp.data : [];
 
-                console.log("Плейлисты", playlists)
+                // === НОРМАЛИЗАЦИЯ ===
+                const makeIptvFileId = (url: string) => `iptv_${encodeURIComponent(url)}`;
 
-                get().addPlaylists(playlists);
+                const mapChildToFileItem = (c: any, idx: number): FileItem => {
+                    const isIptv = c?.source === 'IPTV' || c?.type === 'IPTV';
+                    if (isIptv) {
+                        const url: string = c?.iptvUrl || c?.url || '';
+                        const name: string = c?.iptvName || c?.name || 'IPTV';
+                        const logo: string | null = c?.iptvLogo ?? c?.previewUrl ?? null;
+
+                        return {
+                            id: makeIptvFileId(url),
+                            fileId: makeIptvFileId(url),
+                            name,
+                            type: 'IPTV',
+                            size: null,
+                            duration: c?.duration ?? null, // бэк может прислать дефолт (например 120)
+                            hasPreview: Boolean(logo),
+                            previewUrl: logo ?? undefined,
+                            downloadUrl: undefined,
+                            orderIndex: Number.isFinite(c?.orderIndex) ? c.orderIndex : idx,
+                            source: 'IPTV',
+                            iptvName: name,
+                            iptvUrl: url,
+                            iptvLogo: logo,
+                            // опциональные:
+                            file: null,
+                            width: null,
+                            height: null,
+                        };
+                    }
+
+                    // FILE
+                    const fileId: string = c?.fileId || c?.id || '';
+                    const previewUrl: string | undefined = c?.previewUrl || undefined;
+
+                    return {
+                        id: fileId,
+                        fileId,
+                        name: c?.name ?? 'Без названия',
+                        type: c?.type ?? 'application/octet-stream',
+                        size: Number.isFinite(c?.size) ? c.size : 0,
+                        duration: c?.duration ?? null,
+                        hasPreview: Boolean(previewUrl),
+                        previewUrl,
+                        downloadUrl: c?.downloadUrl ?? undefined,
+                        orderIndex: Number.isFinite(c?.orderIndex) ? c.orderIndex : idx,
+                        source: 'FILE',
+                        // опциональные:
+                        file: null,
+                        width: c?.width ?? null,
+                        height: c?.height ?? null,
+                        sha256: c?.sha256,
+                        createdAt: c?.createdAt,
+                        uploadedBy: c?.uploadedBy,
+                        organizationId: c?.organizationId,
+                        branchId: c?.branchId,
+                    };
+                };
+
+                const normalized = rawPlaylists.map((p: any) => {
+                    const children: FileItem[] = Array.isArray(p?.childFiles)
+                        ? p.childFiles.map(mapChildToFileItem).sort((a: { orderIndex: number; }, b: { orderIndex: number; }) => a.orderIndex - b.orderIndex)
+                        : [];
+
+                    return {
+                        ...p,
+                        name: p?.name ?? 'Без названия',
+                        childFiles: children,
+                    };
+                });
+
+                addPlaylists(normalized);
             } catch (err: any) {
-                console.error('Ошибка при получении плейлистов:', err)
-                get().setError(err?.response?.data?.message || "Не удалось получить плейлисты.")
+                console.error('Ошибка при получении плейлистов:', err);
+                get().setError(err?.response?.data?.message || 'Не удалось получить плейлисты.');
             }
         },
 
@@ -120,15 +193,34 @@ export const usePlaylistStore = create<usePlaylistState>()(
                     playListName: name,
                     branchIds: activeBranches.map(b => b.id),
                     isPublic: true,
-                    childFiles: playlistChildren.map(f => ({
-                        fileId: f.fileId,
-                        name: f.name,
-                        type: f.type,
-                        size: f.size,
-                        duration: f.duration,
-                        previewUrl: f.previewUrl,
-                        orderIndex: f.orderIndex,
-                    }))
+                    childFiles: playlistChildren.map((f, idx) => {
+                        const isIptv = f.source === 'IPTV' || f.type === 'IPTV'
+                        if (isIptv) {
+                            return {
+                                source: 'IPTV',
+                                orderIndex: f.orderIndex ?? idx,
+                                name: f.name,
+                                type: 'IPTV',
+                                size: null,
+                                duration: null, // бэк сам проставит дефолт
+                                previewUrl: f.previewUrl ?? f.iptvLogo ?? null,
+                                iptvName: f.iptvName ?? f.name,
+                                iptvUrl: f.iptvUrl!,              // обязателен
+                                iptvLogo: f.iptvLogo ?? f.previewUrl ?? null,
+                            }
+                        }
+                        // FILE (как было, только явно укажем source)
+                        return {
+                            source: 'FILE',
+                            fileId: f.fileId,
+                            name: f.name,
+                            type: f.type,
+                            size: f.size,
+                            duration: f.duration,
+                            previewUrl: f.previewUrl,
+                            orderIndex: f.orderIndex ?? idx,
+                        }
+                    })
                 };
 
                 console.log("[createPlaylist]", data)
@@ -137,6 +229,7 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
                 const response = await axios.post(`${SERVER_URL}playlists/create`, data,
                     {headers: {Authorization: `Bearer ${accessToken}`}})
+
                 const result: PlaylistItem = response.data
 
                 console.log(result)
@@ -230,30 +323,71 @@ export const usePlaylistStore = create<usePlaylistState>()(
 
         updatePlaylist: async (playlistChildren: FileItem[], name: string) => {
             try {
-                const {playlistToEdit, updatePlaylistItem} = get()
-                if (!playlistToEdit) return false
-                const accessToken = getValueInStorage('accessToken')
+                const { playlistToEdit, updatePlaylistItem } = get();
+                if (!playlistToEdit) return false;
+
+                const accessToken = getValueInStorage('accessToken');
                 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
-                const formatted: PlaylistItem = {
-                    ...playlistToEdit,
-                    name: name,
-                    childFiles: playlistChildren,
-                }
+                // маппинг детей в DTO для бэка
+                const childFilesDto = playlistChildren.map((f, idx) => {
+                    const isIptv = f.source === 'IPTV' || f.type === 'IPTV';
+                    if (isIptv) {
+                        return {
+                            source: 'IPTV',
+                            orderIndex: f.orderIndex ?? idx,
+                            name: f.name,
+                            type: 'IPTV',
+                            size: null,
+                            duration: null, // бэк сам поставит дефолт (например 120)
+                            previewUrl: f.previewUrl ?? f.iptvLogo ?? null,
+                            iptvName: f.iptvName ?? f.name,
+                            iptvUrl: f.iptvUrl!,                 // обязателен
+                            iptvLogo: f.iptvLogo ?? f.previewUrl ?? null,
+                        };
+                    }
+                    // FILE
+                    return {
+                        source: 'FILE',
+                        fileId: f.fileId,
+                        orderIndex: f.orderIndex ?? idx,
+                        name: f.name,
+                        type: f.type,
+                        size: f.size,
+                        duration: f.duration,
+                        previewUrl: f.previewUrl ?? null,
+                    };
+                });
 
-                const response = await axios.put(`${SERVER_URL}playlists/update`, formatted
-                    ,
-                    {headers: {Authorization: `Bearer ${accessToken}`}})
-                const result: PlaylistItem = response.data
+                // полезно унифицировать индексы на всякий
+                childFilesDto.forEach((c: any, i: number) => (c.orderIndex = i));
 
+                // тело апдейта (минимально необходимое)
+                const payload: any = {
+                    id: playlistToEdit.id,                   // идентификатор плейлиста для обновления
+                    name,
+                    // если бэку нужны ветки/публичность при апдейте — передадим
+                    branchIds: playlistToEdit.branchId ? [playlistToEdit.branchId] : undefined,
+                    isPublic: (playlistToEdit as any).isPublic ?? true,
+                    childFiles: childFilesDto,
+                };
 
-                updatePlaylistItem(result)
+                // можно подчистить undefined, чтобы не слать лишнее
+                Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
 
-                return !!result
+                const response = await axios.put(
+                    `${SERVER_URL}playlists/update`,
+                    payload,
+                    { headers: { Authorization: `Bearer ${accessToken}` } }
+                );
+
+                const result: PlaylistItem = response.data;
+                updatePlaylistItem(result);
+                return !!result;
             } catch (err: any) {
-                console.error('Ошибка при обновлении плейлиста:', err)
-                get().setError(err?.response?.data?.message || "Не удалось обновить плейлист.")
-                return false
+                console.error('Ошибка при обновлении плейлиста:', err);
+                get().setError(err?.response?.data?.message || 'Не удалось обновить плейлист.');
+                return false;
             }
         },
 
