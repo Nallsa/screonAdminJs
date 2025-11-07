@@ -96,6 +96,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
                 await getScreens();
                 await getGroups();
                 await getPlaylists?.();
+                await getSchedule()
                 await getFilesInLibrary?.();
                 await requestStatusesForAll?.();
                 startAutoStatusPolling?.();

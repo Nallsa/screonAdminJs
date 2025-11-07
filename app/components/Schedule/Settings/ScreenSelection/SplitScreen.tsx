@@ -1,5 +1,8 @@
-import React, {CSSProperties, useMemo, useState} from "react";
-import {SplitCount, ZoneIndex} from "@/public/types/interfaces";
+import React from "react";
+
+
+export type ZoneIndex = 0 | 1 | 2 | 3;
+export type SplitCount = 1 | 2 | 4;
 
 type Rect = { top: number | string; left: number | string; width: number | string; height: number | string };
 
@@ -10,6 +13,9 @@ type SplitScreenProps = {
     showLabels?: boolean;
     radius?: number;
     lineThickness?: number;
+    width?: number | string;
+    height?: number | string;
+    style?: React.CSSProperties;
 };
 
 const ZONES_BY_COUNT: Record<SplitCount, readonly ZoneIndex[]> = {
@@ -39,6 +45,9 @@ export default function SplitScreen({
                                         showLabels = true,
                                         radius = 12,
                                         lineThickness = 2,
+                                        width = 260,
+                                        height = 150,
+                                        style,
                                     }: SplitScreenProps) {
     const [internalSelected, setInternalSelected] = React.useState<ZoneIndex | null>(null);
     const selected: ZoneIndex | null = value ?? internalSelected;
@@ -52,9 +61,8 @@ export default function SplitScreen({
 
     const boxStyle: React.CSSProperties = {
         position: "relative",
-        width: "100%",
-        maxWidth: 900,
-        maxHeight: 150,
+        width,
+        ...(height ? {height} : {aspectRatio: "16 / 9"}),
         aspectRatio: "16 / 9",
         border: "2px solid var(--bs-border-color, #dee2e6)",
         borderRadius: radius,
