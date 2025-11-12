@@ -789,19 +789,22 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
 
 
             removeBlock: (screenId, block) => {
-                const mapKey = get().isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap'
+                const mapKey = get().isFixedSchedule ? 'scheduledFixedMap' : 'scheduledCalendarMap';
                 set(s => {
-                    const arr = (s as any)[mapKey][screenId] || []
+                    const arr = (s as any)[mapKey][screenId] || [];
                     const idx = arr.findIndex((b: ScheduledBlock) =>
                         b.dayOfWeek === block.dayOfWeek &&
+                        (b.startDate ?? null) === (block.startDate ?? null) &&
+                        (b.endDate ?? null) === (block.endDate ?? null) &&
                         b.startTime === block.startTime &&
                         b.endTime === block.endTime &&
                         b.priority === block.priority &&
                         b.type === block.type &&
                         b.isRecurring === block.isRecurring &&
-                        b.branchId === block.branchId)
-                    if (idx >= 0) arr.splice(idx, 1)
-                })
+                        b.branchId === block.branchId
+                    );
+                    if (idx >= 0) arr.splice(idx, 1);
+                });
             },
 
             addEditedBlock: (screenId, block) => {
@@ -855,25 +858,37 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                 };
 
                 const toSlots = (blocks: ScheduledBlock[] | undefined, screenId: string) => {
-                    const {zoneAssignments, playlistIds} = collectZones(screenId);
+                    return (blocks || []).map(b => {
+                        // 1) Берём zoneAssignments из самого блока (если есть), иначе — фолбэк к глобальным настройкам экрана
+                        const zoneAssignments = b.zoneAssignments ?? (() => {
+                            const count = (splitCountByScreen[screenId] ?? 1) as SplitCount;
+                            const zonePlaylists = zonePlaylistsByScreen[screenId] ?? ({0: b.playlistIds ?? null} as ZonePlaylists);
+                            return {count, zonePlaylists} as ZoneAssignments;
+                        })();
 
-                    return (blocks || []).map(b => ({
-                        dayOfWeek: b.dayOfWeek,
-                        startDate: b.startDate,
-                        endDate: b.endDate,
-                        startTime: toHHmm(b.startTime),
-                        endTime: toHHmm(b.endTime),
-                        // базовые поля, как и раньше:
-                        isRecurring: b.isRecurring,
-                        priority: b.priority,
-                        screenId,
-                        type: b.type,
-                        branchId: b.branchId,
+                        // 2) playlistIds — тоже из блока (если есть), иначе соберём из zoneAssignments
+                        const playlistIds =
+                            (b.playlistIds && b.playlistIds.length)
+                                ? Array.from(new Set(b.playlistIds))
+                                : Array.from(new Set(
+                                    (Object.values(zoneAssignments.zonePlaylists).filter(Boolean) as string[])
+                                ));
 
-                        // === дополняем слоты зонированием ===
-                        zoneAssignments,          // { count, zonePlaylists }
-                        playlistIds,              // массив id плейлистов из зон
-                    }));
+                        return {
+                            dayOfWeek: b.dayOfWeek,
+                            startDate: b.startDate,
+                            endDate: b.endDate,
+                            startTime: toHHmm(b.startTime),
+                            endTime: toHHmm(b.endTime),
+                            isRecurring: b.isRecurring,
+                            priority: b.priority,
+                            screenId,
+                            type: b.type,
+                            branchId: b.branchId,
+                            zoneAssignments,
+                            playlistIds,
+                        };
+                    });
                 };
 
                 // 1) обычные тайм-слоты (без зон): теперь с zoneAssignments/playlistIds

@@ -35,11 +35,7 @@ export default function EditableScheduleTable() {
         selectedScreens,
         addEditedBlock,
         selectedGroup,
-        showMode,
         clearDaySlots,
-        setSplitCount,
-        assignZonePlaylist,
-        clearZonePlaylist,
     } = useScheduleStore()
 
     const {allScreens} = useScreensStore()
@@ -449,51 +445,30 @@ export default function EditableScheduleTable() {
                         return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00`;
                     })()
                     : `${editEnd}:00`;
+        
 
+        // удалить старый блок
+        removeBlock(editingMeta!.screenId, editingMeta!.block);
+
+// подготовить локальные зоны/плейлисты для нового слота
         const zoneAssignments = {
             count: editSplitCount,
             zonePlaylists: editZonePlaylists,
         } as const;
 
         const playlistIds = Array.from(
-            new Set(
-                Object.values(editZonePlaylists).filter(Boolean) as string[]
-            )
+            new Set(Object.values(editZonePlaylists).filter(Boolean) as string[])
         );
 
-        // 1) удалить старый блок
-        removeBlock(editingMeta!.screenId, editingMeta!.block);
-
-        // 2) синхронизировать стор зонирования по выбранным экранам
-        for (const screenId of editScreens) {
-            setSplitCount(screenId, editSplitCount);
-            // очистим лишние зоны, если стало меньше
-            if (editSplitCount === 1) {
-                clearZonePlaylist(screenId, 1 as ZoneIndex);
-                clearZonePlaylist(screenId, 2 as ZoneIndex);
-                clearZonePlaylist(screenId, 3 as ZoneIndex);
-            } else if (editSplitCount === 2) {
-                clearZonePlaylist(screenId, 2 as ZoneIndex);
-                clearZonePlaylist(screenId, 3 as ZoneIndex);
-            }
-            // применим выбранные плейлисты
-            const maxZ = editSplitCount === 4 ? 4 : editSplitCount === 2 ? 2 : 1;
-            for (let z = 0; z < maxZ; z++) {
-                const pid = editZonePlaylists[z as ZoneIndex] ?? null;
-                assignZonePlaylist(screenId, z as ZoneIndex, pid);
-            }
-        }
-
-        // 3) добавить обновлённый блок на все выбранные экраны
+// добавить обновлённый блок на выбранные экраны — ОДИН раз
         editScreens.forEach(screenId =>
             addEditedBlock(screenId, {
                 ...editingMeta!.block,
+                screenId, // на всякий случай
                 type: editTypeMode,
                 isRecurring: editTypeMode === 'PLAYLIST' && editShowMode === 'cycle',
                 startTime: startStr,
                 endTime: endStr,
-                // legacy поле можно опустить; если нужно — оставим только в зоне 0
-                // playlistId: editZonePlaylists[0] ?? undefined,
                 priority: editPriority,
                 branchId: editingMeta!.block.branchId,
                 zoneAssignments,

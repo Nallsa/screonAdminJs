@@ -97,7 +97,6 @@ export interface ScheduledBlock {
     endDate: string | null;
     startTime: string;
     endTime: string;
-    playlistId?: string;
     priority: number;
     type: TypeMode;
     isRecurring: boolean;
@@ -121,8 +120,7 @@ export interface ZoneAssignments {
 }
 
 export type ZonePlaylistsByScreen = Record<string, ZonePlaylists>;
-export type SplitCountByScreen   = Record<string, SplitCount>;
-
+export type SplitCountByScreen = Record<string, SplitCount>;
 
 
 export interface MemberDto {
