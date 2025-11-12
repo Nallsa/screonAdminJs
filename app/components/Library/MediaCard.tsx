@@ -113,7 +113,22 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate, 
                 </button>
             )}
 
-            <PreviewImage id={item.fileId} name={item.name} fill aspectRatio={16 / 9}/>
+
+            {
+                !item.iptvLogo ? <PreviewImage id={item.fileId} name={item.name} fill aspectRatio={16 / 9}/> :
+                    <img
+                        src={item.iptvLogo}
+                        alt={item.name}
+
+                        style={{
+                            objectFit: 'contain',
+                            cursor: 'pointer',
+                            padding: 5,
+                            marginBottom: 5
+                        }}
+                    />
+            }
+
 
             <div className="card-body p-2" style={{
                 display: 'flex',
@@ -203,6 +218,8 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate, 
                             ✏️
                             </span>
                             )}
+
+
                             <span
                                 style={{
                                     width: 24,
@@ -215,7 +232,10 @@ export default function MediaCard({item, isPlaylist = true, onDelete, onUpdate, 
                                 onPointerDown={(e) => e.stopPropagation()}
                                 onClick={() => setShowPreview(true)}
                             >
-                            👁️
+                                {
+                                    !item.iptvLogo ? <>👁️</> : null
+                                }
+
                         </span>
                             <span
                                 style={{

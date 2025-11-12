@@ -1,5 +1,3 @@
-import type {UniqueIdentifier} from "@dnd-kit/core";
-
 export interface PlaylistItem {
     id: string
     name: string
@@ -22,7 +20,7 @@ export interface FileItem {
     file?: File | null
     name: string
     type: string
-    size: number
+    size: number | null
     duration?: number | null
     width?: number | null
     height?: number | null
@@ -35,7 +33,12 @@ export interface FileItem {
     previewUrl?: string
     downloadUrl?: string
     orderIndex: number
+    source?: 'FILE' | 'IPTV'
+    iptvName?: string | null
+    iptvUrl?: string | null
+    iptvLogo?: string | null
 }
+
 
 export interface CatalogAsset {
     id: string;
@@ -102,8 +105,6 @@ export interface ScheduledBlock {
     isRecurring: boolean;
     screenId: string;
     branchId: string;
-
-    // ВАШ ключ и ВАША структура:
     zoneAssignments?: ZoneAssignments;
     playlistIds?: string[];
 }

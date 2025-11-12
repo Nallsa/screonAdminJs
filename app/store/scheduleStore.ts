@@ -908,7 +908,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     isRecurring,
                 };
 
-                const CHUNK_SIZE = 15;
+                const CHUNK_SIZE = 10;
                 const chunks = slots.length ? chunkArray(slots, CHUNK_SIZE) : [[]];
                 const totalChunks = chunks.length;
 
