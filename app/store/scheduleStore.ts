@@ -694,7 +694,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         endDate: isFixedSchedule ? null : isoDate,
                         startTime: minutesToHhmmss(startMin),
                         endTime: minutesToHhmmss(endMin),
-                        playlistId: selectedPlaylist,
+                        playlistIds: [selectedPlaylist],
                         type: typeMode,
                         isRecurring: typeMode === 'PLAYLIST' && showMode === 'cycle',
                         priority: typeMode === 'ADVERTISEMENT' ? 100 : get().priority,
