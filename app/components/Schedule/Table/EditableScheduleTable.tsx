@@ -253,7 +253,7 @@ export default function EditableScheduleTable() {
         setEditShowMode(b.isRecurring ? 'cycle' : 'once');
 
         const count = b.zoneAssignments?.count ?? 1;
-        const zones = b.zoneAssignments?.zonePlaylists ?? ({0: b.playlistId ?? null} as ZonePlaylists);
+        const zones = b.zoneAssignments?.zonePlaylists ?? ({0: b.playlistIds ?? null} as ZonePlaylists);
 
         setEditSplitCount(count as SplitCount);
         setEditZonePlaylists(zones);
