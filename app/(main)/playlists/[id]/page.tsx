@@ -74,7 +74,7 @@ export default function PlaylistContentPage() {
             try {
                 setIptvError(null);
                 setIptvLoading(true);
-                const res = await fetch('https://admin.screon.ru/api/iptv/channels', {
+                const res = await fetch(`${SERVER_URL}/iptv/channels`, {
                     signal: controller.signal,
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
