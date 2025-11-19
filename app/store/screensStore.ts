@@ -359,6 +359,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 set(state => {
                     state.filteredScreens = screens;
                     state.allScreens = screens;
+                    state.errorMessage = null;
                 })
 
                 await get().getLatestPlayerVersionName({
@@ -515,6 +516,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
                 set(s => {
                     s.groups = groups as GroupData[]
+                    s.errorMessage = null;
                 })
             } catch (e: any) {
                 console.error('Ошибка загрузки групп:', e)
