@@ -26,7 +26,7 @@ const navItems = [
     {href: "/emergency", label: "Сценарии", icon: "bi bi-lightning-charge"},
     {href: "/organization", label: "Организация", icon: "bi bi-building-fill-gear"},
     {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
-    {href: "/console", label: "Пульт", icon: "bi bi-phone-flip"},
+    // {href: "/console", label: "Пульт", icon: "bi bi-phone-flip"},
 
 ];
 
