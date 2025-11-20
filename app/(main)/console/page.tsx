@@ -57,7 +57,6 @@ const ConsolePage: React.FC = () => {
     }, [screens, live, isScreenOnline]);
 
 
-
     useEffect(() => {
     }, [screens]);
 
@@ -224,6 +223,8 @@ const ConsolePage: React.FC = () => {
                             />
                         </div>
 
+                        <ConferenceInput/>
+
                         <ConsoleInput
                             sendToBackend={(text) => {
                                 // Kotlin: childScreensViewModel.sendTextEvent(text)
@@ -378,6 +379,72 @@ const RectButton: React.FC<RectButtonProps> = ({
     );
 };
 
+
+const ConferenceInput: React.FC = () => {
+    const sendConference = useScreensStore(s => s.sendConference);
+    const [text, setText] = useState<string>("");
+
+    const onSend = () => {
+        const v = text.trim();
+        if (!v) return;
+        void sendConference(v);
+    };
+
+    return (
+        <div style={{width: "100%", marginTop: 8}}>
+            <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 4,
+            }}>
+                <span style={{color: "#D3D3D3", fontSize: 12}}>Ссылка на конференцию</span>
+            </div>
+
+            <div style={{display: "flex",}}>
+                <input
+                    type="text"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="https://zoom.us/j/..."
+                    style={{
+                        flex: 1,
+                        maxWidth: 160,
+                        height: 40,
+                        boxSizing: "border-box",
+                        borderRadius: 12,
+                        border: "1px solid #555555",
+                        backgroundColor: "transparent",
+                        color: "#FFFFFF",
+                        padding: "8px 10px",
+                        fontSize: 13,
+                        outline: "none",
+                        marginRight: 8,
+                    }}
+                />
+
+                <button
+                    onClick={onSend}
+                    style={{
+                        flex: 1,
+                        width: 100,
+                        height: 40,
+                        borderRadius: 12,
+                        border: "none",
+                        backgroundColor: "#198754",
+                        color: "#FFFFFF",
+                        cursor: "pointer",
+                        fontSize: 13,
+                    }}
+                >
+                    Старт
+                </button>
+            </div>
+        </div>
+    );
+};
+
+
 /* ==== ScreenDropdown с логикой как в Kotlin ==== */
 const ScreenDropdown: React.FC<ScreenDropdownProps> = ({
                                                            screens,
@@ -400,9 +467,9 @@ const ScreenDropdown: React.FC<ScreenDropdownProps> = ({
     // 🔹 Если нет онлайн-экранов — показываем только надпись и всё
     if (!hasScreens) {
         return (
-            <div style={{ width: "100%" }}>
-                <span style={{ fontSize: 12, color: "#D3D3D3" }}>SCREEN</span>
-                <div style={{ height: 4 }} />
+            <div style={{width: "100%"}}>
+                <span style={{fontSize: 12, color: "#D3D3D3"}}>SCREEN</span>
+                <div style={{height: 4}}/>
 
                 <div
                     style={{

@@ -94,6 +94,7 @@ interface ScreensState {
     remoteRegister: () => Promise<void>;
     sendTextEvent: (value: string) => Promise<void>;
     sendKeyClick: (key: string) => Promise<void>;
+    sendConference: (url: string) => Promise<void>;
 }
 
 const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]], [], ScreensState> = (set, get) => {
@@ -107,7 +108,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
     function markStatusRequested(screenId: string) {
         const now = Date.now();
-        pendingStatusReqs.push({ screenId, ts: now });
+        pendingStatusReqs.push({screenId, ts: now});
         while (pendingStatusReqs.length && now - pendingStatusReqs[0].ts > REPLY_WINDOW_MS) pendingStatusReqs.shift();
     }
 
@@ -201,7 +202,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     ws.removeEventListener('open', h);
                     resolve();
                 };
-                ws.addEventListener('open', h, { once: true });
+                ws.addEventListener('open', h, {once: true});
             });
 
     // общий helper для REMOTE_EVENT (аналог sendRemoteEvent в Kotlin)
@@ -358,6 +359,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 set(state => {
                     state.filteredScreens = screens;
                     state.allScreens = screens;
+                    state.errorMessage = null;
                 })
 
                 await get().getLatestPlayerVersionName({
@@ -514,6 +516,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
                 set(s => {
                     s.groups = groups as GroupData[]
+                    s.errorMessage = null;
                 })
             } catch (e: any) {
                 console.error('Ошибка загрузки групп:', e)
@@ -768,6 +771,17 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 eventType: "KEY",
                 key,
                 action: "CLICK",
+            };
+            await sendRemoteEvent(payload);
+        },
+
+        sendConference: async (url: string) => {
+            const v = (url ?? "").trim();
+            if (!v) return;
+
+            const payload = {
+                eventType: "CONFERENCE",
+                value: v,
             };
             await sendRemoteEvent(payload);
         },
