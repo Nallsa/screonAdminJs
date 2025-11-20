@@ -62,6 +62,7 @@ export enum DeviceStatus {
     'OFFLINE',
     'ERROR'
 }
+export type LicenseType = 'DEMO' | 'PROD';
 
 export interface ScreenData {
     id: string
@@ -73,6 +74,9 @@ export interface ScreenData {
     status: DeviceStatus;
     locationId: string;
     branchId: string;
+
+    licenseType: LicenseType;
+    licenseValidTo: string;
 }
 
 export type LiveStatus = {

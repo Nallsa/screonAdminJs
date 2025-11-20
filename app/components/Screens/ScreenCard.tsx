@@ -114,6 +114,21 @@ export default function ScreenCard({
         </div>
     );
 
+    function renderLicense() {
+        if (!screen.licenseType) return '—';
+
+        if (screen.licenseType === 'DEMO') {
+            const d = screen.licenseValidTo ? new Date(screen.licenseValidTo) : null;
+            const formatted = d && !isNaN(d.getTime())
+                ? d.toLocaleDateString('ru-RU')
+                : '—';
+
+            return `DEMO до ${formatted}`;
+        }
+
+        return screen.licenseType;
+    }
+
 
     return (
         <>
@@ -180,6 +195,10 @@ export default function ScreenCard({
                     {/* Группа */}
                     <div className="mb-3">
                         <strong>Группа:</strong> {groupName}
+                    </div>
+
+                    <div className="mb-3">
+                        <strong>Лицензия:</strong> {renderLicense()}
                     </div>
 
                     {/* Действия */}
