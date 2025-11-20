@@ -5,7 +5,7 @@
 
 'use client';
 import Link from "next/link";
-import {usePathname, useRouter} from 'next/navigation';
+import {usePathname} from 'next/navigation';
 import {FaBars} from "react-icons/fa";
 import {useOrganizationStore} from "@/app/store/organizationStore";
 import {Grade, useLicenseStore} from "@/app/store/licenseStore";
@@ -26,6 +26,7 @@ const navItems = [
     {href: "/emergency", label: "Сценарии", icon: "bi bi-lightning-charge"},
     {href: "/organization", label: "Организация", icon: "bi bi-building-fill-gear"},
     {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
+    {href: "/console", label: "Пульт", icon: "bi bi-phone-flip"},
 
 ];
 

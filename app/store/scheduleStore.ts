@@ -421,6 +421,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                     set(s => {
                         s.emergency = legacyList
                         s.scenarios = scnList
+                        s.emgErrorMessage = null
                     })
                     break
                 }
@@ -555,7 +556,9 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                         set(s => {
                             s.backgroundByBranch ??= {}
                             s.backgroundByBranch[branchId] = {playlistId, configured: true}
+                            s.bgErrorMessage = null
                             s.bgSuccessMessage = 'Фоновый плейлист сохранён'
+
                         })
                     }
                     break

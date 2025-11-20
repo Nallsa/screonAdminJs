@@ -121,7 +121,6 @@ export default function PlaylistsPage() {
                         </div>
                     </div>
                 </div>
-
                 <div className="d-flex flex-wrap gap-3">
                     {playlistItems.length > 0 ? (
                         playlistItems.map((p) => (

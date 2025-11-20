@@ -85,9 +85,20 @@ interface ScreensState {
 
     successMessage: string | null,
     setSuccess: (msg: string | null) => void,
+
+    selectedScreen: ScreenData | null;
+    successConnectScreen: boolean;
+
+    setSelectedScreen: (screen: ScreenData) => void;
+
+    remoteRegister: () => Promise<void>;
+    sendTextEvent: (value: string) => Promise<void>;
+    sendKeyClick: (key: string) => Promise<void>;
+    sendConference: (url: string) => Promise<void>;
 }
 
 const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]], [], ScreensState> = (set, get) => {
+
 
     const REPLY_WINDOW_MS = 4000;
     const pendingStatusReqs: Array<{ screenId: string; ts: number }> = [];
@@ -101,6 +112,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
         while (pendingStatusReqs.length && now - pendingStatusReqs[0].ts > REPLY_WINDOW_MS) pendingStatusReqs.shift();
     }
 
+    // ==== WS для статусов ====
     const statusWs = connectWebSocket('status', (actionIn, payloadIn) => {
         const raw = payloadIn;
         const payload = raw?.payload ?? raw;
@@ -120,6 +132,103 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
             isRealTime: payload.isRealTime === true,
         });
     });
+
+    const pairingWs = connectWebSocket('pairing', (action, payload) => {
+        const getMsg = () =>
+            payload?.message ??
+            payload?.error ??
+            payload?.reason ??
+            (typeof payload === 'string' ? payload : null);
+
+        switch (action) {
+            // ==== ПРЕЖНИЕ кейсы ПЭЙРИНГА ====
+            case 'PAIRING_CONFIRMED': {
+                console.log("PAIRING_CONFIRMED");
+
+                const screen: ScreenData = payload;
+                console.log("screen", screen);
+
+                const licDeps = useLicenseStore.getState();
+                licDeps.getLicense();
+
+                set(state => {
+                    state.allScreens.push(screen);
+                    state.filteredScreens.push(screen);
+                    state.successMessage = 'Экран успешно добавлен';
+                    state.errorMessage = null;
+                });
+                break;
+            }
+
+            case 'SCREEN_UNPAIRED': {
+                const sid = payload?.screenId ?? payload?.id;
+
+                set(state => {
+                    state.allScreens = state.allScreens.filter(s => s.id !== sid);
+                    state.filteredScreens = state.filteredScreens.filter(s => s.id !== sid);
+                    state.successMessage = 'Экран удалён';
+                    state.errorMessage = null;
+                });
+
+                useScheduleStore.getState().getSchedule();
+                break;
+            }
+
+            // ==== REMOTE-ответы по тому же каналу ====
+            case 'REMOTE_REGISTERED':
+            case 'REMOTE_READY':
+            case 'REMOTE_OK': {
+                set(s => {
+                    s.successConnectScreen = true;
+                });
+                break;
+            }
+
+            case 'ERROR': {
+                // это и ошибка pairing, и ошибка remote — текст общий
+                const msg = getMsg() ?? 'Не удалось выполнить операцию с экраном';
+                get().setError(msg);
+                break;
+            }
+        }
+    });
+
+    // helper: подождать, пока сокет откроется
+    const waitOpen = (ws: WebSocket) =>
+        ws.readyState === WebSocket.OPEN
+            ? Promise.resolve()
+            : new Promise<void>(resolve => {
+                const h = () => {
+                    ws.removeEventListener('open', h);
+                    resolve();
+                };
+                ws.addEventListener('open', h, {once: true});
+            });
+
+    // общий helper для REMOTE_EVENT (аналог sendRemoteEvent в Kotlin)
+    async function sendRemoteEvent(payload: Record<string, any>) {
+        try {
+            if (!pairingWs) {
+                get().setError("Нет соединения с сервером. Повторите позже.");
+                return;
+            }
+
+            if (pairingWs.readyState !== WebSocket.OPEN) {
+                await waitOpen(pairingWs);
+            }
+
+            const req = {
+                action: "REMOTE_EVENT",
+                payload,
+            };
+
+            console.log("send REMOTE_EVENT", req);
+            pairingWs.send(JSON.stringify(req));
+        } catch (e: any) {
+            console.error("Ошибка REMOTE_EVENT:", e);
+            get().setError(e?.message || "Не удалось отправить команду на экран");
+        }
+    }
 
 
     return {
@@ -250,6 +359,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 set(state => {
                     state.filteredScreens = screens;
                     state.allScreens = screens;
+                    state.errorMessage = null;
                 })
 
                 await get().getLatestPlayerVersionName({
@@ -406,6 +516,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
                 set(s => {
                     s.groups = groups as GroupData[]
+                    s.errorMessage = null;
                 })
             } catch (e: any) {
                 console.error('Ошибка загрузки групп:', e)
@@ -482,65 +593,18 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
         connectWsForScreen: async () => {
             try {
-                connectWebSocket(`pairing`, (action, payload) => {
-
-                    const getMsg = () =>
-                        payload?.message ??
-                        payload?.error ??
-                        payload?.reason ??
-                        (typeof payload === 'string' ? payload : null);
-
-                    switch (action) {
-                        case 'PAIRING_CONFIRMED':
-
-                            console.log("PAIRING_CONFIRMED")
-
-                            const screen: ScreenData = payload;
-
-                            console.log("screen", screen)
-
-                            const licDeps = useLicenseStore.getState()
-
-                            licDeps.getLicense()
-
-                            set(state => {
-
-                                state.allScreens.push(screen);
-
-                                state.filteredScreens.push(screen);
-                                state.successMessage = 'Экран успешно добавлен';
-                                state.errorMessage = null;
-                            });
-                            break;
-
-                        case 'SCREEN_UNPAIRED': {
-                            const sid = payload?.screenId ?? payload?.id;
-
-                            set(state => {
-                                state.allScreens = state.allScreens.filter(s => s.id !== sid);
-                                state.filteredScreens = state.filteredScreens.filter(s => s.id !== sid);
-                                state.successMessage = 'Экран удалён';
-                                state.errorMessage = null;
-                            });
-
-                            useScheduleStore.getState().getSchedule();
-                            break;
-                        }
-
-                        case 'ERROR': {
-                            const msg = getMsg() ?? 'Не удалось добавить экран';
-                            get().setError(msg);
-                            break;
-                        }
-
-                    }
-                });
-
+                if (!pairingWs) {
+                    get().setError("Нет WebSocket соединения для pairing");
+                    return;
+                }
+                if (pairingWs.readyState !== WebSocket.OPEN) {
+                    await waitOpen(pairingWs);
+                }
             } catch (e: any) {
-                console.error("Ошибка при удалении экрана:", e);
+                console.error("Ошибка при соединении с экраном:", e);
+                get().setError(e?.message || "Не удалось подключиться к серверу");
             }
         },
-
         //====================STATUS==================
 
         latestPlayerVersionName: null,
@@ -640,6 +704,86 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     console.warn('Не удалось получить последнюю версию плеера', error)
                 }
             }
+        },
+
+
+        // Console remote
+
+        selectedScreen: null,
+        successConnectScreen: false,
+
+        setSelectedScreen: (screen) => {
+            set(s => {
+                s.selectedScreen = screen;
+                s.successConnectScreen = false;  // сбрасываем флаг при смене экрана
+            });
+            void get().remoteRegister();
+        },
+
+        // ====== remoteRegister
+        remoteRegister: async () => {
+            try {
+                const screen = get().selectedScreen;
+                if (!screen?.id) {
+                    get().setError("Сначала выберите экран");
+                    return;
+                }
+
+                if (!pairingWs) {
+                    get().setError("Нет соединения с сервером. Повторите позже.");
+                    return;
+                }
+
+                if (pairingWs.readyState !== WebSocket.OPEN) {
+                    await waitOpen(pairingWs);
+                }
+
+                const req = {
+                    action: "REMOTE_REGISTER",
+                    payload: {
+                        screenId: screen.id,
+                    },
+                };
+
+                console.log("send REMOTE_REGISTER", req);
+                pairingWs.send(JSON.stringify(req));
+            } catch (e: any) {
+                console.error("Ошибка REMOTE_REGISTER:", e);
+                get().setError(e?.message || "Не удалось: " + (e?.message ?? ""));
+            }
+        },
+
+        // ---------- TEXT event ---------- //
+        sendTextEvent: async (value: string) => {
+            const v = value.trim();
+            if (!v) return;
+
+            const payload = {
+                eventType: "TEXT",
+                value: v,
+            };
+            await sendRemoteEvent(payload);
+        },
+
+        // ---------- KEY CLICK event ---------- //
+        sendKeyClick: async (key: string) => {
+            const payload = {
+                eventType: "KEY",
+                key,
+                action: "CLICK",
+            };
+            await sendRemoteEvent(payload);
+        },
+
+        sendConference: async (url: string) => {
+            const v = (url ?? "").trim();
+            if (!v) return;
+
+            const payload = {
+                eventType: "CONFERENCE",
+                value: v,
+            };
+            await sendRemoteEvent(payload);
         },
     }
 }

@@ -100,7 +100,7 @@ export default function SectionsSelectionCard() {
 
 
     if (playlistItems.length === 0) {
-        return <Button variant="secondary">Плейлисты</Button>;
+        return <p >Нет плейлистов</p>;
     }
 
     if (!baseScreenId) {

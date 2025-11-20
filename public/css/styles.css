@@ -25,3 +25,13 @@ a {
     max-width: fit-content;
     width: auto;
 }
+
+
+.console-scroll {
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* IE / Edge */
+}
+
+.console-scroll::-webkit-scrollbar {
+    display: none;              /* Chrome / Safari / Opera */
+}
