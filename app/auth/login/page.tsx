@@ -55,54 +55,96 @@ export default function LoginPage() {
     }
 
     return (
-        <Form onSubmit={onSubmit}
-              style={{
-                  maxWidth: 400,
-                  margin: 'auto',
-                  padding: 20,
+        <div
+            style={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#f5f7fb',
+                padding: 16,
+            }}
+        >
+            <div
+                className="shadow-sm"
+                style={{
+                    width: '100%',
+                    maxWidth: 420,
+                    borderRadius: 16,
+                    background: '#ffffff',
+                    padding: 32,
+                }}
+            >
+                {/* ЛОГО + ТЕКСТ ПО ЦЕНТРУ */}
+                <div
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 24,
+                        textAlign: 'center',
+                    }}
+                >
+                    <img
+                        src="/assets/default-thumbnail.svg"
+                        alt="Скреон"
+                        style={{
+                            width: 200,
+                            height: 'auto',
+                            marginBottom: 16,
+                            display: 'block',
+                        }}
+                    />
+                    <h3 className="mb-1">Вход</h3>
+                </div>
 
-              }}>
-            <h3 style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                flexDirection: "column"
-            }} className="mb-4">Вход в Скреон</h3>
-            {error && <Alert variant="danger">{error}</Alert>}
+                <Form onSubmit={onSubmit}>
+                    {error && <Alert variant="danger">{error}</Alert>}
 
-            <Form.Group className="mb-3">
-                <Form.Label>Email</Form.Label>
-                <Form.Control
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    isInvalid={!!emailError}
-                />
-                <Form.Control.Feedback type="invalid">{emailError}</Form.Control.Feedback>
-            </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Email</Form.Label>
+                        <Form.Control
+                            type="email"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            isInvalid={!!emailError}
+                            placeholder="example@mail.com"
+                        />
+                        <Form.Control.Feedback type="invalid">
+                            {emailError}
+                        </Form.Control.Feedback>
+                    </Form.Group>
 
-            <Form.Group className="mb-3">
-                <Form.Label>Пароль</Form.Label>
-                <Form.Control
-                    type="password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    isInvalid={!!passError}
-                />
-                <Form.Control.Feedback type="invalid">{passError}</Form.Control.Feedback>
-            </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Пароль</Form.Label>
+                        <Form.Control
+                            type="password"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            isInvalid={!!passError}
+                            placeholder="Введите пароль"
+                        />
+                        <Form.Control.Feedback type="invalid">
+                            {passError}
+                        </Form.Control.Feedback>
+                    </Form.Group>
 
-            <Button type="submit" disabled={loading} className="w-100">
-                {loading ? 'Загрузка…' : 'Войти'}
-            </Button>
+                    <Button type="submit" disabled={loading} className="w-100">
+                        {loading ? 'Загрузка…' : 'Войти'}
+                    </Button>
 
-            <div className="mt-3 text-center">
-                <a href="/auth/register">Регистрация</a>
+                    <div
+                        className="mt-3 d-flex justify-content-between"
+                        style={{ fontSize: 14 }}
+                    >
+                        <a href="/auth/register">Регистрация</a>
+                        <a href="/auth/recoveryPassword">Забыли пароль?</a>
+                    </div>
+                </Form>
             </div>
-
-            <div className="mt-3 text-center">
-                <a href="/auth/recoveryPassword">Забыли пароль?</a>
-            </div>
-        </Form>
+        </div>
     )
+
+
 }

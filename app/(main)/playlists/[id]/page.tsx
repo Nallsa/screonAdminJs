@@ -5,28 +5,22 @@
 
 'use client'
 
-import {useParams, useRouter} from 'next/navigation'
-import React, {useState, useCallback, useEffect, useMemo} from 'react'
-import Link from 'next/link'
-import {
-    Button,
-    Form,
-    Dropdown,
-} from 'react-bootstrap'
-import {useDropzone} from 'react-dropzone'
+import {useRouter} from 'next/navigation'
+import React, {useEffect, useMemo, useState} from 'react'
+import {Button, Form,} from 'react-bootstrap'
 
 import MediaCard from '@/app/components/Library/MediaCard'
-import {closestCenter, DndContext, DragEndEvent, useDraggable} from "@dnd-kit/core";
+import {closestCenter, DndContext, DragEndEvent} from "@dnd-kit/core";
 import {arrayMove, horizontalListSortingStrategy, SortableContext} from "@dnd-kit/sortable";
 import {FileItem} from "@/public/types/interfaces";
 import {useLibraryStore} from "@/app/store/libraryStore";
 import UploadZone from "@/app/components/Library/UploadZone";
 import {usePlaylistStore} from "@/app/store/playlistStore";
 import {SERVER_URL} from "@/app/API/api";
-import Image from "next/image"
 import ConfirmModal from "@/app/components/Common/ConfirmModal";
 import ErrorModal from "@/app/components/Common/ErrorModal";
 import PreviewImage from "@/app/components/Common/PreviewImage";
+import {Grade, useLicenseStore} from "@/app/store/licenseStore";
 
 
 export default function PlaylistContentPage() {
@@ -34,6 +28,7 @@ export default function PlaylistContentPage() {
     const router = useRouter()
 
     const {getFilesInLibrary, libraryItems} = useLibraryStore(state => state)
+    const {screenLicense} = useLicenseStore(state => state)
 
     const {
         createPlaylist,
@@ -344,16 +339,19 @@ export default function PlaylistContentPage() {
 
                         <UploadZone/>
 
-                        {/* ⬇️ вставьте переключатель сразу после UploadZone */}
-                        <div className="mt-3 mb-4">
-                            <Form.Check
-                                type="switch"
-                                id="iptv-toggle"
-                                label="Вывести каналы с IPTV"
-                                checked={showIptv}
-                                onChange={(e) => setShowIptv(e.currentTarget.checked)}
-                            />
-                        </div>
+
+                        {
+                            screenLicense == Grade.PRO ?  <div className="mt-3 mb-4">
+                                <Form.Check
+                                    type="switch"
+                                    id="iptv-toggle"
+                                    label="Вывести каналы с IPTV"
+                                    checked={showIptv}
+                                    onChange={(e) => setShowIptv(e.currentTarget.checked)}
+                                />
+                            </div> : null
+                        }
+
 
                         {/* ⬇️ далее условный рендер IPTV / библиотека */}
                         {showIptv ? (

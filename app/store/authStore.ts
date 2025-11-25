@@ -38,6 +38,9 @@ interface AuthState {
 
     // (опционально) если поддерживаешь токен из ссылки
     confirmPasswordReset: (args: { newPassword: string }) => Promise<boolean>
+
+    checkEmail: (email: string) => Promise<boolean>
+    verifyEmail: (args: { email: string; code: string }) => Promise<string | null>
 }
 
 const base = (process.env.NEXT_PUBLIC_SERVER_URL ?? "")
@@ -158,6 +161,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch {
             set({isAuthenticated: false})
             return false
+        } finally {
+            set({loading: false})
+        }
+    },
+
+    checkEmail: async (email) => {
+        set({loading: true, error: null})
+        try {
+            await axios.post(`${base}auth/register/email/code`, {email})
+
+            set({resetStep: "code_sent"})
+            return true
+        } catch (e: any) {
+            set({
+                error: e?.response?.data?.message || "Не удалось отправить код",
+                resetStep: "idle",
+            })
+            return false
+        } finally {
+            set({loading: false})
+        }
+    },
+
+    verifyEmail: async ({email, code}) => {
+        set({loading: true, error: null})
+        try {
+            const res = await axios.post(
+                `${base}auth/register/email/verify`,
+                {email, code},
+                {responseType: "text"}
+            )
+            const resetSession = (res?.data ?? "").toString().trim()
+            if (!resetSession) throw new Error("Пустой ответ от сервера")
+            set({resetSession, resetStep: "verified"})
+            return resetSession
+        } catch (e: any) {
+            set({
+                error: e?.response?.data?.message || e?.message || "Не удалось подтвердить код",
+                resetStep: "code_sent",
+            })
+            return null
         } finally {
             set({loading: false})
         }

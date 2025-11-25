@@ -115,8 +115,33 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
 
 
     if (loading || !isAuthenticated) {
-        return <div className="text-center p-4">Загрузка…</div>
+    return (
+        <div
+            style={{
+                minHeight: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}
+        >
+            <img
+                src="/assets/default-thumbnail.svg"
+                alt="Логотип"
+                style={{
+                    width: '25vw',      // 25% от ширины экрана
+                    maxWidth: 320,      // но не больше 320px
+                    height: 'auto',
+                    marginBottom: 16,
+                }}
+            />
+
+        </div>
+    )
+
     }
+
+
 
 
     return (
