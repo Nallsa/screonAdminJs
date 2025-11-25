@@ -11,7 +11,7 @@ export default function RecoveryPage(): JSX.Element {
     const state = useAuthStore((s) => s)
 
     // Токен из ссылки (если используешь такой сценарий)
-    const [stage, setStage] = useState<Stage>("password");
+    const [stage, setStage] = useState<Stage>("email");
 
     // Поля
     const [email, setEmail] = useState<string>("");
@@ -285,7 +285,7 @@ export default function RecoveryPage(): JSX.Element {
                                     variant="link"
                                     type="button"
                                     className="text-decoration-none"
-                                    onClick={() => router.push("auth/login")}
+                                    onClick={() => router.push("/auth/login")}
                                 >
                                     Вернуться ко входу
                                 </Button>
@@ -293,7 +293,7 @@ export default function RecoveryPage(): JSX.Element {
                         </Form>
                     ) : (
                         <div className="d-grid gap-2">
-                            <Button onClick={() => router.push("auth/login")}>Перейти ко входу</Button>
+                            <Button onClick={() => router.push("/auth/login")}>Перейти ко входу</Button>
                             <Button variant="outline-secondary" onClick={() => router.push("/")}>На главную</Button>
                         </div>
                     )}
