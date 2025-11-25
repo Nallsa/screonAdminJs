@@ -38,14 +38,14 @@ export default function EditableScheduleTable() {
         clearDaySlots,
     } = useScheduleStore()
 
-    const {allScreens} = useScreensStore()
+    const {activeScreens} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
 
     const screenBranchById = useMemo(() => {
         const map = new Map<string, string>();
-        allScreens.forEach(s => map.set(s.id, s.branchId));
+        activeScreens.forEach(s => map.set(s.id, s.branchId));
         return map;
-    }, [allScreens]);
+    }, [activeScreens]);
 
     const getBranchOf = (screenId: string) => screenBranchById.get(screenId);
 
@@ -57,7 +57,7 @@ export default function EditableScheduleTable() {
 
         const weekDates = currentWeek.map(d => dateToIsoLocal(d));
         const screens = selectedGroup
-            ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
+            ? activeScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
             : selectedScreens;
 
         for (const screenId of screens) {
@@ -93,7 +93,7 @@ export default function EditableScheduleTable() {
         scheduledCalendarMap,
         selectedScreens,
         selectedGroup,
-        allScreens,
+        activeScreens,
     ]);
 
 // 3) metasWithIdx и всё ниже оставь:
@@ -134,9 +134,9 @@ export default function EditableScheduleTable() {
 
     const screensForTable = useMemo(() => (
         selectedGroup
-            ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
+            ? activeScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
             : selectedScreens
-    ), [selectedGroup, selectedScreens, allScreens])
+    ), [selectedGroup, selectedScreens, activeScreens])
 
     // для позиционирования
     const tableRef = useRef<HTMLTableElement>(null)
@@ -559,11 +559,11 @@ export default function EditableScheduleTable() {
                     const height = (m.endRow - m.startRow) * slotH;
 
                     // const playlistName = playlistItems.find(p => p.id === m.block.playlistId)?.name ?? m.block.playlistId;
-                    const screenName = allScreens.find(s => s.id === m.screenId)?.name ?? m.screenId;
+                    const screenName = activeScreens.find(s => s.id === m.screenId)?.name ?? m.screenId;
                     const isAd = m.block.type === 'ADVERTISEMENT';
 
                     const screenColorsMap = new Map<string, string>();
-                    allScreens.forEach((screen, index) => {
+                    activeScreens.forEach((screen, index) => {
                         const color = screenColors[index % screenColors.length];
                         screenColorsMap.set(screen.id, color);
                     });
@@ -714,7 +714,7 @@ export default function EditableScheduleTable() {
                                                  setEditScreens(opts)
                                              }}
                                 >
-                                    {allScreens.map(s => (
+                                    {activeScreens.map(s => (
                                         <option key={s.id} value={s.id}>{s.name}</option>
                                     ))}
                                 </Form.Select>

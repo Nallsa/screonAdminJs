@@ -1,0 +1,150 @@
+/* ОБЩИЙ surface-стиль для карточек и панели предпросмотра */
+.widget-card,
+.widget-preview-panel {
+    border-radius: 1rem;
+    background: linear-gradient(
+            135deg,
+            rgba(15, 23, 42, 0.98),
+            rgba(15, 23, 42, 0.94)
+    );
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+
+/* hover только для карточек слева */
+.widget-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+    border-color: rgba(45, 212, 191, 0.6);
+}
+
+/* выделенная карточка */
+.widget-card-active {
+    border-color: rgba(16, 185, 129, 0.9);
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.7), 0 22px 50px rgba(0, 0, 0, 0.75);
+}
+
+/* активная панель предпросмотра */
+.widget-preview-panel-active {
+    border-color: rgba(16, 185, 129, 0.85);
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.6), 0 22px 50px rgba(0, 0, 0, 0.75);
+}
+
+/* вертикальная цветная полоска слева у карточки */
+.widget-card-accent {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(to bottom, #22c55e, #0ea5e9);
+    opacity: 0.7;
+}
+
+/* иконка виджета */
+.widget-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.7);
+    font-size: 1.2rem;
+    color: #a5b4fc;
+}
+
+/* мини-превью внутри карточки */
+.widget-preview {
+    border-radius: 0.9rem;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(51, 65, 85, 0.8);
+    padding: 0.5rem 0.75rem;
+    color: #e5e7eb;
+    max-height: 90px;
+    overflow: hidden;
+}
+
+.widget-preview pre {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    white-space: pre-wrap;
+}
+
+/* Обёртка панели предпросмотра (доп. эффекты) */
+.widget-preview-panel {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Лёгкое свечение фона у панели */
+.widget-preview-panel::before {
+    content: "";
+    position: absolute;
+    inset: -30%;
+    background:
+            radial-gradient(circle at top left, rgba(16, 185, 129, 0.12), transparent 55%),
+            radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.16), transparent 55%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.widget-preview-panel-active::before {
+    opacity: 1;
+}
+
+/* Анимация заголовка при смене выбранного виджета */
+.widget-preview-header {
+    animation: widgetFadeInUp 0.22s ease-out;
+}
+
+/* Карточка предпросмотра внутри панели */
+.widget-preview-card {
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+    position: relative;
+    overflow: hidden;
+}
+
+.widget-preview-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 55%);
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Поле кода / preview */
+.widget-preview-content {
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+    animation: widgetGlow 0.35s ease-out;
+}
+
+/* бейдж категории */
+.widget-meta-badge {
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.7);
+}
+
+/* Анимации */
+@keyframes widgetFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes widgetGlow {
+    0% {
+        box-shadow:
+                0 0 0 0 rgba(16, 185, 129, 0.35),
+                inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+    }
+    100% {
+        box-shadow:
+                0 0 0 0 rgba(16, 185, 129, 0),
+                inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+    }
+}

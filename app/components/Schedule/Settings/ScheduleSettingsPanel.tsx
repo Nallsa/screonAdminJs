@@ -54,7 +54,7 @@ export default function ScheduleSettingsPanel() {
     } = useScheduleStore()
 
 
-    const {allScreens, groups} = useScreensStore()
+    const {activeScreens, groups} = useScreensStore()
     const {playlistItems} = usePlaylistStore()
     const [noScreensModal, setNoScreensModal] = useState(false)
     const [noPlaylistsModal, setNoPlaylistsModal] = useState(false)
@@ -71,7 +71,7 @@ export default function ScheduleSettingsPanel() {
     }, [])
 
     const handleScreensToggle = (e: React.MouseEvent) => {
-        if (allScreens.length === 0) {
+        if (activeScreens.length === 0) {
             e.preventDefault()
             setNoScreensModal(true)
         }
@@ -91,7 +91,7 @@ export default function ScheduleSettingsPanel() {
 
     const getTargetScreens = () =>
         (selectedGroup
-            ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
+            ? activeScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
             : selectedScreens);
 
     const isScreenZonesComplete = (screenId: string) => {
@@ -146,7 +146,7 @@ export default function ScheduleSettingsPanel() {
         for (const sid of screensToAdd) {
             if (!isScreenZonesComplete(sid)) {
                 const {count, zonePlaylists} = getZoneAssignments(sid);
-                const name = allScreens.find(s => s.id === sid)?.name ?? sid;
+                const name = activeScreens.find(s => s.id === sid)?.name ?? sid;
                 const missing = Array.from({length: count}, (_, i) => i as ZoneIndex)
                     .filter(z => !zonePlaylists[z])
                     .map(z => `Зона ${z + 1}`).join(', ');
@@ -157,7 +157,7 @@ export default function ScheduleSettingsPanel() {
             // если показ разово или реклама — длительность должна быть > 0
             if ((typeMode === 'PLAYLIST' && startTime !== '00:00' && endTime !== '00:00') || typeMode === 'ADVERTISEMENT') {
                 if (maxMin <= 0) {
-                    const name = allScreens.find(s => s.id === sid)?.name ?? sid;
+                    const name = activeScreens.find(s => s.id === sid)?.name ?? sid;
                     window.alert(`На экране «${name}» длительность плейлистов = 0 мин. Проверьте содержимое плейлистов.`);
                     return;
                 }
@@ -170,12 +170,12 @@ export default function ScheduleSettingsPanel() {
             for (const sid of screensToAdd) {
                 const durationMin = maxDurationByScreen.get(sid)!;
                 if (advertisementShowMode === 'minutes' && advertisementIntervalMinutes < durationMin) {
-                    const name = allScreens.find(s => s.id === sid)?.name ?? sid;
+                    const name = activeScreens.find(s => s.id === sid)?.name ?? sid;
                     window.alert(`На экране «${name}» интервал между показами (${advertisementIntervalMinutes} мин) меньше максимальной длительности выбранных плейлистов (${durationMin} мин).`);
                     return;
                 }
                 if (advertisementShowMode === 'hours' && advertisementIntervalHours * 60 < durationMin) {
-                    const name = allScreens.find(s => s.id === sid)?.name ?? sid;
+                    const name = activeScreens.find(s => s.id === sid)?.name ?? sid;
                     window.alert(`На экране «${name}» интервал между показами (${advertisementIntervalHours} ч) меньше максимальной длительности (${durationMin} мин).`);
                     return;
                 }
@@ -206,7 +206,7 @@ export default function ScheduleSettingsPanel() {
                     });
 
                     if (conflict) {
-                        const name = allScreens.find(s => s.id === screenId)?.name ?? screenId;
+                        const name = activeScreens.find(s => s.id === screenId)?.name ?? screenId;
                         window.alert(`На экране «${name}» уже есть слот с приоритетом ${priority} в ${dayShort} с ${conflict.startTime} до ${conflict.endTime}.`);
                         return;
                     }
@@ -261,7 +261,7 @@ export default function ScheduleSettingsPanel() {
                     return (start < existEnd && existStart < end);
                 });
                 if (conflict) {
-                    const name = allScreens.find(s => s.id === screenId)?.name ?? screenId;
+                    const name = activeScreens.find(s => s.id === screenId)?.name ?? screenId;
                     window.alert(`На экране «${name}» рекламный слот пересекается с ${conflict.startTime}–${conflict.endTime} в ${date}.`);
                     return;
                 }

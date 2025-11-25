@@ -299,7 +299,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
                             typeof rawSlots === 'string' ? JSON.parse(rawSlots) :
                                 Array.isArray(rawSlots) ? rawSlots : [];
 
-                        const byId = new Map(useScreensStore.getState().allScreens.map(s => [s.id, s]));
+                        const byId = new Map(useScreensStore.getState().activeScreens.map(s => [s.id, s]));
 
                         for (const slot of arr) {
                             const screenId = slot.screenId as string;
@@ -634,7 +634,7 @@ export const useScheduleStore = create<ScheduleState, [["zustand/immer", never]]
             addBlock: (overrideScreens) => {
                 const playlistItems = usePlaylistStore.getState().playlistItems
                 const screensStore = useScreensStore.getState();
-                const byId = new Map(screensStore.allScreens.map(s => [s.id, s]));
+                const byId = new Map(screensStore.activeScreens.map(s => [s.id, s]));
 
                 const {
                     selectedScreens,

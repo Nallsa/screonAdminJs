@@ -76,7 +76,7 @@ export interface ScreenData {
     branchId: string;
 
     licenseType: LicenseType;
-    licenseValidTo: string;
+    licenseValidTo: string | null;
 }
 
 export type LiveStatus = {

@@ -115,6 +115,11 @@ export default function ScreenCard({
     );
 
     function renderLicense() {
+        // Если нет даты окончания — считаем, что срок истёк
+        if (!screen.licenseValidTo) {
+            return 'Срок действия лицензии истёк';
+        }
+
         if (!screen.licenseType) return '—';
 
         if (screen.licenseType === 'DEMO') {
@@ -130,13 +135,23 @@ export default function ScreenCard({
     }
 
 
+    const isInactive = screen.licenseValidTo == null;
+
+
     return (
         <>
             <Card
                 className="shadow-sm position-relative"
-                style={{width: 240, borderRadius: 8}}
+                style={{
+                    width: 240,
+                    borderRadius: 8,
+                    opacity: isInactive ? 0.5 : 1,
+                    pointerEvents: isInactive ? 'none' : 'auto',
+                    filter: isInactive ? 'grayscale(0.3)' : 'none',
+                }}
             >
-                {isCreatingGroup && onSelect && (
+
+            {isCreatingGroup && onSelect && (
                     <Form.Check
                         type="checkbox"
                         checked={isSelected}

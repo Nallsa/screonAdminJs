@@ -23,7 +23,7 @@ export default function EmergencyPage() {
     const orgId = useOrganizationStore(s => s.organizationInfo?.id) || ''
 
     const {playlistItems} = usePlaylistStore()
-    const {allScreens, groups} = useScreensStore()
+    const {activeScreens, groups} = useScreensStore()
     const {selectedScreens, selectedGroup, selectedPlaylist, canStartScenarioOn} = useScheduleStore()
 
     const {
@@ -50,9 +50,9 @@ export default function EmergencyPage() {
 
     const screenNameById = useMemo(() => {
         const m = new Map<string, string>()
-        allScreens.forEach(s => m.set(s.id, s.name))
+        activeScreens.forEach(s => m.set(s.id, s.name))
         return m
-    }, [allScreens])
+    }, [activeScreens])
 
     const prettyScreens = (ids?: string[], fallbackCount?: number) => {
         const names = (ids ?? []).map(id => screenNameById.get(id) ?? id)
@@ -223,7 +223,7 @@ export default function EmergencyPage() {
                 onSubmit={() => {
                     const selectedPlaylistObj = playlistItems.find(p => p.id === selectedPlaylist) || null
                     const screensToUse = selectedGroup
-                        ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
+                        ? activeScreens.filter(s => s.groupId === selectedGroup).map(s => s.id)
                         : selectedScreens
 
                     // валидация
@@ -248,7 +248,7 @@ export default function EmergencyPage() {
                     }
                     const conflict = screensToUse.filter(id => busyIds.has(id))
                     if (conflict.length) {
-                        const byId = new Map(allScreens.map(s => [s.id, s.name]))
+                        const byId = new Map(activeScreens.map(s => [s.id, s.name]))
                         const names = conflict.slice(0, 5).map(id => byId.get(id) || id).join(', ')
                         const more = conflict.length > 5 ? ` и ещё ${conflict.length - 5}` : ''
                         setEmgError(`Нельзя запустить экстренное. Уже заняты экраны: ${names}${more}.`)

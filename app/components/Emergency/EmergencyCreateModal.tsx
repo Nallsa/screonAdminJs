@@ -27,7 +27,7 @@ export function EmergencyCreateModal({
     const orgId = useOrganizationStore(s => s.organizationInfo?.id) || ''
 
     const {playlistItems} = usePlaylistStore()
-    const {allScreens} = useScreensStore()
+    const {activeScreens} = useScreensStore()
     const {
         selectedScreens,
         selectedGroup,
@@ -42,8 +42,8 @@ export function EmergencyCreateModal({
     const clearErr = () => setErr(null)
 
     const screensToUse = useMemo(
-        () => (selectedGroup ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id) : selectedScreens),
-        [allScreens, selectedGroup, selectedScreens]
+        () => (selectedGroup ? activeScreens.filter(s => s.groupId === selectedGroup).map(s => s.id) : selectedScreens),
+        [activeScreens, selectedGroup, selectedScreens]
     )
 
     const handleSubmit = () => {

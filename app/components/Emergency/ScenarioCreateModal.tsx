@@ -27,7 +27,7 @@ export function ScenarioCreateModal({
     const orgId = useOrganizationStore(s => s.organizationInfo?.id) || ''
 
     const {playlistItems} = usePlaylistStore()
-    const {allScreens} = useScreensStore()
+    const {activeScreens} = useScreensStore()
     const {
         selectedScreens, selectedGroup, selectedPlaylist,
         emergency,
@@ -43,8 +43,8 @@ export function ScenarioCreateModal({
 
     // Экраны для текущей добавляемой группы
     const currentScreens = useMemo(
-        () => (selectedGroup ? allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id) : selectedScreens),
-        [allScreens, selectedGroup, selectedScreens]
+        () => (selectedGroup ? activeScreens.filter(s => s.groupId === selectedGroup).map(s => s.id) : selectedScreens),
+        [activeScreens, selectedGroup, selectedScreens]
     )
 
     // Активное экстренное
@@ -205,7 +205,7 @@ export function ScenarioCreateModal({
                         <ListGroup>
                             {groups.map((g, i) => {
                                 const plName = playlistItems.find(p => p.id === g.playlistId)?.name ?? g.playlistId
-                                const byId = new Map(allScreens.map(s => [s.id, s.name]))
+                                const byId = new Map(activeScreens.map(s => [s.id, s.name]))
                                 const names = g.screens.map(id => byId.get(id) ?? id)
                                 const pretty = names.length > 6 ? names.slice(0, 6).join(', ') + ` и ещё ${names.length - 6}` : names.join(', ')
                                 return (

@@ -22,8 +22,10 @@ export type StatusEntry = LiveStatus & {
 };
 
 interface ScreensState {
+    activeScreens: ScreenData[]
     allScreens: ScreenData[]
     filteredScreens: ScreenData[]
+
     groups: GroupData[]
 
     // для формы создания группы
@@ -157,6 +159,11 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     state.successMessage = 'Экран успешно добавлен';
                     state.errorMessage = null;
                 });
+
+                screen.licenseType !== null ? set(state => {
+                    state.activeScreens.push(screen);
+                }) : null
+
                 break;
             }
 
@@ -164,6 +171,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 const sid = payload?.screenId ?? payload?.id;
 
                 set(state => {
+                    state.activeScreens = state.activeScreens.filter(s => s.id !== sid);
                     state.allScreens = state.allScreens.filter(s => s.id !== sid);
                     state.filteredScreens = state.filteredScreens.filter(s => s.id !== sid);
                     state.successMessage = 'Экран удалён';
@@ -233,6 +241,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
     return {
         allScreens: [],
+        activeScreens: [],
         filteredScreens: [],
         groups: [],
 
@@ -314,6 +323,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
         addScreen: screen => {
             set(s => {
+                s.activeScreens.push({...screen, groupId: screen.groupId ?? null})
                 s.allScreens.push({...screen, groupId: screen.groupId ?? null})
                 s.filteredScreens.push({...screen, groupId: screen.groupId ?? null})
             })
@@ -352,15 +362,17 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                     {headers: {Authorization: `Bearer ${accessToken}`}},
                 )
 
-                const screens: ScreenData[] = res.data
+                const screens: ScreenData[] = res.data;
 
-                console.log("Экраны", screens)
+                console.log("Экраны", screens);
 
                 set(state => {
                     state.filteredScreens = screens;
                     state.allScreens = screens;
+                    state.activeScreens = screens.filter(s => s.licenseValidTo != null); // только с лицензией
                     state.errorMessage = null;
-                })
+                });
+
 
                 await get().getLatestPlayerVersionName({
                     app: 'player',
@@ -389,7 +401,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
                 // если всё ок — обновляем локальный стейт
                 set(state => {
-                    const scr = state.allScreens.find(s => s.id === screenId)
+                    const scr = state.activeScreens.find(s => s.id === screenId)
                     if (scr) scr.name = newName
                 })
                 // пересчитаем фильтр
@@ -432,6 +444,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
 
                 if (res.status === 200) {
                     set(state => {
+                        state.activeScreens = state.activeScreens.filter(screen => screen.id !== screenId);
                         state.allScreens = state.allScreens.filter(screen => screen.id !== screenId);
                         state.filteredScreens = state.filteredScreens.filter(screen => screen.id !== screenId);
                         state.successMessage = 'Экран удалён';
@@ -489,7 +502,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 }
 
                 set(s => {
-                    const scr = s.allScreens.find(x => x.id === screenId)
+                    const scr = s.activeScreens.find(x => x.id === screenId)
                     if (scr) scr.groupId = groupId
                     s.successMessage = 'Информация об экране обновлена';
                     s.errorMessage = null;
@@ -553,7 +566,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 set(s => {
                     s.groups.push(group)
                     // у каждого добавленного экрана записать его groupId
-                    s.allScreens = s.allScreens.map(screen =>
+                    s.activeScreens = s.activeScreens.map(screen =>
                         selectedForNewGroup.includes(screen.id)
                             ? {...screen, groupId: group.id}
                             : screen
@@ -669,7 +682,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
         },
 
         requestStatusesForAll: async () => {
-            const ids = get().allScreens.map(s => s.id);
+            const ids = get().activeScreens.map(s => s.id);
             await Promise.all(
                 ids.map((id, i) =>
                     new Promise<void>(res =>

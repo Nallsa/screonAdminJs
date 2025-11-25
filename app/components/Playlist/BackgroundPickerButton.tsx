@@ -25,7 +25,7 @@ export default function BackgroundPickerButton({branchId, className, size}: Prop
         resolveBackground,
         setBackground,
     } = useScheduleStore()
-    const {allScreens} = useScreensStore()
+    const {activeScreens} = useScreensStore()
 
     const [show, setShow] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -53,7 +53,7 @@ export default function BackgroundPickerButton({branchId, className, size}: Prop
                 branchId,
                 orgId,
                 playlistId: selectedId,
-                screenIds: allScreens.map(b => b.id)
+                screenIds: activeScreens.map(b => b.id)
             })
             if (ok) setShow(false)
         } finally {

@@ -39,7 +39,7 @@ interface ScreenDropdownProps {
 
 const ConsolePage: React.FC = () => {
     // как в Kotlin: val screens by childScreensViewModel.filteredScreens.collectAsState()
-    const screens = useScreensStore(s => s.filteredScreens);
+    const screens = useScreensStore(s => s.activeScreens);
 
     // remote / key / text из стора (аналог методов ChildScreensViewModel)
     const sendKeyClick = useScreensStore(s => s.sendKeyClick);

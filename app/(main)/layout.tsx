@@ -27,7 +27,7 @@ export default function MainLayout({children}: { children: React.ReactNode }) {
     const {checkToken, isAuthenticated, loading} = useAuthStore()
     const {libraryItems, getFilesInLibrary} = useLibraryStore(state => state)
     const {
-        allScreens,
+        activeScreens,
         getScreens,
         getGroups,
         requestStatusesForAll,

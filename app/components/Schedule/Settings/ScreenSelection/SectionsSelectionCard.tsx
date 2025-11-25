@@ -18,15 +18,15 @@ export default function SectionsSelectionCard() {
     const assignZonePlaylist = useScheduleStore(s => s.assignZonePlaylist);
     const clearZonePlaylist = useScheduleStore(s => s.clearZonePlaylist);
 
-    const {allScreens} = useScreensStore();
+    const {activeScreens} = useScreensStore();
     const {playlistItems} = usePlaylistStore();
 
     const targetScreens = useMemo(() => {
         if (selectedGroup) {
-            return allScreens.filter(s => s.groupId === selectedGroup).map(s => s.id);
+            return activeScreens.filter(s => s.groupId === selectedGroup).map(s => s.id);
         }
         return selectedScreens;
-    }, [selectedGroup, selectedScreens, allScreens]);
+    }, [selectedGroup, selectedScreens, activeScreens]);
 
     const [activeZone, setActiveZoneLocal] = useState<ZoneIndex | null>(null);
 

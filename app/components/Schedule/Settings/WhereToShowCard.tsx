@@ -14,7 +14,7 @@ type Props = {
 }
 
 export default function WhereToShowCard({onNoScreensClick}: Props) {
-    const {allScreens, groups} = useScreensStore()
+    const {activeScreens, groups} = useScreensStore()
     const {
         selectedScreens,
         toggleScreen,
@@ -26,7 +26,7 @@ export default function WhereToShowCard({onNoScreensClick}: Props) {
     return (
         <div className="d-flex flex-column justify-content-lg-evenly align-content-center gap-3">
             <Col xs="auto">
-                {allScreens.length === 0 ? (
+                {activeScreens.length === 0 ? (
                     <Button variant="secondary" onClick={onNoScreensClick}>
                         Экраны
                     </Button>
@@ -47,12 +47,12 @@ export default function WhereToShowCard({onNoScreensClick}: Props) {
                                     <Form.Check
                                         type="checkbox"
                                         id="screen-all"
-                                        checked={selectedScreens.length === allScreens.length}
+                                        checked={selectedScreens.length === activeScreens.length}
                                         onChange={() => {
-                                            if (selectedScreens.length === allScreens.length) {
+                                            if (selectedScreens.length === activeScreens.length) {
                                                 selectedScreens.forEach(id => toggleScreen(id))
                                             } else {
-                                                allScreens.forEach(s => {
+                                                activeScreens.forEach(s => {
                                                     if (!selectedScreens.includes(s.id)) toggleScreen(s.id)
                                                 })
                                             }
@@ -62,7 +62,7 @@ export default function WhereToShowCard({onNoScreensClick}: Props) {
                                     <span>Выбрать всё</span>
                                 </Dropdown.Item>
 
-                                {allScreens.map(s => (
+                                {activeScreens.map(s => (
                                     <Dropdown.Item
                                         as="label"
                                         htmlFor={`screen-${s.id}`}

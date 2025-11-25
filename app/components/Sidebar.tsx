@@ -10,6 +10,7 @@ import {FaBars} from "react-icons/fa";
 import {useOrganizationStore} from "@/app/store/organizationStore";
 import {Grade, useLicenseStore} from "@/app/store/licenseStore";
 import React, {useCallback, useEffect, useMemo} from "react";
+import WidgetsPage from "@/app/(main)/widgets/page";
 
 interface Props {
     collapsed: boolean
@@ -26,6 +27,8 @@ const navItems = [
     {href: "/emergency", label: "Сценарии", icon: "bi bi-lightning-charge"},
     {href: "/organization", label: "Организация", icon: "bi bi-building-fill-gear"},
     {href: "/settings", label: "Настройки", icon: "bi bi-gear"},
+
+    // {href: "/widgets", label: "Виджеты", icon: "bi bi-gear"},
     // {href: "/console", label: "Пульт", icon: "bi bi-phone-flip"},
 
 ];

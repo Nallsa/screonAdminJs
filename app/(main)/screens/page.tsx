@@ -20,7 +20,7 @@ import {WarningModal} from "@/app/components/Common/WarningModal";
 
 export default function ScreensPage() {
     const {
-        allScreens,
+        activeScreens,
         filteredScreens,
         groups,
         isCreatingGroup,
@@ -65,7 +65,7 @@ export default function ScreensPage() {
 
 
     useEffect(() => {
-        if (allScreens.length !== 0) return;
+        if (activeScreens.length !== 0) return;
 
         const initialize = async () => {
             await getScreens();
@@ -103,7 +103,6 @@ export default function ScreensPage() {
         addPairingConfirm(screenCode, certificateCode, selectedBranchId).then(r => setShowAddModal(false))
     }
 
-    // первичный фильтр
     useEffect(() => {
         filterScreens('', 'all')
     }, [filterScreens])
@@ -141,7 +140,7 @@ export default function ScreensPage() {
                             className="px-sm-4"
                             variant="primary"
                             onClick={startCreateGroup}
-                            disabled={allScreens.length === 0}
+                            disabled={activeScreens.length === 0}
                         >
                             Создать группу
                         </Button>
@@ -153,7 +152,7 @@ export default function ScreensPage() {
             <div className="row g-2 g-md-3 mb-3">
                 <div className="col-12 col-md-auto">
                     <Dropdown onSelect={(k) => setGroupFilter(k!)} className="w-100">
-                        <Dropdown.Toggle disabled={allScreens.length === 0} variant="outline-primary" className="w-100">
+                        <Dropdown.Toggle disabled={activeScreens.length === 0} variant="outline-primary" className="w-100">
                             {groupFilter === 'all'
                                 ? 'Все группы'
                                 : groupFilter === 'nogroup'
