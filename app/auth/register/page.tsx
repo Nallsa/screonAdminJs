@@ -20,8 +20,7 @@ export default function RegisterPage() {
     // из твоего стора восстановления пароля
     const checkEmail = useAuthStore(s => s.checkEmail)
     const verifyEmail = useAuthStore(s => s.verifyEmail)
-    const resetStep = useAuthStore(s => s.resetStep) // "idle" | "code_sent" | "verified"
-    // const resetSession = useAuthStore(s => s.resetSession) // если понадобится
+    const resetStep = useAuthStore(s => s.resetStep) // уже есть
 
     const [email, setEmail] = useState('')
     const [phone, setPhone] = useState('')
@@ -110,7 +109,7 @@ export default function RegisterPage() {
         }
     }
 
-    // подтверждение кода через verifyEmail
+// подтверждение кода через verifyEmail
     const handleConfirmCode = async () => {
         setCodeError(null)
 
@@ -119,7 +118,7 @@ export default function RegisterPage() {
             return
         }
 
-        const session = await verifyEmail({ email, code })
+        const session = await verifyEmail({email, code})
         if (!session) {
             // ошибка уже в error из стора, но локально подсветим поле
             setCodeError('Не удалось подтвердить код')
@@ -128,6 +127,7 @@ export default function RegisterPage() {
             setCodeError(null)
         }
     }
+
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -140,7 +140,7 @@ export default function RegisterPage() {
     const codeSent = resetStep === 'code_sent' || resetStep === 'verified'
 
     return (
-        <Form onSubmit={onSubmit} style={{ maxWidth: 400, margin: 'auto', padding: 20 }}>
+        <Form onSubmit={onSubmit} style={{maxWidth: 400, margin: 'auto', padding: 20}}>
             <h3 className="mb-4">Регистрация</h3>
             {error && <Alert variant="danger">{error}</Alert>}
 
@@ -173,7 +173,7 @@ export default function RegisterPage() {
                                     : 'Отправить код'}
                     </Button>
                 </InputGroup>
-                <Form.Control.Feedback type="invalid" style={emailError ? { display: 'block' } : {}}>
+                <Form.Control.Feedback type="invalid" style={emailError ? {display: 'block'} : {}}>
                     {emailError}
                 </Form.Control.Feedback>
 

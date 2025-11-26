@@ -116,7 +116,7 @@ export default function ScreenCard({
 
     function renderLicense() {
         // Если нет даты окончания — считаем, что срок истёк
-        if (!screen.licenseValidTo) {
+        if (!screen.valid) {
             return 'Срок действия лицензии истёк';
         }
 
@@ -135,7 +135,7 @@ export default function ScreenCard({
     }
 
 
-    const isInactive = screen.licenseValidTo == null;
+    const isInactive = screen.valid == null;
 
 
     return (

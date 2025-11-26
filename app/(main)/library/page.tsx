@@ -187,9 +187,9 @@ export default function LibraryPage() {
                     </SortableContext>
                 </Tab>
 
-                <Tab eventKey="store" title="Магазин">
-                    <StorePanel/>
-                </Tab>
+                {/*<Tab eventKey="store" title="Магазин">*/}
+                {/*    <StorePanel/>*/}
+                {/*</Tab>*/}
             </Tabs>
         </div>
     )

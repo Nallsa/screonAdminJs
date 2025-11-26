@@ -69,7 +69,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             const res = await axios.post(`${base}auth/login`, {email, password})
 
-            console.log("base", base)
             const {accessToken, refreshToken, userId} = res.data
             localStorage.setItem("accessToken", accessToken)
             localStorage.setItem("refreshToken", refreshToken)
@@ -83,12 +82,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             })
             return true
         } catch (e: any) {
-            set({error: e.response?.data?.message || "Ошибка входа"})
+            const serverData = e?.response?.data
+            const msg =
+                serverData?.message ||
+                serverData?.error ||      // <-- сюда попадёт "Invalid email or password"
+                "Ошибка входа"
+
+            set({error: msg})
             return false
         } finally {
             set({loading: false})
         }
     },
+
 
     signUp: async (username, phone, password, email) => {
         localStorage.removeItem("accessToken")
@@ -116,12 +122,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             })
             return true
         } catch (e: any) {
-            set({error: e.response?.data?.message || "Ошибка регистрации"})
+            const serverData = e?.response?.data
+            const msg =
+                serverData?.message ||
+                serverData?.error ||      // если бэкенд вернёт {error: "..."}
+                "Ошибка регистрации"
+
+            set({error: msg})
             return false
         } finally {
             set({loading: false})
         }
     },
+
 
     signOut: () => {
         localStorage.removeItem("accessToken")
@@ -170,12 +183,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({loading: true, error: null})
         try {
             await axios.post(`${base}auth/register/email/code`, {email})
-
             set({resetStep: "code_sent"})
             return true
         } catch (e: any) {
+            const serverData = e?.response?.data
+            const msg =
+                serverData?.message ||
+                serverData?.error ||
+                "Не удалось отправить код"
+
             set({
-                error: e?.response?.data?.message || "Не удалось отправить код",
+                error: msg,
                 resetStep: "idle",
             })
             return false
@@ -183,6 +201,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({loading: false})
         }
     },
+
 
     verifyEmail: async ({email, code}) => {
         set({loading: true, error: null})
@@ -192,13 +211,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 {email, code},
                 {responseType: "text"}
             )
-            const resetSession = (res?.data ?? "").toString().trim()
-            if (!resetSession) throw new Error("Пустой ответ от сервера")
-            set({resetSession, resetStep: "verified"})
-            return resetSession
+
+            const status = res.status
+            const raw = (res?.data ?? "").toString().trim()
+
+            // если сервер всё ещё когда-то начнёт возвращать строку — сохраним
+            const resetSession = raw || null
+
+            // если статус 2xx — считаем подтверждением, даже если тело пустое (204)
+            if (status >= 200 && status < 300) {
+                set({
+                    resetSession,
+                    resetStep: "verified",
+                })
+                // для регистрации нам важен сам факт успеха:
+                return resetSession || true
+            }
+
+            // на всякий пожарный, если статус не 2xx — кинем ошибку
+            throw new Error("Неожиданный статус ответа: " + status)
         } catch (e: any) {
+            const serverData = e?.response?.data
+            const msg =
+                serverData?.message ||
+                serverData?.error ||        // <-- сюда придут тексты вида {"error":"..."}
+                e?.message ||
+                "Не удалось подтвердить код"
+
             set({
-                error: e?.response?.data?.message || e?.message || "Не удалось подтвердить код",
+                error: msg,
                 resetStep: "code_sent",
             })
             return null
@@ -206,6 +247,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({loading: false})
         }
     },
+
+
 
     // =========================
     // ВОССТАНОВЛЕНИЕ ПАРОЛЯ

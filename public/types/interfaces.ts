@@ -77,6 +77,7 @@ export interface ScreenData {
 
     licenseType: LicenseType;
     licenseValidTo: string | null;
+    valid: boolean;
 }
 
 export type LiveStatus = {

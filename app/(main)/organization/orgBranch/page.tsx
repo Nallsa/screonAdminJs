@@ -91,8 +91,7 @@ export default function OrgBranchPage() {
                     )}
 
                     {/* Invite Code Generator */}
-                    {/*{hasDealerCast &&*/}
-                    {/*    <InviteCodeGenerator branchId={selectBranch.id}/>}*/}
+                    <InviteCodeGenerator branchId={selectBranch.id}/>
 
                     {/* Participants */}
                     <ParticipantsSection participants={selectBranch.members}/>

@@ -369,7 +369,7 @@ const createScreensStore: StateCreator<ScreensState, [['zustand/immer', never]],
                 set(state => {
                     state.filteredScreens = screens;
                     state.allScreens = screens;
-                    state.activeScreens = screens.filter(s => s.licenseValidTo != null); // только с лицензией
+                    state.activeScreens = screens.filter(s => s.valid); // только с лицензией
                     state.errorMessage = null;
                 });
 
