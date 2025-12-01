@@ -90,6 +90,8 @@ export default function ScreensPage() {
             alert('Пожалуйста, введите код экрана')
             return
         }
+
+
         if (!certificateCode) {
             alert('Пожалуйста, введите сертификат')
             return

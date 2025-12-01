@@ -81,11 +81,6 @@ export default function RecoveryPage(): JSX.Element {
                 if (password.length < 8) throw new Error("Пароль должен быть не короче 8 символов.");
                 if (!passwordsMatch) throw new Error("Пароли не совпадают.");
 
-                // 3.1 Если есть токен из ссылки → подтверждаем по токену
-                if (typeof confirmWithTokenFn === "function") {
-                    const ok = await confirmWithTokenFn({newPassword: password});
-                    if (!ok) throw new Error(error || "Не удалось обновить пароль");
-                }
                 // 3.2 Иначе — финалим по resetSession (который пришёл на шаге 2)
                 else if (typeof confirmWithCodeFn === "function") {
                     const ok = await confirmWithCodeFn({newPassword: password, resetSession: resetToken || undefined});
